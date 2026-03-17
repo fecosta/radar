@@ -1,0 +1,65 @@
+:root {
+  --bg: #FAFAF9;
+  --surface: #FFFFFF;
+  --surface-raised: #F5F5F4;
+  --border: #E7E5E4;
+  --border-strong: #D6D3D1;
+  --text: #1C1917;
+  --text-secondary: #78716C;
+  --accent: #B45309;
+  --accent-light: #FEF3C7;
+  --hover: rgba(0, 0, 0, 0.03);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0C0A09;
+    --surface: #1C1917;
+    --surface-raised: #292524;
+    --border: #292524;
+    --border-strong: #44403C;
+    --text: #FAFAF9;
+    --text-secondary: #A8A29E;
+    --accent: #F59E0B;
+    --accent-light: #451A03;
+    --hover: rgba(255, 255, 255, 0.04);
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
