@@ -1,30 +1,30 @@
-import React from 'react';
-
 function Chip({ label, active, onClick, color }) {
+  const activeColor = color || 'var(--accent)';
   return (
     <button
       onClick={onClick}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 4,
-        padding: '3px 10px',
-        fontSize: 11,
-        fontWeight: 600,
-        fontFamily: "'IBM Plex Mono', monospace",
-        letterSpacing: 0.3,
-        border: `1.5px solid ${active ? (color || 'var(--accent)') : 'var(--border)'}`,
+        gap: 5,
+        padding: '4px 12px',
+        fontSize: 12,
+        fontWeight: 700,
+        fontFamily: 'var(--sans)',
+        border: `1.5px solid ${active ? activeColor : 'var(--border)'}`,
         borderRadius: 20,
-        background: active ? (color || 'var(--accent)') + '18' : 'transparent',
-        color: active ? (color || 'var(--accent)') : 'var(--text-secondary)',
+        background: active ? (color ? color + '18' : 'var(--accent-light)') : 'transparent',
+        color: active ? activeColor : 'var(--text-secondary)',
         cursor: 'pointer',
         transition: 'all 0.15s ease',
         whiteSpace: 'nowrap',
       }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.borderColor = 'var(--border-strong)'; }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.borderColor = 'var(--border)'; }}
     >
       {label}
       {active && (
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
       )}
@@ -68,12 +68,11 @@ export default function Filters({
   totalShown,
 }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
       {/* Area / Folder filter */}
       {topFolders.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
-          <Label text="Area" />
+        <FilterRow label="Area">
           {topFolders.map(f => (
             <Chip
               key={f.id}
@@ -83,12 +82,11 @@ export default function Filters({
               onClick={() => setFilterFolder(filterFolder?.id === f.id ? null : f)}
             />
           ))}
-        </div>
+        </FilterRow>
       )}
 
       {/* Type filter */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
-        <Label text="Type" />
+      <FilterRow label="Type">
         {FILE_TYPES.map(t => (
           <Chip
             key={t.key}
@@ -97,12 +95,11 @@ export default function Filters({
             onClick={() => setFilterType(filterType === t.key ? null : t.key)}
           />
         ))}
-      </div>
+      </FilterRow>
 
       {/* Owner filter */}
       {owners.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
-          <Label text="Owner" />
+        <FilterRow label="Owner">
           {owners.slice(0, 8).map(o => (
             <Chip
               key={o.email}
@@ -111,27 +108,27 @@ export default function Filters({
               onClick={() => setFilterOwner(filterOwner === o.email ? null : o.email)}
             />
           ))}
-        </div>
+        </FilterRow>
       )}
 
       {/* Date + sort row */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
-        <Label text="Modified" />
+        <FilterLabel text="Modified" />
         <DateInput value={filterDateAfter} onChange={setFilterDateAfter} placeholder="After" />
         <DateInput value={filterDateBefore} onChange={setFilterDateBefore} placeholder="Before" />
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Label text="Sort" />
+          <FilterLabel text="Sort" />
           <select
             value={sortBy}
             onChange={e => setSortBy(e.target.value)}
             style={{
-              fontSize: 11,
-              fontFamily: "'IBM Plex Mono', monospace",
-              fontWeight: 600,
-              padding: '4px 8px',
+              fontSize: 12,
+              fontFamily: 'var(--sans)',
+              fontWeight: 700,
+              padding: '5px 10px',
               border: '1.5px solid var(--border)',
-              borderRadius: 6,
+              borderRadius: 'var(--radius-sm)',
               background: 'var(--surface)',
               color: 'var(--text)',
               cursor: 'pointer',
@@ -148,16 +145,21 @@ export default function Filters({
 
       {/* Results count + clear */}
       {hasFilters && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: "'IBM Plex Mono', monospace" }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
             {totalShown} result{totalShown !== 1 ? 's' : ''}
           </span>
           <button
             onClick={clearFilters}
             style={{
-              fontSize: 11, fontWeight: 600, fontFamily: "'IBM Plex Mono', monospace",
-              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)',
+              fontSize: 12, fontWeight: 700,
+              fontFamily: 'var(--sans)',
+              background: 'none', border: 'none',
+              cursor: 'pointer', color: 'var(--accent)',
+              padding: '2px 4px', borderRadius: 4,
             }}
+            onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+            onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
           >
             Clear all
           </button>
@@ -167,13 +169,23 @@ export default function Filters({
   );
 }
 
-function Label({ text }) {
+function FilterRow({ label, children }) {
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+      <FilterLabel text={label} />
+      {children}
+    </div>
+  );
+}
+
+function FilterLabel({ text }) {
   return (
     <span style={{
-      fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)',
-      letterSpacing: 1, textTransform: 'uppercase',
-      fontFamily: "'IBM Plex Mono', monospace",
-      marginRight: 4, flexShrink: 0,
+      fontSize: 11, fontWeight: 800,
+      color: 'var(--text-muted)',
+      letterSpacing: 0.9, textTransform: 'uppercase',
+      fontFamily: 'var(--sans)',
+      flexShrink: 0, minWidth: 46,
     }}>
       {text}
     </span>
@@ -188,13 +200,14 @@ function DateInput({ value, onChange, placeholder }) {
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       style={{
-        fontSize: 11,
-        fontFamily: "'IBM Plex Mono', monospace",
-        padding: '4px 8px',
+        fontSize: 12,
+        fontFamily: 'var(--sans)',
+        fontWeight: 600,
+        padding: '5px 10px',
         border: '1.5px solid var(--border)',
-        borderRadius: 6,
+        borderRadius: 'var(--radius-sm)',
         background: 'var(--surface)',
-        color: value ? 'var(--text)' : 'var(--text-secondary)',
+        color: value ? 'var(--text)' : 'var(--text-muted)',
         outline: 'none',
         cursor: 'pointer',
       }}

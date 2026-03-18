@@ -1,65 +1,59 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&family=IBM+Plex+Mono:wght@400;600;700&display=swap');
+
 :root {
-  --bg: #FAFAF9;
+  --bg: #F3F6FB;
   --surface: #FFFFFF;
-  --surface-raised: #F5F5F4;
-  --border: #E7E5E4;
-  --border-strong: #D6D3D1;
-  --text: #1C1917;
-  --text-secondary: #78716C;
-  --accent: #B45309;
-  --accent-light: #FEF3C7;
-  --hover: rgba(0, 0, 0, 0.03);
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --surface-raised: #EDF2F9;
+  --border: #E0E7F0;
+  --border-strong: #BFD0E8;
+  --text: #262B40;
+  --text-secondary: #66799E;
+  --text-muted: #93A2BB;
+  --accent: #0648B3;
+  --accent-hover: #0B5FCC;
+  --accent-light: #EBF1FB;
+  --danger: #EE5050;
+  --danger-light: #FEF0F0;
+  --success: #05A677;
+  --success-light: #E6F7F2;
+  --hover: rgba(6, 72, 179, 0.035);
+  --shadow: 0 2px 12px rgba(38, 43, 64, 0.07), 0 1px 3px rgba(38, 43, 64, 0.04);
+  --shadow-elevated: 0 8px 32px rgba(38, 43, 64, 0.11);
+  --shadow-navbar: 0 2px 8px rgba(38, 43, 64, 0.05);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-xs: 5px;
+  --sans: 'Nunito Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'IBM Plex Mono', 'Menlo', monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0C0A09;
-    --surface: #1C1917;
-    --surface-raised: #292524;
-    --border: #292524;
-    --border-strong: #44403C;
-    --text: #FAFAF9;
-    --text-secondary: #A8A29E;
-    --accent: #F59E0B;
-    --accent-light: #451A03;
-    --hover: rgba(255, 255, 255, 0.04);
-    --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  }
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-input:focus,
-select:focus {
-  outline: none;
-}
+input:focus, select:focus { outline: none; }
 
 button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-::-webkit-scrollbar {
-  width: 6px;
-}
+::placeholder { color: var(--text-muted); }
 
-::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
-  border-radius: 3px;
-}
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }

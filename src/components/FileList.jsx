@@ -1,20 +1,20 @@
-import React from 'react';
+import { useRef } from 'react';
 import { formatSize, formatDate, getFileType, getFileColor } from '../utils/helpers';
 
-function FileIcon({ mimeType, size = 18 }) {
+function FileIcon({ mimeType, size = 16 }) {
   const color = getFileColor(mimeType);
   const isFolder = mimeType === 'application/vnd.google-apps.folder';
 
   if (isFolder) {
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width={size} height={size} viewBox="0 0 24 24" fill={color + '22'} stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
       </svg>
     );
   }
 
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={color + '14'} stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
       <polyline points="14 2 14 8 20 8"/>
       <line x1="16" y1="13" x2="8" y2="13"/>
@@ -23,167 +23,211 @@ function FileIcon({ mimeType, size = 18 }) {
   );
 }
 
-function ExternalLinkIcon() {
+function TypeBadge({ mimeType }) {
+  const color = getFileColor(mimeType);
+  const label = getFileType(mimeType);
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
-      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-      <polyline points="15 3 21 3 21 9"/>
-      <line x1="10" y1="14" x2="21" y2="3"/>
-    </svg>
+    <span style={{
+      display: 'inline-block',
+      padding: '2px 7px',
+      background: color + '15',
+      color,
+      borderRadius: 20,
+      fontWeight: 700,
+      fontSize: 10,
+      fontFamily: 'var(--sans)',
+      letterSpacing: 0.3,
+      whiteSpace: 'nowrap',
+    }}>
+      {label}
+    </span>
   );
 }
 
-export default function FileList({ results, loading, nextPageToken, loadMore }) {
+function FileRow({ file, onSingleClick, onDoubleClick }) {
+  const clickTimerRef = useRef(null);
+
+  const handleClick = () => {
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+      onDoubleClick?.(file);
+    } else {
+      clickTimerRef.current = setTimeout(() => {
+        clickTimerRef.current = null;
+        onSingleClick?.(file);
+      }, 230);
+    }
+  };
+
+  return (
+    <div
+      onClick={handleClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '10px 20px',
+        borderBottom: '1px solid var(--border)',
+        cursor: 'pointer',
+        transition: 'background 0.1s',
+        userSelect: 'none',
+        position: 'relative',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.background = 'var(--hover)';
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.background = 'transparent';
+      }}
+    >
+      {/* Icon */}
+      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', width: 22 }}>
+        <FileIcon mimeType={file.mimeType} />
+      </div>
+
+      {/* Name + badge */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{
+          fontSize: 13,
+          fontWeight: 700,
+          fontFamily: 'var(--mono)',
+          color: 'var(--text)',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}>
+          {file.name}
+        </span>
+        <TypeBadge mimeType={file.mimeType} />
+        {file.size && (
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--mono)', flexShrink: 0 }}>
+            {formatSize(file.size)}
+          </span>
+        )}
+      </div>
+
+      {/* Owner */}
+      <div style={{
+        fontSize: 12,
+        fontWeight: 600,
+        color: 'var(--text-secondary)',
+        textAlign: 'right',
+        flexShrink: 0,
+        width: 140,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      }}>
+        {file.lastModifyingUser?.displayName || file.owners?.[0]?.displayName || '—'}
+      </div>
+
+      {/* Modified date */}
+      <div style={{
+        fontSize: 12,
+        fontWeight: 600,
+        color: 'var(--text-muted)',
+        textAlign: 'right',
+        flexShrink: 0,
+        width: 80,
+        fontFamily: 'var(--mono)',
+      }}>
+        {formatDate(file.modifiedTime)}
+      </div>
+    </div>
+  );
+}
+
+function ColumnHeader() {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      padding: '9px 20px',
+      background: 'var(--surface-raised)',
+      borderBottom: '1px solid var(--border)',
+      position: 'sticky',
+      top: 0,
+      zIndex: 1,
+    }}>
+      <div style={{ width: 22, flexShrink: 0 }} />
+      <div style={{ flex: 1, fontSize: 10, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.9 }}>
+        Name
+      </div>
+      <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.9, flexShrink: 0, width: 140, textAlign: 'right' }}>
+        Owner
+      </div>
+      <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.9, flexShrink: 0, width: 80, textAlign: 'right' }}>
+        Modified
+      </div>
+    </div>
+  );
+}
+
+export default function FileList({ results, loading, nextPageToken, loadMore, onSingleClick, onDoubleClick }) {
   if (loading && results.length === 0) {
     return (
-      <div style={{
-        padding: 60, textAlign: 'center',
-        color: 'var(--text-secondary)',
-        fontFamily: "'IBM Plex Mono', monospace",
-        fontSize: 13,
-      }}>
+      <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)' }}>
         <div style={{
-          width: 24, height: 24, margin: '0 auto 12px',
-          border: '2.5px solid var(--border)',
+          width: 28, height: 28, margin: '0 auto 14px',
+          border: '3px solid var(--border)',
           borderTopColor: 'var(--accent)',
           borderRadius: '50%',
-          animation: 'spin 0.6s linear infinite',
+          animation: 'spin 0.65s linear infinite',
         }} />
-        Searching your Drive...
+        <div style={{ fontSize: 13, fontWeight: 600 }}>Searching your Drive...</div>
       </div>
     );
   }
 
   if (!loading && results.length === 0) {
     return (
-      <div style={{
-        padding: 60, textAlign: 'center',
-        color: 'var(--text-secondary)',
-        fontFamily: "'IBM Plex Mono', monospace",
-        fontSize: 13,
-      }}>
-        No files found
+      <div style={{ padding: 60, textAlign: 'center' }}>
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border-strong)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 14px', display: 'block' }}>
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }}>No files found</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Try adjusting your search or filters</div>
       </div>
     );
   }
 
   return (
     <div>
+      <ColumnHeader />
+
       {results.map((file) => (
-        <a
+        <FileRow
           key={file.id}
-          href={file.webViewLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            padding: '8px 12px',
-            borderRadius: 8,
-            textDecoration: 'none',
-            color: 'inherit',
-            transition: 'background 0.1s',
-            cursor: 'pointer',
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--hover)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-        >
-          {/* Icon */}
-          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-            <FileIcon mimeType={file.mimeType} />
-          </div>
-
-          {/* Name + type */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{
-              fontSize: 13,
-              fontWeight: 600,
-              fontFamily: "'IBM Plex Mono', monospace",
-              color: 'var(--text)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}>
-              {file.name}
-            </div>
-            <div style={{
-              fontSize: 11,
-              color: 'var(--text-secondary)',
-              fontFamily: "'IBM Plex Mono', monospace",
-              marginTop: 1,
-              display: 'flex',
-              gap: 8,
-              flexWrap: 'wrap',
-            }}>
-              <span style={{
-                padding: '0 5px',
-                background: getFileColor(file.mimeType) + '18',
-                color: getFileColor(file.mimeType),
-                borderRadius: 3,
-                fontWeight: 600,
-                fontSize: 10,
-              }}>
-                {getFileType(file.mimeType)}
-              </span>
-              {file.size && <span>{formatSize(file.size)}</span>}
-            </div>
-          </div>
-
-          {/* Owner */}
-          <div style={{
-            fontSize: 11,
-            color: 'var(--text-secondary)',
-            fontFamily: "'IBM Plex Mono', monospace",
-            textAlign: 'right',
-            flexShrink: 0,
-            maxWidth: 120,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}>
-            {file.lastModifyingUser?.displayName ||
-             file.owners?.[0]?.displayName || '—'}
-          </div>
-
-          {/* Modified date */}
-          <div style={{
-            fontSize: 11,
-            color: 'var(--text-secondary)',
-            fontFamily: "'IBM Plex Mono', monospace",
-            textAlign: 'right',
-            flexShrink: 0,
-            width: 70,
-          }}>
-            {formatDate(file.modifiedTime)}
-          </div>
-
-          {/* External link icon */}
-          <div style={{ flexShrink: 0, color: 'var(--text-secondary)' }}>
-            <ExternalLinkIcon />
-          </div>
-        </a>
+          file={file}
+          onSingleClick={onSingleClick}
+          onDoubleClick={onDoubleClick}
+        />
       ))}
 
       {/* Load more */}
       {nextPageToken && (
-        <div style={{ padding: '12px 12px 8px', textAlign: 'center' }}>
+        <div style={{ padding: '14px 20px', textAlign: 'center', borderTop: '1px solid var(--border)' }}>
           <button
             onClick={loadMore}
             disabled={loading}
             style={{
               fontSize: 12,
-              fontWeight: 600,
-              fontFamily: "'IBM Plex Mono', monospace",
-              padding: '8px 24px',
+              fontWeight: 700,
+              fontFamily: 'var(--sans)',
+              padding: '8px 28px',
               border: '1.5px solid var(--border)',
-              borderRadius: 8,
+              borderRadius: 'var(--radius-sm)',
               background: 'var(--surface)',
-              color: 'var(--text)',
+              color: 'var(--text-secondary)',
               cursor: loading ? 'wait' : 'pointer',
               transition: 'all 0.15s',
               opacity: loading ? 0.6 : 1,
             }}
+            onMouseEnter={e => { if (!loading) { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
           >
             {loading ? 'Loading...' : 'Load more results'}
           </button>

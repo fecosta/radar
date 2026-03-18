@@ -209,6 +209,24 @@ export async function listTopFolders(token, sharedDriveId) {
 }
 
 /**
+ * List subfolders inside a given folder
+ */
+export async function listSubfolders(token, folderId, sharedDriveId) {
+  const result = await driveRequest('/files', token, {
+    q: `'${folderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+    corpora: 'drive',
+    driveId: sharedDriveId,
+    includeItemsFromAllDrives: true,
+    supportsAllDrives: true,
+    fields: 'files(id, name, mimeType, modifiedTime, webViewLink, owners, parents, createdTime, lastModifyingUser)',
+    pageSize: 100,
+    orderBy: 'name',
+  });
+
+  return result.files || [];
+}
+
+/**
  * Get Shared Drive metadata
  */
 export async function getDriveInfo(token, sharedDriveId) {
