@@ -7,8 +7,55 @@ import LoginScreen from './components/LoginScreen';
 import SearchBar from './components/SearchBar';
 import Filters from './components/Filters';
 import FileList from './components/FileList';
+import Classify from './components/Classify';
 
 const SHARED_DRIVE_ID = import.meta.env.VITE_SHARED_DRIVE_ID;
+
+/* ─── Mode tabs ───────────────────────────────────────────── */
+
+const MODES = [
+  { key: 'search', label: 'Search' },
+  { key: 'classify', label: 'Classify' },
+];
+
+function ModeTabs({ mode, onChange }) {
+  return (
+    <div style={{
+      display: 'inline-flex',
+      gap: 3,
+      padding: 3,
+      background: 'var(--surface)',
+      border: '1.5px solid var(--border)',
+      borderRadius: 'var(--radius-sm)',
+      marginBottom: 20,
+    }}>
+      {MODES.map(m => {
+        const active = mode === m.key;
+        return (
+          <button
+            key={m.key}
+            onClick={() => onChange(m.key)}
+            style={{
+              padding: '6px 18px',
+              fontSize: 12, fontWeight: 700,
+              fontFamily: 'var(--sans)',
+              border: 'none',
+              borderRadius: 'var(--radius-xs)',
+              background: active ? 'var(--accent)' : 'transparent',
+              color: active ? '#fff' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--hover)'; }}
+            onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+          >
+            {m.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 /* ─── Detail panel ────────────────────────────────────────── */
 
@@ -150,6 +197,7 @@ export default function App() {
   const { user, token, loading: authLoading, error: authError, signIn, signOut } = useAuth();
   const search = useDriveSearch(token);
 
+  const [mode, setMode] = useState('search');
   const [selectedItem, setSelectedItem] = useState(null);
   const [browseStack, setBrowseStack] = useState([]);
   const [browseLoading, setBrowseLoading] = useState(false);
@@ -268,109 +316,121 @@ export default function App() {
       {/* ── Content ── */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 32px 60px' }}>
 
-        {/* Search + filters card */}
-        <div style={{
-          background: 'var(--surface)',
-          borderRadius: 'var(--radius)',
-          boxShadow: 'var(--shadow)',
-          padding: '20px 24px',
-          marginBottom: 20,
-        }}>
-          <SearchBar query={search.query} onChange={search.handleQueryChange} loading={search.loading} />
-          <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-            <Filters
-              topFolders={search.topFolders}
-              owners={search.owners}
-              filterFolder={search.filterFolder}
-              setFilterFolder={search.setFilterFolder}
-              filterType={search.filterType}
-              setFilterType={search.setFilterType}
-              filterOwner={search.filterOwner}
-              setFilterOwner={search.setFilterOwner}
-              filterDateAfter={search.filterDateAfter}
-              setFilterDateAfter={search.setFilterDateAfter}
-              filterDateBefore={search.filterDateBefore}
-              setFilterDateBefore={search.setFilterDateBefore}
-              sortBy={search.sortBy}
-              setSortBy={search.setSortBy}
-              hasFilters={search.hasFilters}
-              clearFilters={search.clearFilters}
-              totalShown={search.totalShown}
-            />
-          </div>
-        </div>
+        <ModeTabs mode={mode} onChange={setMode} />
 
-        {/* Folder breadcrumb */}
-        {browseStack.length > 0 && (
+        {/* ── Search mode ── */}
+        {/* Kept mounted while classifying so query, filters and browse position survive. */}
+        <div style={{ display: mode === 'search' ? 'block' : 'none' }}>
+
+          {/* Search + filters card */}
           <div style={{
-            display: 'flex', alignItems: 'center',
-            gap: 8, marginBottom: 12,
+            background: 'var(--surface)',
+            borderRadius: 'var(--radius)',
+            boxShadow: 'var(--shadow)',
+            padding: '20px 24px',
+            marginBottom: 20,
           }}>
-            <button
-              onClick={handleBack}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                background: 'var(--surface)',
-                border: '1.5px solid var(--border)',
-                borderRadius: 'var(--radius-sm)',
-                padding: '5px 12px',
-                cursor: 'pointer',
-                color: 'var(--text-secondary)',
-                fontSize: 12, fontWeight: 700,
-                transition: 'all 0.15s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
-              </svg>
-              Back
-            </button>
-
-            <span style={{ color: 'var(--border-strong)', fontSize: 12 }}>·</span>
-
-            {browseStack.map((entry, i) => (
-              <React.Fragment key={entry.folder.id}>
-                {i > 0 && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>/</span>}
-                <span style={{
-                  fontSize: 13, fontWeight: 700,
-                  color: i === browseStack.length - 1 ? 'var(--text)' : 'var(--text-secondary)',
-                }}>
-                  {entry.folder.name}
-                </span>
-              </React.Fragment>
-            ))}
-          </div>
-        )}
-
-        {/* Results area */}
-        <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-          {/* File list card */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{
-              background: 'var(--surface)',
-              borderRadius: 'var(--radius)',
-              boxShadow: 'var(--shadow)',
-              overflow: 'hidden',
-              maxHeight: 'calc(100vh - 320px)',
-              overflowY: 'auto',
-            }}>
-              <FileList
-                results={displayItems}
-                loading={displayLoading}
-                nextPageToken={currentBrowseItems ? null : search.nextPageToken}
-                loadMore={currentBrowseItems ? undefined : search.loadMore}
-                onSingleClick={handleSingleClick}
-                onDoubleClick={handleDoubleClick}
+            <SearchBar query={search.query} onChange={search.handleQueryChange} loading={search.loading} />
+            <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+              <Filters
+                topFolders={search.topFolders}
+                owners={search.owners}
+                filterFolder={search.filterFolder}
+                setFilterFolder={search.setFilterFolder}
+                filterType={search.filterType}
+                setFilterType={search.setFilterType}
+                filterOwner={search.filterOwner}
+                setFilterOwner={search.setFilterOwner}
+                filterDateAfter={search.filterDateAfter}
+                setFilterDateAfter={search.setFilterDateAfter}
+                filterDateBefore={search.filterDateBefore}
+                setFilterDateBefore={search.setFilterDateBefore}
+                sortBy={search.sortBy}
+                setSortBy={search.setSortBy}
+                hasFilters={search.hasFilters}
+                clearFilters={search.clearFilters}
+                totalShown={search.totalShown}
               />
             </div>
           </div>
 
-          {/* Detail panel */}
-          {selectedItem && (
-            <DetailPanel item={selectedItem} onClose={() => setSelectedItem(null)} />
+          {/* Folder breadcrumb */}
+          {browseStack.length > 0 && (
+            <div style={{
+              display: 'flex', alignItems: 'center',
+              gap: 8, marginBottom: 12,
+            }}>
+              <button
+                onClick={handleBack}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  background: 'var(--surface)',
+                  border: '1.5px solid var(--border)',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '5px 12px',
+                  cursor: 'pointer',
+                  color: 'var(--text-secondary)',
+                  fontSize: 12, fontWeight: 700,
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                </svg>
+                Back
+              </button>
+
+              <span style={{ color: 'var(--border-strong)', fontSize: 12 }}>·</span>
+
+              {browseStack.map((entry, i) => (
+                <React.Fragment key={entry.folder.id}>
+                  {i > 0 && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>/</span>}
+                  <span style={{
+                    fontSize: 13, fontWeight: 700,
+                    color: i === browseStack.length - 1 ? 'var(--text)' : 'var(--text-secondary)',
+                  }}>
+                    {entry.folder.name}
+                  </span>
+                </React.Fragment>
+              ))}
+            </div>
           )}
+
+          {/* Results area */}
+          <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+            {/* File list card */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{
+                background: 'var(--surface)',
+                borderRadius: 'var(--radius)',
+                boxShadow: 'var(--shadow)',
+                overflow: 'hidden',
+                maxHeight: 'calc(100vh - 320px)',
+                overflowY: 'auto',
+              }}>
+                <FileList
+                  results={displayItems}
+                  loading={displayLoading}
+                  nextPageToken={currentBrowseItems ? null : search.nextPageToken}
+                  loadMore={currentBrowseItems ? undefined : search.loadMore}
+                  onSingleClick={handleSingleClick}
+                  onDoubleClick={handleDoubleClick}
+                />
+              </div>
+            </div>
+
+            {/* Detail panel */}
+            {selectedItem && (
+              <DetailPanel item={selectedItem} onClose={() => setSelectedItem(null)} />
+            )}
+          </div>
+        </div>
+
+        {/* ── Classify mode ── */}
+        <div style={{ display: mode === 'classify' ? 'block' : 'none' }}>
+          <Classify />
         </div>
       </div>
     </div>
