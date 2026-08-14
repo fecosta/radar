@@ -279,6 +279,16 @@ export default function Classify() {
         }}>
           Describe the file, note, document, photo, report, or material in English, Spanish, or Portuguese. RADAR will suggest its official folder and a consistent file name.
         </h4>
+        <h5 style={{
+          fontSize: 16,
+          fontWeight: 700,
+          fontFamily: 'var(--sans)',
+          color: 'var(--text)',
+          lineHeight: 1.45,
+          marginBottom: 20,
+        }}>
+          Describe what you want to save
+        </h5>
 
         {/* Description */}
         <div style={{
@@ -296,7 +306,7 @@ export default function Classify() {
             onBlur={() => setFocused(false)}
             onKeyDown={handleKeyDown}
             rows={4}
-            placeholder="Describe what you want to save — e.g. 'Board meeting minutes for August' or 'Fotos del evento de Beca Tech'"
+            placeholder="Board meeting minutes for August' or 'Fotos del evento de Beca Tech"
             style={{
               display: 'block',
               width: '100%',
