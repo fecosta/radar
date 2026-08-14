@@ -8,6 +8,7 @@ import SearchBar from './components/SearchBar';
 import Filters from './components/Filters';
 import FileList from './components/FileList';
 import Classify from './components/Classify';
+import CreateStructure from './components/CreateStructure/CreateStructure';
 import ErrorBoundary from './components/ErrorBoundary';
 
 const SHARED_DRIVE_ID = import.meta.env.VITE_SHARED_DRIVE_ID;
@@ -52,6 +53,7 @@ function AuthSplash() {
 const MODES = [
   { key: 'search', label: 'Search' },
   { key: 'classify', label: 'Classify' },
+  { key: 'create', label: 'Create structure' },
 ];
 
 function ModeTabs({ mode, onChange }) {
@@ -504,6 +506,21 @@ export default function App() {
         >
           <ErrorBoundary label="the Classify tab">
             <Classify />
+          </ErrorBoundary>
+        </div>
+
+        {/* ── Create structure mode ── */}
+        {/* Unmounted while inactive: this is the only write-capable workflow, so it should not
+            hold an elevated token or a half-finished plan in a tab nobody is looking at. */}
+        <div
+          role="tabpanel"
+          id="panel-create"
+          aria-labelledby="tab-create"
+          tabIndex={0}
+          style={{ display: mode === 'create' ? 'block' : 'none' }}
+        >
+          <ErrorBoundary label="the Create structure tab">
+            {mode === 'create' && <CreateStructure user={user} />}
           </ErrorBoundary>
         </div>
       </div>
