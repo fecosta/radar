@@ -108,7 +108,8 @@ conflict and left untouched — one object has exactly one official home.
 
 ### Audit spreadsheet
 
-Must already exist with this exact header row, in this order:
+Must already exist, with these columns present in the header row. Columns are matched **by
+name**, so order does not matter and extra columns of your own are left untouched:
 
 ```
 Timestamp | Actor | Structure_Type | Inputs | Destination_Path | Plan_Hash | Operation_Id |
@@ -120,6 +121,76 @@ is not much of an audit trail. One row is appended per attempted execution — s
 success and failure alike. Events are assembled field by field from a known shape, and keys
 matching `token|secret|password|credential|authorization|api key` are dropped, so tokens and
 file contents cannot leak in.
+
+### Creating the two spreadsheets
+
+RADAR deliberately does not create these for you. Both take about a minute by hand.
+
+**1. Master Registry**
+
+Create a Google Sheet in the Shared Drive — the canonical home per the v05 spec is
+`02_INVESTMENTS_AND_PROGRAMS/00_MASTER_INDEXES/00_Master_Registry`. Paste this into cell
+**A1** (it is tab-separated, so it spreads across the row):
+
+```
+Object_Name	Theme	Strategic_Focus	Object_Type	Current_Stage_or_Status	Country_or_Geography	Owner	Official_Folder_Link	Last_Updated	Decline_or_Closure_Reason	Decision_Link
+```
+
+Only `Object_Name`, `Theme`, `Object_Type` and `Official_Folder_Link` are strictly required;
+the rest are populated when present.
+
+**2. Audit log**
+
+Create a second Google Sheet. Paste this into cell **A1**:
+
+```
+Timestamp	Actor	Structure_Type	Inputs	Destination_Path	Plan_Hash	Operation_Id	Outcome	Created_Items	Reused_Items	Registry_Result	Warnings	Failure_Stage	Error
+```
+
+All fourteen are required. Consider restricting access to this sheet more tightly than the
+Drive itself — it records who did what.
+
+**3. Wire them up**
+
+Take each ID from its URL:
+
+```
+https://docs.google.com/spreadsheets/d/THIS_PART_IS_THE_ID/edit#gid=0
+```
+
+Put them in `.env`:
+
+```
+VITE_RADAR_REGISTRY_SHEET_ID=...
+VITE_RADAR_AUDIT_SHEET_ID=...
+```
+
+**Restart the dev server.** These are build-time variables, so Vite does not pick up an edited
+`.env` on hot reload — the app will keep reporting "not configured" until you restart.
+
+> **Note:** these two spreadsheet IDs are the only things RADAR touches that are *not* pinned
+> to the configured Shared Drive. Everything else is verified to be inside it. That is a
+> deliberate consequence of configuring them by ID: it lets the audit log live somewhere with
+> tighter access than the Drive. The trade-off is that a mistyped ID points RADAR at whatever
+> spreadsheet that ID happens to name, so check them.
+
+### Troubleshooting the Registry and audit sheets
+
+Failures name their cause in the result screen, and the browser console carries the structured
+error (`[RADAR] audit write failed`).
+
+| Message | Cause | Fix |
+|---|---|---|
+| "No audit spreadsheet is configured…" | `VITE_RADAR_AUDIT_SHEET_ID` unset or empty | set it, then restart the dev server |
+| "…could not be found — check `VITE_RADAR_AUDIT_SHEET_ID`" | the ID names no spreadsheet | re-copy the ID from the URL |
+| "…header row is missing required columns" | sheet exists, columns wrong | paste the header row above into A1 |
+| "Google refused access…" | no edit access, or the Sheets permission was declined | get access; sign out and back in to re-consent |
+| "No Master Registry is configured…" | `VITE_RADAR_REGISTRY_SHEET_ID` unset | set it, then restart the dev server |
+| "…already records a different official folder" | the object already has an official home | resolve the Registry row by hand; RADAR will not create a second home |
+
+A failed audit or Registry write never rolls back the folders — they were created. Fix the
+configuration and re-run: creation is idempotent, so the existing folders are reused and only
+the missing record is written.
 
 ## Local development
 
