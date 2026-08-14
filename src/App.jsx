@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { useDriveSearch } from './hooks/useDriveSearch';
 import { listSubfolders } from './utils/driveApi';
@@ -8,8 +8,44 @@ import SearchBar from './components/SearchBar';
 import Filters from './components/Filters';
 import FileList from './components/FileList';
 import Classify from './components/Classify';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const SHARED_DRIVE_ID = import.meta.env.VITE_SHARED_DRIVE_ID;
+
+/* ─── Auth splash ─────────────────────────────────────────── */
+
+/* Shown while GIS loads and the silent token request resolves, so a reload with a live
+   Google session never flashes the sign-in card. */
+function AuthSplash() {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'var(--bg)',
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      gap: 22,
+    }}>
+      <div style={{
+        width: 38, height: 38,
+        background: 'linear-gradient(135deg, #0648B3 0%, #1A80E8 100%)',
+        borderRadius: 11,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 4px 12px rgba(6, 72, 179, 0.3)',
+      }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </div>
+      <div style={{
+        width: 28, height: 28,
+        border: '3px solid var(--border)',
+        borderTopColor: 'var(--accent)',
+        borderRadius: '50%',
+        animation: 'spin 0.65s linear infinite',
+      }} />
+    </div>
+  );
+}
 
 /* ─── Mode tabs ───────────────────────────────────────────── */
 
@@ -19,21 +55,49 @@ const MODES = [
 ];
 
 function ModeTabs({ mode, onChange }) {
+  const tabRefs = useRef([]);
+
+  /* Roving tabindex: the tablist is a single tab stop and the arrows move within it,
+     so Tab doesn't have to walk past every tab to reach the panel. */
+  const handleKeyDown = (e) => {
+    const current = MODES.findIndex(m => m.key === mode);
+    let next;
+    if (e.key === 'ArrowRight') next = (current + 1) % MODES.length;
+    else if (e.key === 'ArrowLeft') next = (current - 1 + MODES.length) % MODES.length;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = MODES.length - 1;
+    else return;
+
+    e.preventDefault();
+    onChange(MODES[next].key);
+    tabRefs.current[next]?.focus();
+  };
+
   return (
-    <div style={{
-      display: 'inline-flex',
-      gap: 3,
-      padding: 3,
-      background: 'var(--surface)',
-      border: '1.5px solid var(--border)',
-      borderRadius: 'var(--radius-sm)',
-      marginBottom: 20,
-    }}>
-      {MODES.map(m => {
+    <div
+      role="tablist"
+      aria-label="View"
+      onKeyDown={handleKeyDown}
+      style={{
+        display: 'inline-flex',
+        gap: 3,
+        padding: 3,
+        background: 'var(--surface)',
+        border: '1.5px solid var(--border)',
+        borderRadius: 'var(--radius-sm)',
+        marginBottom: 20,
+      }}>
+      {MODES.map((m, i) => {
         const active = mode === m.key;
         return (
           <button
             key={m.key}
+            ref={el => { tabRefs.current[i] = el; }}
+            role="tab"
+            id={`tab-${m.key}`}
+            aria-selected={active}
+            aria-controls={`panel-${m.key}`}
+            tabIndex={active ? 0 : -1}
             onClick={() => onChange(m.key)}
             style={{
               padding: '6px 18px',
@@ -194,7 +258,7 @@ function DetailPanel({ item, onClose }) {
 /* ─── App ─────────────────────────────────────────────────── */
 
 export default function App() {
-  const { user, token, loading: authLoading, error: authError, signIn, signOut } = useAuth();
+  const { user, token, initializing: authInitializing, loading: authLoading, error: authError, signIn, signOut } = useAuth();
   const search = useDriveSearch(token);
 
   const [mode, setMode] = useState('search');
@@ -237,6 +301,10 @@ export default function App() {
     setSelectedItem(null);
   };
 
+  if (authInitializing) {
+    return <AuthSplash />;
+  }
+
   if (!token) {
     return <LoginScreen onSignIn={signIn} loading={authLoading} error={authError} />;
   }
@@ -255,28 +323,14 @@ export default function App() {
         boxShadow: 'var(--shadow-navbar)',
         padding: '0 32px',
         height: 64,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-around',
       }}>
         {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{
-            width: 38, height: 38,
-            background: 'linear-gradient(135deg, #0648B3 0%, #1A80E8 100%)',
-            borderRadius: 11,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(6, 72, 179, 0.3)',
-            flexShrink: 0,
-          }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-          </div>
           <div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.4, lineHeight: 1.2 }}>
-              VélezReyes+
-            </div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>
-              Drive Search
+            <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.4, lineHeight: 1.2 }}>RADAR</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', lineHeight: 1.2 }}>
+              <h4>Repository for Assets, Decisions, Analysis, and Research</h4>
             </div>
           </div>
         </div>
@@ -319,8 +373,18 @@ export default function App() {
         <ModeTabs mode={mode} onChange={setMode} />
 
         {/* ── Search mode ── */}
-        {/* Kept mounted while classifying so query, filters and browse position survive. */}
-        <div style={{ display: mode === 'search' ? 'block' : 'none' }}>
+        {/* Kept mounted while classifying so query, filters and browse position survive.
+            Visibility stays on `display` rather than `hidden`, which an inline
+            display:block would override. */}
+        <div
+          role="tabpanel"
+          id="panel-search"
+          aria-labelledby="tab-search"
+          tabIndex={0}
+          style={{ display: mode === 'search' ? 'block' : 'none' }}
+        >
+          {/* Boundary sits inside the toggle so a crash in a hidden tab stays hidden. */}
+          <ErrorBoundary label="the Search tab">
 
           {/* Search + filters card */}
           <div style={{
@@ -426,11 +490,21 @@ export default function App() {
               <DetailPanel item={selectedItem} onClose={() => setSelectedItem(null)} />
             )}
           </div>
+
+          </ErrorBoundary>
         </div>
 
         {/* ── Classify mode ── */}
-        <div style={{ display: mode === 'classify' ? 'block' : 'none' }}>
-          <Classify />
+        <div
+          role="tabpanel"
+          id="panel-classify"
+          aria-labelledby="tab-classify"
+          tabIndex={0}
+          style={{ display: mode === 'classify' ? 'block' : 'none' }}
+        >
+          <ErrorBoundary label="the Classify tab">
+            <Classify />
+          </ErrorBoundary>
         </div>
       </div>
     </div>

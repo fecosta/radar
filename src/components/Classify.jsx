@@ -26,10 +26,13 @@ const CONFIDENCE = {
 
 /* Radio-style variant of the Filters chip — one option is always selected,
    so there is no ✕ affordance to clear it. */
-function Chip({ label, active, onClick }) {
+function Chip({ label, active, onClick, role, tabIndex }) {
   return (
     <button
       onClick={onClick}
+      role={role}
+      aria-checked={role === 'radio' ? active : undefined}
+      tabIndex={tabIndex}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -50,6 +53,49 @@ function Chip({ label, active, onClick }) {
     >
       {label}
     </button>
+  );
+}
+
+/* Single-select chip group, so it follows the radio pattern rather than a row of
+   buttons: the whole group is one tab stop and the arrows move selection and focus
+   together. The chips live in their own wrapper so the FieldRow's text label isn't
+   swallowed into the radiogroup. */
+function RadioChipGroup({ label, ariaLabel, options, value, onChange }) {
+  const onChipKeyDown = (e) => {
+    const count = options.length;
+    const current = options.findIndex(o => o.key === value);
+    let next;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (current + 1) % count;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (current - 1 + count) % count;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = count - 1;
+    else return; // Space/Enter already select via the button's native click
+
+    e.preventDefault();
+    onChange(options[next].key);
+    e.currentTarget.querySelectorAll('[role="radio"]')[next]?.focus();
+  };
+
+  return (
+    <FieldRow label={label}>
+      <div
+        role="radiogroup"
+        aria-label={ariaLabel}
+        onKeyDown={onChipKeyDown}
+        style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}
+      >
+        {options.map(o => (
+          <Chip
+            key={o.key}
+            label={o.label}
+            active={value === o.key}
+            onClick={() => onChange(o.key)}
+            role="radio"
+            tabIndex={value === o.key ? 0 : -1}
+          />
+        ))}
+      </div>
+    </FieldRow>
   );
 }
 
@@ -211,6 +257,29 @@ export default function Classify() {
         boxShadow: 'var(--shadow)',
         padding: '20px 24px',
       }}>
+        {/* Heading */}
+        <h3 style={{
+          fontSize: 22,
+          fontWeight: 800,
+          fontFamily: 'var(--sans)',
+          color: 'var(--text)',
+          letterSpacing: -0.3,
+          lineHeight: 1.25,
+          marginBottom: 5,
+        }}>
+          Where should I save this?
+        </h3>
+        <h4 style={{
+          fontSize: 16,
+          fontWeight: 700,
+          fontFamily: 'var(--sans)',
+          color: 'var(--text)',
+          lineHeight: 1.45,
+          marginBottom: 20,
+        }}>
+          Describe the file, note, document, photo, report, or material in English, Spanish, or Portuguese. RADAR will suggest its official folder and a consistent file name.
+        </h4>
+
         {/* Description */}
         <div style={{
           background: 'var(--surface)',
@@ -269,17 +338,21 @@ export default function Classify() {
             />
           </FieldRow>
 
-          <FieldRow label="Context">
-            {CONTEXTS.map(c => (
-              <Chip key={c.key} label={c.label} active={context === c.key} onClick={() => setContext(c.key)} />
-            ))}
-          </FieldRow>
+          <RadioChipGroup
+            label="Context"
+            ariaLabel="Work context"
+            options={CONTEXTS}
+            value={context}
+            onChange={setContext}
+          />
 
-          <FieldRow label="Theme">
-            {THEMES.map(t => (
-              <Chip key={t.key} label={t.label} active={theme === t.key} onClick={() => setTheme(t.key)} />
-            ))}
-          </FieldRow>
+          <RadioChipGroup
+            label="Theme"
+            ariaLabel="Theme"
+            options={THEMES}
+            value={theme}
+            onChange={setTheme}
+          />
         </div>
 
         {/* Error */}

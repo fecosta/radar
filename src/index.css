@@ -39,6 +39,14 @@ body {
 
 input:focus, select:focus, textarea:focus { outline: none; }
 
+/* ...but keyboard focus must stay visible. `:focus-visible` wins over the rule above
+   for keyboard users while mouse focus stays bare. */
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Covers plain buttons plus the tabs and radio-chips built on them. */
 button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
