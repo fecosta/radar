@@ -40,10 +40,17 @@ Why writes are client-side: **[docs/decisions/0001-client-side-controlled-drive-
 2. Click **Select a project** → **New Project**
 3. Name it `velezreyes-drive-search` → **Create**
 
-### 2. Enable the Google Drive API
+### 2. Enable the Google APIs
 
-1. Go to **APIs & Services → Library**
-2. Search for **Google Drive API** → click **Enable**
+Both are required. Go to **APIs & Services → Library** and enable each:
+
+1. **Google Drive API** — search, then click **Enable**
+2. **Google Sheets API** — search, then click **Enable**
+
+The Sheets API is what the Master Registry and the audit log use. Skipping it is easy to miss
+because search, classification and folder creation all keep working — only spreadsheet writes
+fail, with a `403` that says *"Google Sheets API has not been used in project … or it is
+disabled"*.
 
 ### 3. Create OAuth 2.0 Credentials
 

@@ -181,6 +181,8 @@ error (`[RADAR] audit write failed`).
 
 | Message | Cause | Fix |
 |---|---|---|
+| "The Google Sheets API is not enabled for this Google Cloud project" | the Sheets API was never enabled — see setup step 2 in the README | enable it in **APIs & Services → Library**, wait ~1 minute, retry |
+| "Your Google sign-in is missing the Google Sheets permission" | the token was issued without the `spreadsheets` scope | sign out, sign back in, accept the permission request |
 | "No audit spreadsheet is configured…" | `VITE_RADAR_AUDIT_SHEET_ID` unset or empty | set it, then restart the dev server |
 | "…could not be found — check `VITE_RADAR_AUDIT_SHEET_ID`" | the ID names no spreadsheet | re-copy the ID from the URL |
 | "…header row is missing required columns" | sheet exists, columns wrong | paste the header row above into A1 |
@@ -191,6 +193,13 @@ error (`[RADAR] audit write failed`).
 A failed audit or Registry write never rolls back the folders — they were created. Fix the
 configuration and re-run: creation is idempotent, so the existing folders are reused and only
 the missing record is written.
+
+**Both Google APIs must be enabled.** Drive and Sheets are enabled separately in the Cloud
+project. With only Drive enabled, every part of RADAR works except spreadsheet writes, so the
+first symptom is a successful structure creation whose audit row never appears. The console log
+(`[RADAR] audit write failed`) carries Google's verbatim message under `details.apiMessage`,
+including the project number and activation link; the on-screen message stays generic on
+purpose.
 
 ## Local development
 
