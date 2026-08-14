@@ -86,25 +86,37 @@ export function buildAuditEvent({
   };
 }
 
-/** Serialize an event into the spreadsheet row order above. */
-export function auditEventToRow(event) {
+/**
+ * Serialize an event into a `{ columnName: value }` map.
+ *
+ * Keyed by name rather than position so the adapter can place each value under whichever
+ * column the spreadsheet actually has it in — a hand-built audit sheet should not have to
+ * match a memorised column order.
+ */
+export function auditEventToValues(event) {
   const list = (items) => items.map((i) => `${i.name} (${i.id})`).join('\n');
-  return [
-    event.timestamp,
-    event.actor,
-    event.structureType,
-    JSON.stringify(event.inputs),
-    event.destinationPath,
-    event.planHash,
-    event.operationId,
-    event.outcome,
-    list(event.created),
-    list(event.reused),
-    event.registryResult || '',
-    event.warnings.join(', '),
-    event.failureStage || '',
-    event.error ? JSON.stringify(event.error) : '',
-  ];
+  return {
+    Timestamp: event.timestamp,
+    Actor: event.actor,
+    Structure_Type: event.structureType,
+    Inputs: JSON.stringify(event.inputs),
+    Destination_Path: event.destinationPath,
+    Plan_Hash: event.planHash,
+    Operation_Id: event.operationId,
+    Outcome: event.outcome,
+    Created_Items: list(event.created),
+    Reused_Items: list(event.reused),
+    Registry_Result: event.registryResult || '',
+    Warnings: event.warnings.join(', '),
+    Failure_Stage: event.failureStage || '',
+    Error: event.error ? JSON.stringify(event.error) : '',
+  };
+}
+
+/** The same values in the canonical column order documented above. */
+export function auditEventToRow(event) {
+  const values = auditEventToValues(event);
+  return AUDIT_COLUMNS.map((column) => values[column] ?? '');
 }
 
 /**

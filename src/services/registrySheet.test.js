@@ -250,12 +250,41 @@ describe('audit sheet', () => {
     ).rejects.toMatchObject({ code: ERROR_CODE.CONFIGURATION });
   });
 
-  it('refuses a spreadsheet whose columns are reordered, since rows are positional', async () => {
-    const shuffled = [AUDIT_COLUMNS[1], AUDIT_COLUMNS[0], ...AUDIT_COLUMNS.slice(2)];
+  it('accepts a reordered header row and still lands values in the right columns', async () => {
+    // Columns are matched by name, so a hand-built sheet does not have to match a memorised
+    // order — the most likely way manual setup goes wrong.
+    const shuffled = [AUDIT_COLUMNS[1], AUDIT_COLUMNS[0], ...AUDIT_COLUMNS.slice(2).reverse()];
     const sheets = fakeSheets({ titles: ['Audit'], rows: [shuffled] });
+
+    await createSheetAudit({ sheetsClient: sheets, spreadsheetId: 'audit-id' }).record(event());
+
+    const row = sheets._appended[0].values;
+    expect(row[shuffled.indexOf('Actor')]).toBe('admin@example.test');
+    expect(row[shuffled.indexOf('Timestamp')]).toBe('2026-08-14T10:00:00.000Z');
+    expect(row[shuffled.indexOf('Outcome')]).toBe('success');
+    expect(row[shuffled.indexOf('Created_Items')]).toBe('02_Sourcing (i1)');
+  });
+
+  it('tolerates extra columns the team added, leaving them empty', async () => {
+    const header = ['Reviewed_By', ...AUDIT_COLUMNS, 'Notes'];
+    const sheets = fakeSheets({ titles: ['Audit'], rows: [header] });
+
+    await createSheetAudit({ sheetsClient: sheets, spreadsheetId: 'audit-id' }).record(event());
+
+    const row = sheets._appended[0].values;
+    expect(row[header.indexOf('Actor')]).toBe('admin@example.test');
+    expect(row[header.indexOf('Reviewed_By')]).toBe('');
+    expect(row[header.indexOf('Notes')]).toBe('');
+  });
+
+  it('names exactly which columns are missing', async () => {
+    const sheets = fakeSheets({
+      titles: ['Audit'],
+      rows: [AUDIT_COLUMNS.filter((c) => c !== 'Plan_Hash' && c !== 'Outcome')],
+    });
     await expect(
       createSheetAudit({ sheetsClient: sheets, spreadsheetId: 'audit-id' }).record(event())
-    ).rejects.toThrow(/not in the expected order/);
+    ).rejects.toThrow(/Plan_Hash, Outcome/);
   });
 
   it('verifies the header only once across repeated writes', async () => {
