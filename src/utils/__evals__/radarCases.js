@@ -50,4 +50,11 @@ export const knownDivergences = [
     currentPath: '02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education/aprendo+/10_MEL_Evidence',
     note: 'Known objects matched from FREE TEXT are lowercased (aprendo+), so the path does not match the canonical "Aprendo+" folder. Supplying the object name yields correct casing (see the passing Aprendo+ cases). Fix belongs in the classifier, not here.',
   },
+  {
+    description: 'application review notes',
+    objectName: 'Sample Org', context: 'pipeline', theme: 'Education',
+    specExpectedPath: '02_INVESTMENTS_AND_PROGRAMS/01_PIPELINE/Education/Sample_Org/04_Diligence/01_Investment_Due_Diligence/02_Application_Review',
+    currentPath: '02_INVESTMENTS_AND_PROGRAMS/01_PIPELINE/Education/Sample_Org/04_Diligence/01_Investment_Due_Diligence/01_Application',
+    note: 'Spec INVESTMENT PROCESS V2 -> FOLDER MAPPING routes "Application review" to 02_Application_Review. The 01_Application rule (keyword "application", weight 3) and the 02_Application_Review rule (keyword "application review", weight 3) both score 12 on this text, and the sort is stable, so the earlier-added 01_Application wins. Found by the canonical-model equivalence harness; the fix is a classifier tie-break, not a canonical change.',
+  },
 ];
