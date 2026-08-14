@@ -475,6 +475,8 @@ describe('audit trail', () => {
       ['a missing spreadsheet', ERROR_CODE.NOT_FOUND, /could not be found/i],
       ['a bad header row', ERROR_CODE.CONFIGURATION, /header row is missing required/i],
       ['no access', ERROR_CODE.PERMISSION_DENIED, /refused access/i],
+      ['an unenabled Sheets API', ERROR_CODE.API_NOT_ENABLED, /Sheets API is not enabled/i],
+      ['an insufficient scope', ERROR_CODE.SCOPE_INSUFFICIENT, /missing the Google Sheets permission/i],
       ['an expired session', ERROR_CODE.AUTH_EXPIRED, /session expired/i],
       ['a network failure', ERROR_CODE.NETWORK, /could not be reached/i],
     ])('names the cause for %s', async (_label, code, expected) => {
@@ -492,11 +494,35 @@ describe('audit trail', () => {
         const result = await failWith(new DriveError(code));
         expect(result.audit.message).toMatch(/Retrying is safe/i);
       }
-      // Retrying a misconfigured header row would just loop, so it must not say that.
-      for (const code of [ERROR_CODE.NOT_FOUND, ERROR_CODE.CONFIGURATION]) {
+      // Retrying a misconfigured header row or an unenabled API would just loop.
+      for (const code of [
+        ERROR_CODE.NOT_FOUND,
+        ERROR_CODE.CONFIGURATION,
+        ERROR_CODE.API_NOT_ENABLED,
+        ERROR_CODE.SCOPE_INSUFFICIENT,
+      ]) {
         const result = await failWith(new DriveError(code));
         expect(result.audit.message).not.toMatch(/Retrying is safe/i);
       }
+    });
+
+    it('keeps the activation link and project number off the screen', async () => {
+      // The user chose to keep Google's raw detail in the console only. The on-screen text
+      // names the cause and who fixes it; the URL and project number stay in the log.
+      const result = await failWith(
+        new DriveError(ERROR_CODE.API_NOT_ENABLED, {
+          details: {
+            apiMessage:
+              'Google Sheets API has not been used in project 000000000000 before or it is ' +
+              'disabled. Enable it by visiting https://console.developers.google.com/apis/...',
+          },
+        })
+      );
+
+      expect(result.audit.message).toMatch(/Sheets API is not enabled/i);
+      expect(result.audit.message).not.toMatch(/https?:\/\//);
+      expect(result.audit.message).not.toMatch(/\d{9,}/);
+      expect(result.audit.message).toMatch(/browser console/i);
     });
 
     it('logs the structured error so the console can be inspected', async () => {

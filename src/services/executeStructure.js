@@ -334,11 +334,24 @@ export function auditFailureMessage(code) {
         'The audit spreadsheet is set up incorrectly — its header row is missing required ' +
         'columns. Fix the header row, then re-run to record this operation.'
       );
+    case ERROR_CODE.API_NOT_ENABLED:
+      return (
+        preamble +
+        'The Google Sheets API is not enabled for this Google Cloud project, so RADAR cannot ' +
+        'write to any spreadsheet. Ask the RADAR owner to enable it — the browser console has ' +
+        'the exact project and activation link.'
+      );
+    case ERROR_CODE.SCOPE_INSUFFICIENT:
+      return (
+        preamble +
+        'Your Google sign-in is missing the Google Sheets permission. Sign out, sign back in, ' +
+        'and accept the permission request when Create structure asks for it.'
+      );
     case ERROR_CODE.PERMISSION_DENIED:
       return (
         preamble +
-        'Google refused access to the audit spreadsheet. Check that you can edit it and that ' +
-        'the Google Sheets permission was granted.'
+        'Google refused access to the audit spreadsheet. Check that you can edit it — the ' +
+        'spreadsheet may belong to someone else or not be shared with you.'
       );
     case ERROR_CODE.AUTH_EXPIRED:
       return preamble + 'Your Google session expired before the audit entry was written. Sign in again.';

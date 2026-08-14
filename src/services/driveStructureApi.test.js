@@ -180,6 +180,86 @@ describe('error mapping', () => {
     expect(mapApiError(status, body, {}).code).toBe(code);
   });
 
+  /**
+   * Regression: every non-rate-limit 403 used to collapse into PERMISSION_DENIED, so an
+   * unenabled Sheets API reported itself as a sharing problem. Envelopes below are the real
+   * shapes Google returns.
+   */
+  describe('403 sub-causes', () => {
+    it('recognizes an API that is not enabled, from the legacy errors[] shape', () => {
+      const error = mapApiError(
+        403,
+        {
+          error: {
+            code: 403,
+            message:
+              'Google Sheets API has not been used in project 000000000000 before or it is disabled.',
+            errors: [{ domain: 'usageLimits', reason: 'accessNotConfigured' }],
+            status: 'PERMISSION_DENIED',
+          },
+        },
+        { stage: 'sheets_list_titles' }
+      );
+      expect(error.code).toBe(ERROR_CODE.API_NOT_ENABLED);
+      expect(error.retryable).toBe(false);
+    });
+
+    it('recognizes an API that is not enabled, from the ErrorInfo details[] shape', () => {
+      const error = mapApiError(403, {
+        error: {
+          code: 403,
+          status: 'PERMISSION_DENIED',
+          details: [
+            {
+              '@type': 'type.googleapis.com/google.rpc.ErrorInfo',
+              reason: 'SERVICE_DISABLED',
+              domain: 'googleapis.com',
+              metadata: { service: 'sheets.googleapis.com' },
+            },
+          ],
+        },
+      });
+      expect(error.code).toBe(ERROR_CODE.API_NOT_ENABLED);
+    });
+
+    it('recognizes an insufficient token scope', () => {
+      const error = mapApiError(403, {
+        error: {
+          code: 403,
+          message: 'Request had insufficient authentication scopes.',
+          status: 'PERMISSION_DENIED',
+          details: [{ '@type': 'type.googleapis.com/google.rpc.ErrorInfo', reason: 'ACCESS_TOKEN_SCOPE_INSUFFICIENT' }],
+        },
+      });
+      expect(error.code).toBe(ERROR_CODE.SCOPE_INSUFFICIENT);
+      expect(error.retryable).toBe(false);
+    });
+
+    it('still treats an ordinary 403 as a genuine access problem', () => {
+      const error = mapApiError(403, {
+        error: { code: 403, status: 'PERMISSION_DENIED', errors: [{ reason: 'forbidden' }] },
+      });
+      expect(error.code).toBe(ERROR_CODE.PERMISSION_DENIED);
+    });
+
+    it('prefers the more specific ErrorInfo reason when both shapes are present', () => {
+      const error = mapApiError(403, {
+        error: {
+          errors: [{ reason: 'forbidden' }],
+          details: [{ reason: 'SERVICE_DISABLED' }],
+          status: 'PERMISSION_DENIED',
+        },
+      });
+      expect(error.code).toBe(ERROR_CODE.API_NOT_ENABLED);
+    });
+
+    it('keeps rate limiting distinct from all of them', () => {
+      const error = mapApiError(403, { error: { errors: [{ reason: 'rateLimitExceeded' }] } });
+      expect(error.code).toBe(ERROR_CODE.RATE_LIMITED);
+      expect(error.retryable).toBe(true);
+    });
+  });
+
   it('keeps Google error text out of the user-facing message', () => {
     const error = mapApiError(
       404,
