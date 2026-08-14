@@ -153,7 +153,10 @@ export default function ResultStep({ result, onRetry, onStartOver }) {
         <Callout tone="danger" title="Audit trail">
           {result.audit.status === AUDIT_STATUS.NOT_CONFIGURED
             ? 'No audit spreadsheet is configured, so this operation was not recorded in a durable audit trail.'
-            : 'The audit entry could not be written. Tell the RADAR owner.'}
+            : // The cause-specific message from executeStructure, so the reader knows what to
+              // fix rather than only that something broke.
+              result.audit.message ||
+              'The audit entry could not be written. Tell the RADAR owner.'}
         </Callout>
       ) : null}
 

@@ -61,6 +61,7 @@ export const EXECUTION_WARNING = Object.freeze({
  * @param {string[]} [options.acknowledged]   acknowledgement codes the user ticked
  * @param {string} options.actor           authenticated user identifier for the audit trail
  * @param {string} options.operationId     idempotency key
+ * @param {object} [options.logger]        injectable for tests; defaults to console
  */
 export function executeStructure(options) {
   // One run per idempotency key: a repeated submission joins the in-flight promise.
@@ -78,6 +79,7 @@ async function runExecution({
   actor,
   operationId,
   now = () => new Date(),
+  logger = console,
 }) {
   const created = [];
   const reused = [];
@@ -109,15 +111,23 @@ async function runExecution({
     });
 
     let auditStatus;
+    let auditError = null;
     try {
       auditStatus = (await audit.record(event)).status;
     } catch (error) {
       auditStatus = AUDIT_STATUS.FAILED;
+      auditError = toErrorRecord(error);
+      // The Drive change happened and is now unrecorded, so the cause has to be findable.
+      // Swallowing it here is what made this failure impossible to diagnose from the UI.
+      logger.error('[RADAR] audit write failed', {
+        code: auditError.code,
+        operationId,
+        destinationPath: plan?.destination.path ?? null,
+        details: auditError.details ?? null,
+      });
       warnings.push({
         code: EXECUTION_WARNING.AUDIT_WRITE_FAILED,
-        message:
-          'The audit entry could not be written. The Drive changes above DID happen but are not ' +
-          'recorded in the audit log — tell the RADAR owner.',
+        message: auditFailureMessage(auditError.code),
       });
     }
     if (auditStatus === AUDIT_STATUS.NOT_CONFIGURED) {
@@ -141,7 +151,11 @@ async function runExecution({
       warnings,
       errors,
       registry: { status: registryResult },
-      audit: { status: auditStatus },
+      audit: {
+        status: auditStatus,
+        code: auditError?.code ?? null,
+        message: auditError ? auditFailureMessage(auditError.code) : null,
+      },
     };
   };
 
@@ -291,6 +305,50 @@ async function runExecution({
   }
 
   return finish();
+}
+
+/**
+ * Why the audit write failed, and what to do about it.
+ *
+ * The cause determines the advice, so these are not interchangeable: telling someone to retry
+ * a misconfigured header row would send them round the same loop forever. Only genuinely
+ * transient failures say retrying helps.
+ *
+ * Every message states plainly that the Drive change DID happen and is unrecorded — that is
+ * the part the RADAR owner needs to know regardless of cause.
+ */
+export function auditFailureMessage(code) {
+  const preamble =
+    'The Drive changes above DID happen but are not recorded in the audit log. ';
+
+  switch (code) {
+    case ERROR_CODE.NOT_FOUND:
+      return (
+        preamble +
+        'The configured audit spreadsheet could not be found — check VITE_RADAR_AUDIT_SHEET_ID ' +
+        'and that the spreadsheet still exists.'
+      );
+    case ERROR_CODE.CONFIGURATION:
+      return (
+        preamble +
+        'The audit spreadsheet is set up incorrectly — its header row is missing required ' +
+        'columns. Fix the header row, then re-run to record this operation.'
+      );
+    case ERROR_CODE.PERMISSION_DENIED:
+      return (
+        preamble +
+        'Google refused access to the audit spreadsheet. Check that you can edit it and that ' +
+        'the Google Sheets permission was granted.'
+      );
+    case ERROR_CODE.AUTH_EXPIRED:
+      return preamble + 'Your Google session expired before the audit entry was written. Sign in again.';
+    case ERROR_CODE.RATE_LIMITED:
+    case ERROR_CODE.TIMEOUT:
+    case ERROR_CODE.NETWORK:
+      return preamble + 'Google could not be reached. Retrying is safe and will record the operation.';
+    default:
+      return preamble + 'Tell the RADAR owner. The browser console has the full error.';
+  }
 }
 
 /** Normalize any thrown value into the audit/result error shape, without leaking internals. */

@@ -491,6 +491,27 @@ describe('execution and results', () => {
     expect(screen.getByText(/Reused \(already existed\) \(\d+\)/)).toBeInTheDocument();
   });
 
+  it('names why the audit write failed instead of a generic message', async () => {
+    // Regression: this used to render "Tell the RADAR owner" for every cause, so a wrong
+    // spreadsheet ID was indistinguishable from a bad header row or a missing scope.
+    const audit = createFakeAudit({ failOnRecord: new DriveError(ERROR_CODE.NOT_FOUND) });
+    const { user } = setup({ audit });
+    await createPipeline(user);
+
+    expect(await screen.findByText(/Structure created/i)).toBeInTheDocument();
+    expect(screen.getByText(/VITE_RADAR_AUDIT_SHEET_ID/)).toBeInTheDocument();
+    expect(screen.queryByText(/^The audit entry could not be written\./)).not.toBeInTheDocument();
+  });
+
+  it('tells the reader the Drive change happened even though it went unrecorded', async () => {
+    const audit = createFakeAudit({ failOnRecord: new DriveError(ERROR_CODE.CONFIGURATION) });
+    const { user } = setup({ audit });
+    await createPipeline(user);
+
+    expect(await screen.findByText(/header row is missing required columns/i)).toBeInTheDocument();
+    expect(screen.getByText(/DID happen but are not recorded/i)).toBeInTheDocument();
+  });
+
   it('says plainly when no durable audit trail exists', async () => {
     const { user } = setup({ audit: createFakeAudit({ configured: false }) });
     await createPipeline(user);

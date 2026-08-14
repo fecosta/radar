@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { executeStructure, OUTCOME, FAILURE_STAGE, EXECUTION_WARNING } from './executeStructure.js';
 import { resetOperationStore, getOperationResult } from './operationStore.js';
 import { planStructureFromRaw } from '../radar/planStructure.js';
@@ -31,6 +31,9 @@ function run({
   hash,
   acknowledged = [],
   operationId,
+  // Silent by default: several cases deliberately fail the audit write, and the real
+  // console.error would flood the test output. The test that asserts logging passes a spy.
+  logger = { error: () => {} },
 } = {}) {
   counter += 1;
   return executeStructure({
@@ -43,6 +46,7 @@ function run({
     acknowledged,
     actor: 'admin@velezreyesmas.example',
     operationId: operationId ?? `op-${counter}`,
+    logger,
   });
 }
 
@@ -457,6 +461,77 @@ describe('audit trail', () => {
     expect(result.outcome).toBe(OUTCOME.SUCCESS);
     expect(result.audit.status).toBe(AUDIT_STATUS.FAILED);
     expect(result.warnings.some((w) => w.code === EXECUTION_WARNING.AUDIT_WRITE_FAILED)).toBe(true);
+  });
+
+  /**
+   * Regression: these all used to collapse into one opaque "could not be written" sentence
+   * with nothing logged, which made a misconfigured audit sheet impossible to diagnose.
+   */
+  describe('audit failure diagnosability', () => {
+    const failWith = (error) =>
+      run({ drive: createFakeDrive(), audit: createFakeAudit({ failOnRecord: error }) });
+
+    it.each([
+      ['a missing spreadsheet', ERROR_CODE.NOT_FOUND, /could not be found/i],
+      ['a bad header row', ERROR_CODE.CONFIGURATION, /header row is missing required/i],
+      ['no access', ERROR_CODE.PERMISSION_DENIED, /refused access/i],
+      ['an expired session', ERROR_CODE.AUTH_EXPIRED, /session expired/i],
+      ['a network failure', ERROR_CODE.NETWORK, /could not be reached/i],
+    ])('names the cause for %s', async (_label, code, expected) => {
+      const result = await failWith(new DriveError(code));
+
+      expect(result.audit.status).toBe(AUDIT_STATUS.FAILED);
+      expect(result.audit.code).toBe(code);
+      expect(result.audit.message).toMatch(expected);
+      // Whatever the cause, the reader must know the Drive change happened and is unrecorded.
+      expect(result.audit.message).toMatch(/DID happen but are not recorded/i);
+    });
+
+    it('advises retrying only for genuinely transient causes', async () => {
+      for (const code of [ERROR_CODE.RATE_LIMITED, ERROR_CODE.TIMEOUT, ERROR_CODE.NETWORK]) {
+        const result = await failWith(new DriveError(code));
+        expect(result.audit.message).toMatch(/Retrying is safe/i);
+      }
+      // Retrying a misconfigured header row would just loop, so it must not say that.
+      for (const code of [ERROR_CODE.NOT_FOUND, ERROR_CODE.CONFIGURATION]) {
+        const result = await failWith(new DriveError(code));
+        expect(result.audit.message).not.toMatch(/Retrying is safe/i);
+      }
+    });
+
+    it('logs the structured error so the console can be inspected', async () => {
+      const logger = { error: vi.fn() };
+      const drive = createFakeDrive();
+      const plan = planFor();
+
+      await executeStructure({
+        drive,
+        registry: createFakeRegistry(),
+        audit: createFakeAudit({
+          failOnRecord: new DriveError(ERROR_CODE.CONFIGURATION, {
+            details: { stage: 'audit_header', missing: ['Plan_Hash'] },
+          }),
+        }),
+        structureType: STRUCTURE_TYPES.PIPELINE_ORGANIZATION,
+        rawInputs: PIPELINE_INPUTS,
+        confirmedPlanHash: plan.hash,
+        actor: 'admin@example.test',
+        operationId: 'audit-log-probe',
+        logger,
+      });
+
+      expect(logger.error).toHaveBeenCalledTimes(1);
+      const [message, context] = logger.error.mock.calls[0];
+      expect(message).toMatch(/audit write failed/i);
+      expect(context.code).toBe(ERROR_CODE.CONFIGURATION);
+      expect(context.operationId).toBe('audit-log-probe');
+      expect(context.details.missing).toEqual(['Plan_Hash']);
+    });
+
+    it('carries no code or message when the audit succeeded', async () => {
+      const result = await run({ drive: createFakeDrive(), audit: createFakeAudit() });
+      expect(result.audit).toEqual({ status: AUDIT_STATUS.RECORDED, code: null, message: null });
+    });
   });
 
   it('says plainly that no durable trail exists when audit is unconfigured', async () => {
