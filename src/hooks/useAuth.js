@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { ACCESS_STATUS, useRadarAccess } from './useRadarAccess.js';
+import { fetchDriveIdentity } from '../services/driveAccess.js';
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+/**
+ * Ordinary application access. Unchanged by the access-control feature: verifying whether a
+ * user can reach the Shared Drive needs no more permission than reading it.
+ */
 const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
 
 // Fallback in case GIS answers the silent request through neither callback
@@ -14,13 +21,27 @@ const SILENT_TIMEOUT_MS = 8000;
  * On load it asks GIS for a token silently: if the browser still has a live Google
  * session and the user previously consented, they are signed straight back in. Nothing
  * is persisted by this app — the session lives in Google's own cookie.
+ *
+ * Signing in is not the same as being allowed in. This hook establishes *who* the person is
+ * and then composes `useRadarAccess`, which decides whether they may use RADAR. Callers
+ * should gate on `accessStatus`, never on `token` alone.
+ *
+ * @param {object} [options] injectable seams for tests; production passes nothing
+ * @param {Function} [options.fetchIdentity] resolves who the token belongs to
  */
-export function useAuth() {
+export function useAuth({ fetchIdentity = fetchDriveIdentity, ...accessOptions } = {}) {
   const [user, setUser] = useState(null);       // { name, email, picture }
   const [token, setToken] = useState(null);      // access_token string
   const [initializing, setInitializing] = useState(true); // GIS loading + silent attempt
   const [loading, setLoading] = useState(false); // interactive sign-in in flight
   const [error, setError] = useState(null);
+  /**
+   * Google issued a token but the identity lookup could not resolve an email for it.
+   * Previously this left `user` null beside a live token and the app rendered anyway — the
+   * one path that could reach RADAR with no identity at all. It is now an explicit state,
+   * because "unknown identity" must fail closed and must not be reported as a domain denial.
+   */
+  const [identityFailed, setIdentityFailed] = useState(false);
 
   // Initialize the token client
   const [tokenClient, setTokenClient] = useState(null);
@@ -56,20 +77,29 @@ export function useAuth() {
               return;
             }
             setToken(response.access_token);
-            // Fetch user info
-            fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-              headers: { Authorization: `Bearer ${response.access_token}` },
-            })
-              .then(r => r.json())
-              .then(info => {
-                setUser({
-                  name: info.name,
-                  email: info.email,
-                  picture: info.picture,
-                });
+            // A new token may belong to a different person. Drop the previous identity before
+            // the new one is known, so the incoming token is never briefly paired with the
+            // outgoing user's email — that pairing is exactly how one account could inherit
+            // another's authorization.
+            setUser(null);
+            setIdentityFailed(false);
+            // Ask Drive who this token belongs to. The verifier guarantees either a user with
+            // an email or no user at all, so a partial identity can never reach the domain rule
+            // and be misreported there as an unapproved organization.
+            fetchIdentity({ token: response.access_token })
+              .then(result => {
+                if (!result.ok) {
+                  setIdentityFailed(true);
+                  finishInit();
+                  return;
+                }
+                setUser(result.user);
                 finishInit();
               })
-              .catch(() => finishInit());
+              .catch(() => {
+                setIdentityFailed(true);
+                finishInit();
+              });
           },
           error_callback: () => {
             // Fires when a silent request cannot be fulfilled (no Google session, consent
@@ -124,7 +154,28 @@ export function useAuth() {
     }
     setToken(null);
     setUser(null);
+    // Transient authorization state must not outlive the session that produced it. The access
+    // status itself needs no reset: it is derived from (user, token) and follows them to
+    // signed_out on the next render.
+    setError(null);
+    setIdentityFailed(false);
   }, [token]);
 
-  return { user, token, initializing, loading, error, signIn, signOut };
+  const access = useRadarAccess({ user, token, identityFailed, ...accessOptions });
+
+  return {
+    user,
+    token,
+    initializing,
+    loading,
+    error,
+    signIn,
+    signOut,
+    /**
+     * The single authorization verdict. `initializing` outranks it so a reload with a live
+     * Google session still shows the splash rather than flashing the sign-in card.
+     */
+    accessStatus: initializing ? ACCESS_STATUS.INITIALIZING : access.status,
+    retryAccessCheck: access.retry,
+  };
 }
