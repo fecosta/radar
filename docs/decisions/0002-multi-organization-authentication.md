@@ -125,6 +125,33 @@ Consequences we accept:
   structure audit trail recorded `Actor: unknown` for every operation. The access gate is what
   surfaced it.
 
+- **The premise is not free, and this ADR originally failed to say so.** "Partner organizations
+  can authenticate" reads as though RADAR's own configuration were the only gate. It is not. The
+  Google OAuth audience decides who may even reach RADAR, and because `drive.readonly` is a
+  Google **restricted** scope, opening it to accounts outside the publisher's Workspace carries a
+  cost that has to be chosen rather than assumed:
+
+  | Route | Verification | Limits |
+  |---|---|---|
+  | Internal audience | none | own Workspace only — refuses partners with `Error 403: org_internal` |
+  | External + Testing | none | 100 test users listed by hand; unverified-app screen for every user |
+  | External + admin-trusted | exempt per Google, though its docs are inconsistent | one admin task per participating organization |
+  | External + In production | required, incl. annual **CASA** third-party assessment (~$500–$4,500) | none |
+
+  **RADAR runs External + Testing.** This was discovered the honest way: the first
+  `democraciamas.com` sign-in attempt, on 2026-08-18, was refused by Google with `org_internal`
+  while the audience was still Internal. Two consequences we accept:
+
+  - **Nobody is admitted automatically any more, including the publisher's own staff.** Leaving
+    Internal means every user must be on the test-user list; an account missing from it is refused
+    with a 403 `access_denied`, again before RADAR loads.
+  - **Onboarding a person is two independent manual steps** — a test-user entry and a Shared Drive
+    grant. Neither implies the other, which is the same "eligibility is not access" separation this
+    ADR argues for, now applying one layer further out.
+
+  The 100-user cap is a live constraint at the expected scale of 25–100 users, not a theoretical
+  one. It is a stopgap, and the exits are recorded under *Revisiting this*.
+
 ## What this decision does *not* relax
 
 - **No provisioning, ever.** RADAR does not add anyone to a Shared Drive, does not modify Drive
@@ -141,6 +168,25 @@ Consequences we accept:
   cookie, no IndexedDB.
 
 ## Revisiting this
+
+### The Google publishing route
+
+Leave External + Testing when any of these becomes true:
+
+- the test-user list approaches **100 users** — at 25–100 today, this is the trigger most likely to
+  fire first, and it fires as a hard refusal for user 101 rather than a warning;
+- adding a user by hand for every person becomes an unacceptable onboarding cost;
+- the "Google hasn't verified this app" screen becomes unacceptable to a partner organization —
+  a reasonable objection from an external admin, and not one that can be argued away.
+
+Move to **Workspace admin-trusted** first: it is free, fits a private tool used by a few known
+organizations, and needs one admin action per organization. Move to **verification + CASA** only
+when RADAR must serve an audience too large or too unknown for either of the above — it is the
+only route that removes both the cap and the warning, at a recurring cost.
+
+Neither move touches RADAR's code or configuration. The client ID does not change.
+
+### The architecture
 
 Move to option C when any of these becomes true:
 

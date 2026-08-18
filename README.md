@@ -96,17 +96,21 @@ disabled"*.
 #### Who can authenticate
 
 The functional requirement: **the OAuth application must permit Google accounts from the
-organizations RADAR intends to authorize.** Consent-screen options and any verification
-requirements change over time, so confirm the current choices in the Google Cloud Console
-rather than trusting a label written here.
+organizations RADAR intends to authorize.** This is a Google Cloud setting, not a RADAR one, and
+it is the first gate a user meets — before RADAR loads at all.
 
-- A consent screen restricted to your own Google Workspace admits **only** your own Workspace.
-  That is sufficient when everyone using RADAR has a `your-org.com` account, and it was the
-  original assumption of this project.
-- Admitting partner organizations requires a consent screen that accepts accounts outside your
-  Workspace. Configure it for the organizations you intend to authorize.
+Set it under **Google Auth Platform → Audience** (`console.cloud.google.com/auth/audience`):
 
-Widening the consent screen does not widen access to RADAR, and this is the point of the design:
+| User type | Who can sign in |
+|---|---|
+| **Internal** | Only accounts inside your own Google Workspace organization |
+| **External** | Any Google account, subject to the publishing status below |
+
+An **Internal** audience refuses every outside account with **`Error 403: org_internal`** —
+*"can only be used within its organization"* — on Google's own sign-in page. RADAR never runs, so
+no amount of RADAR configuration will help. If you are looking at that error, this is the setting.
+
+Widening the audience does not widen access to RADAR, which is the point of the design:
 
 ```
 Google OAuth          → verifies identity
@@ -114,11 +118,38 @@ RADAR allowed-domain  → verifies the organization is approved
 Google Shared Drive   → verifies this individual account actually has access
 ```
 
-A consent screen that admits a wider set of accounts simply hands more identities to RADAR's
-domain rule, which refuses the ones that are not approved. Anyone who gets past that is then
-refused by Google unless they genuinely have Shared Drive access. Approving a domain still
-grants no Drive membership to anyone — see
-[docs/operations/access-control.md](docs/operations/access-control.md).
+A wider audience simply hands more identities to RADAR's domain rule, which refuses the ones that
+are not approved. Anyone past that is refused by Google unless they genuinely have Shared Drive
+access. Approving a domain still grants no Drive membership to anyone.
+
+#### The cost of going External
+
+`drive.readonly` is a Google **restricted** scope, so an External audience puts RADAR inside
+Google's verification regime. There is no free, unlimited option:
+
+| Publishing status | Verification | Practical limits |
+|---|---|---|
+| **Testing** | Not required | **100 test users, listed by hand.** Each sees a "Google hasn't verified this app" screen and must choose **Advanced → Continue** |
+| **In production** | Required, and a restricted scope means an annual **CASA** third-party assessment (roughly $500–$4,500) | None once verified |
+
+Google also treats **Workspace admin-trusted** apps as a verification exemption: an admin in each
+participating organization allowlists RADAR's OAuth client ID under **Security → API controls →
+App access control**. Its documentation is inconsistent about how far that reaches, so confirm in
+your own console before relying on it.
+
+**RADAR currently runs External + Testing.** Two consequences worth knowing before you touch this:
+
+- **Nobody is admitted automatically any more, including your own staff.** Leaving Internal means
+  every user needs adding to the test-user list. An account that is missing from it is refused with
+  a 403 `access_denied` — again on Google's page, before RADAR loads.
+- **Onboarding a person is now two separate manual steps**: add them as a test user (Cloud
+  Console), *and* grant them Shared Drive access (Google Workspace). Neither implies the other.
+
+Changing the audience does **not** change `VITE_GOOGLE_CLIENT_ID`, so none of this requires a
+rebuild or redeploy.
+
+Full onboarding, offboarding and troubleshooting:
+**[docs/operations/access-control.md](docs/operations/access-control.md)**.
 
 ### 4. Configure the app
 

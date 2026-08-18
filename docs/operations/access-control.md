@@ -74,25 +74,52 @@ server restart locally.
 
 ## Onboarding an organization
 
-Five steps, in this order. Steps 2–4 are Google administration and cannot be done from RADAR.
+Everything except step 1 is Google administration and cannot be done from RADAR.
+
+**Once per organization:**
 
 1. **Approve the domain in RADAR configuration.** Add it to `VITE_RADAR_ALLOWED_DOMAINS` in the
-   hosting platform.
-2. **Configure Google OAuth so those users can authenticate.** The OAuth application must
-   permit Google accounts from the organizations RADAR intends to authorize. A consent screen
-   restricted to your own Workspace admits only your own Workspace — see
-   [the README setup step](../../README.md#3-create-oauth-20-credentials).
-3. **Grant the intended users or groups access to the RADAR Shared Drive** in Google Workspace.
-   Nothing in step 1 did this. Until this step, approved-domain users are correctly refused
-   with "Shared Drive access required".
-4. **Add restricted-area Google Group memberships separately**, where required
-   (`radar-finance`, `radar-legal`, `radar-people`, `radar-leadership`, `radar-board`). These
-   govern folders, not application entry, and RADAR neither reads nor manages them.
-5. **Redeploy RADAR**, because the domain configuration is build-time.
+   hosting platform, then **rebuild and redeploy** — the value is build-time.
+2. **Make sure the OAuth audience admits that organization.** Under **Google Auth Platform →
+   Audience**, an *Internal* audience admits only your own Workspace and refuses everyone else
+   with `Error 403: org_internal`. See
+   [Who can authenticate](../../README.md#who-can-authenticate) for the audience options and what
+   an External audience costs.
+
+**Then once per person** — these two are independent, and neither implies the other:
+
+3. **Add them as a test user** under **Google Auth Platform → Audience**. Required while the app
+   is in *Testing* status, which is where RADAR currently sits. An account that is missing from
+   this list cannot sign in at all: Google refuses it with a 403 `access_denied` before RADAR
+   loads. Capped at 100 users in total — see [Google-side capacity](#google-side-capacity).
+4. **Grant them access to the RADAR Shared Drive** in Google Workspace, individually or through a
+   group. Steps 1 and 3 did not do this. Until it is done the person signs in successfully and is
+   then correctly refused with "Shared Drive access required" — which is the system working, not a
+   fault.
+5. **Add restricted-area Google Group memberships** where required (`radar-finance`, `radar-legal`,
+   `radar-people`, `radar-leadership`, `radar-board`). These govern folders, not application entry,
+   and RADAR neither reads nor manages them.
 
 Grant the narrowest Drive role that fits. Reading RADAR needs only Viewer; Content Manager is
 required solely for Create structure, per
 [create-structure.md](create-structure.md).
+
+### Google-side capacity
+
+While the OAuth app is in **Testing** status it is limited to **100 test users**, added by hand.
+That is a live constraint at RADAR's expected scale, not a theoretical one, and it is a Google
+limit that no RADAR setting can raise.
+
+Two ways out when it starts to bind:
+
+- **Workspace admin-trusted** — an admin in each participating organization allowlists RADAR's
+  OAuth client ID under **Security → API controls → App access control**. Google lists
+  admin-trusted apps as a verification exemption; confirm the current behaviour in your own
+  console before depending on it.
+- **Verification** — publish *In production* and complete OAuth verification. Because
+  `drive.readonly` is a restricted scope this includes an annual **CASA** third-party assessment
+  (roughly $500–$4,500). It is the only route that removes both the cap and the unverified-app
+  warning.
 
 ## Offboarding
 
@@ -101,13 +128,17 @@ Match the scope of the removal to the scope of the problem.
 | Scope | Action | Takes effect |
 |---|---|---|
 | An entire organization | Remove its domain from `VITE_RADAR_ALLOWED_DOMAINS`, then rebuild and redeploy | On deploy |
-| One person | Remove the individual or their group from the RADAR Shared Drive | Immediately, on their next request |
+| One person — **data access** | Remove the individual or their group from the RADAR Shared Drive | Immediately, on their next request |
+| One person — **sign-in**, and to free a test-user slot | Remove them from the test users under **Google Auth Platform → Audience** | Immediately |
 | Restricted areas only, person keeps general access | Remove them from the relevant `radar-*` Google Group | Immediately |
 
-Removing a domain does **not** remove Drive access, and removing Drive access does **not**
-remove the domain. For a departing person, the Drive removal is the one that matters and is the
-one that is immediate — a domain change cannot revoke an individual and should never be relied
-on to.
+The two per-person removals do different things and are not substitutes. Removing someone from
+the **Shared Drive** removes their access to RADAR *data* — this is the one that matters, and the
+one to do first. Removing them from the **test-user list** only stops them signing in, and is
+worth doing to reclaim a slot against the 100-user cap.
+
+Removing a domain does **not** remove Drive access, and removing Drive access does **not** remove
+the domain. A domain change cannot revoke an individual and should never be relied on to.
 
 ## What a user sees
 
@@ -130,8 +161,14 @@ who has nothing to fix.
 
 ## Troubleshooting
 
+The first two rows are Google's own screens, shown on `accounts.google.com` **before RADAR
+loads**. If you see either one, nothing in RADAR is involved and no RADAR setting will change it.
+
 | Message | Cause | Fix |
 |---|---|---|
+| `Error 403: org_internal` — "can only be used within its organization" | the OAuth audience is **Internal**, which admits only your own Workspace | set **Google Auth Platform → Audience → User type: External**; see [Who can authenticate](../../README.md#who-can-authenticate) for what that costs |
+| `Error 403: access_denied`, or a screen saying the app "has not completed the Google verification process" | the app is in **Testing** status and this account is not on the test-user list — this now includes your own staff | add the account under **Google Auth Platform → Audience → Test users**; if the list is full, see [Google-side capacity](#google-side-capacity) |
+| "Google hasn't verified this app" | expected while the app is in **Testing** status | choose **Advanced → Continue**; removing this screen requires verification |
 | "Access not authorized" for someone who should have access | their email domain is not in `VITE_RADAR_ALLOWED_DOMAINS`, or the deploy predates the change | add the domain, rebuild, redeploy; confirm the account's actual domain, not the display name |
 | "Access not authorized" for a subdomain address | matching is exact — `mail.your-org.com` is not `your-org.com` | add the exact domain the addresses use |
 | "RADAR Shared Drive access required" | the domain is approved but this account is not a member of the Shared Drive | grant Drive access in Google Workspace; this is expected and correct until you do |
