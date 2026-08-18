@@ -26,9 +26,9 @@ Three architectures were considered.
 
 ### A. Approved-domain gate in the client, plus a mandatory Shared Drive check
 
-Read a configured list of approved domains at build time, compare it against the verified
-email from Google's userinfo response, and — only if that passes — ask Google whether this
-specific account can reach the configured Shared Drive. Both must succeed.
+Read a configured list of approved domains at build time, compare it against the email Google
+reports for the signed-in account, and — only if that passes — ask Google whether this specific
+account can reach the configured Shared Drive. Both must succeed.
 
 ### B. Domain gate only
 
@@ -108,10 +108,22 @@ Consequences we accept:
   offboarding an organization is a deploy. Offboarding an *individual* is not: that is a Drive
   permission change and takes effect immediately, which is the case that actually needs to be
   fast.
-- **RADAR has no verified organization claim.** `initTokenClient` returns an access token, not
-  an ID token, so there is no signed `hd` claim to check. The email comes from Google's userinfo
-  endpoint over TLS on the user's own token. Good enough for an application gate; it is not
+- **RADAR has no signed organization claim.** `initTokenClient` returns an access token, not an
+  ID token, so there is no signed `hd` claim to check. The email is read from the Drive API's
+  `about.get` over TLS on the user's own token. Good enough for an application gate; it is not
   relied on as the security boundary, per the above.
+
+  The OpenID Connect userinfo endpoint would be the conventional source and is deliberately not
+  used: it requires `openid`, `email` or `profile`, and RADAR's token carries only
+  `drive.readonly`. Reading identity from Drive instead keeps the token at one scope, spares
+  every existing user a fresh consent prompt, and has a property worth stating — the email the
+  domain rule judges and the ACL that enforces access now come from the same authority.
+
+  This was not a free choice made up front. RADAR called the userinfo endpoint until
+  2026-08-18, where it had been failing on every request since the feature was written: the
+  failure was swallowed, `user` was always null, the navbar rendered blank and the Create
+  structure audit trail recorded `Actor: unknown` for every operation. The access gate is what
+  surfaced it.
 
 ## What this decision does *not* relax
 

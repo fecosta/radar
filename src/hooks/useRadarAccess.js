@@ -18,7 +18,7 @@ export const ACCESS_STATUS = Object.freeze({
   /** Google Identity Services is loading and the silent token request has not settled. */
   INITIALIZING: 'initializing',
   SIGNED_OUT: 'signed_out',
-  /** A token exists but Google's userinfo has not answered yet, so there is no email to judge. */
+  /** A token exists but the identity lookup has not answered yet, so there is no email to judge. */
   CHECKING_IDENTITY: 'checking_identity',
   CHECKING_DOMAIN: 'checking_domain',
   CHECKING_DRIVE: 'checking_drive',
@@ -68,9 +68,9 @@ function statusForReason(reason) {
  * discarded, so an earlier success can never land on a later user.
  *
  * @param {object} options
- * @param {object|null} options.user           `{ name, email, picture }` once userinfo resolves
+ * @param {object|null} options.user           `{ name, email, picture }` once identity resolves
  * @param {string|null} options.token          the signed-in user's own read-only OAuth token
- * @param {boolean} [options.identityFailed]   userinfo could not be read at all
+ * @param {boolean} [options.identityFailed]   the signed-in identity could not be resolved
  * @param {object} [options.config]            injectable; defaults to build configuration
  * @param {Function} [options.verify]          injectable Drive verifier, for tests
  * @param {object} [options.logger]            injectable; defaults to console
@@ -95,7 +95,7 @@ export function useRadarAccess({
 
   const resolvedConfig = useMemo(() => config || readAccessConfig(), [config]);
 
-  // Depend on the email itself, not the object identity: a new userinfo object for the same
+  // Depend on the email itself, not the object identity: a new identity object for the same
   // person should not re-run the Drive check.
   const email = user?.email ?? null;
   const hasUser = user != null;

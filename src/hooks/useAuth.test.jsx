@@ -56,33 +56,44 @@ function stubGis({ grant = true, token = 'token-1' } = {}) {
   return { requests, scopes, revoke };
 }
 
-/** Stub the userinfo endpoint. */
-function stubUserinfo({ ok = true, body = { name: 'Approved', email: 'user@velezreyesmas.com' } } = {}) {
-  const fetchImpl = vi.fn(async () => ({ ok, status: ok ? 200 : 401, json: async () => body }));
-  vi.stubGlobal('fetch', fetchImpl);
-  return fetchImpl;
+const IDENTITY = {
+  name: 'Approved User',
+  email: 'user@velezreyesmas.com',
+  picture: 'https://lh3.googleusercontent.com/a/example',
+};
+
+/**
+ * Stub the identity lookup. Injected rather than stubbing global fetch, so these tests say
+ * nothing about which endpoint is used — that belongs to driveAccess.test.js.
+ */
+function stubIdentity({ ok = true, user = IDENTITY, status = 200 } = {}) {
+  return vi.fn(async () => (ok ? { ok: true, user } : { ok: false, status }));
 }
 
-function setup({ verify } = {}) {
+function setup({ verify, fetchIdentity } = {}) {
   const resolvedVerify =
     verify || vi.fn(async () => ({ allowed: true, reason: ACCESS_REASON.AUTHORIZED }));
+  const resolvedIdentity = fetchIdentity || stubIdentity();
   const view = renderHook(() =>
-    useAuth({ config: CONFIG, verify: resolvedVerify, logger: silentLogger })
+    useAuth({
+      config: CONFIG,
+      verify: resolvedVerify,
+      fetchIdentity: resolvedIdentity,
+      logger: silentLogger,
+    })
   );
-  return { ...view, verify: resolvedVerify };
+  return { ...view, verify: resolvedVerify, fetchIdentity: resolvedIdentity };
 }
 
 afterEach(() => {
   cleanup();
   delete window.google;
-  vi.unstubAllGlobals();
 });
 
 describe('useAuth — silent re-authentication', () => {
   /** The behavior most at risk from this change, so it is asserted first and directly. */
   it('asks Google for a token silently, without any UI', async () => {
     const { requests } = stubGis({ grant: true });
-    stubUserinfo();
     const { result } = setup();
 
     await waitFor(() => expect(requests).toHaveLength(1));
@@ -93,7 +104,6 @@ describe('useAuth — silent re-authentication', () => {
 
   it('requests only the read-only Drive scope', async () => {
     const { scopes } = stubGis();
-    stubUserinfo();
     setup();
 
     // The scope the token client was actually constructed with. Verifying Shared Drive access
@@ -102,22 +112,35 @@ describe('useAuth — silent re-authentication', () => {
     for (const scope of scopes) {
       expect(scope).toBe('https://www.googleapis.com/auth/drive.readonly');
       expect(scope).not.toContain('spreadsheets');
+      // Reading the identity from Drive rather than the OIDC userinfo endpoint is what makes
+      // this possible. Adding these would have worked too, at the cost of re-consenting
+      // every existing user.
+      expect(scope).not.toContain('openid');
+      expect(scope).not.toContain('profile');
+      expect(scope).not.toMatch(/auth\/(email|userinfo)/);
     }
   });
 
   it('signs a returning approved user straight back in', async () => {
     stubGis({ grant: true });
-    stubUserinfo();
     const { result } = setup();
 
     await waitFor(() => expect(result.current.accessStatus).toBe(ACCESS_STATUS.AUTHORIZED));
-    expect(result.current.user).toMatchObject({ email: 'user@velezreyesmas.com' });
+    /**
+     * The full shape, not just the email. Nothing used to assert `name` or `picture`, so the
+     * navbar could render a blank name and no avatar with the suite still green — which is
+     * exactly what was happening before the identity source was fixed.
+     */
+    expect(result.current.user).toEqual({
+      name: 'Approved User',
+      email: 'user@velezreyesmas.com',
+      picture: 'https://lh3.googleusercontent.com/a/example',
+    });
     expect(result.current.initializing).toBe(false);
   });
 
   it('falls through to the sign-in screen when there is no Google session', async () => {
     stubGis({ grant: false });
-    stubUserinfo();
     const { result } = setup();
 
     await waitFor(() => expect(result.current.accessStatus).toBe(ACCESS_STATUS.SIGNED_OUT));
@@ -134,26 +157,31 @@ describe('useAuth — identity failures', () => {
    */
   it('denies with a verification error when the profile cannot be read', async () => {
     stubGis();
-    stubUserinfo({ ok: false, body: { error: 'invalid_token' } });
-    const { result } = setup();
+    const { result } = setup({ fetchIdentity: stubIdentity({ ok: false, status: 403 }) });
 
     await waitFor(() => expect(result.current.accessStatus).toBe(ACCESS_STATUS.VERIFICATION_ERROR));
     expect(result.current.accessStatus).not.toBe(ACCESS_STATUS.DOMAIN_DENIED);
     expect(result.current.accessStatus).not.toBe(ACCESS_STATUS.AUTHORIZED);
   });
 
-  it('denies when the profile carries no email at all', async () => {
+  /**
+   * The verifier is what enforces this: it returns no user rather than a partial one, so a
+   * missing email cannot reach the domain rule and be reported there as a refused organization.
+   */
+  it('never holds a user when the identity lookup could not produce an email', async () => {
     stubGis();
-    stubUserinfo({ ok: true, body: { name: 'No Email' } });
-    const { result } = setup();
+    const { result } = setup({ fetchIdentity: stubIdentity({ ok: false, status: 200 }) });
 
     await waitFor(() => expect(result.current.accessStatus).toBe(ACCESS_STATUS.VERIFICATION_ERROR));
+    expect(result.current.user).toBeNull();
+    expect(result.current.accessStatus).not.toBe(ACCESS_STATUS.DOMAIN_DENIED);
   });
 
   it('never calls the Drive verifier for an unapproved organization', async () => {
     stubGis();
-    stubUserinfo({ body: { name: 'Outsider', email: 'user@gmail.com' } });
-    const { result, verify } = setup();
+    const { result, verify } = setup({
+      fetchIdentity: stubIdentity({ user: { ...IDENTITY, email: 'user@gmail.com' } }),
+    });
 
     await waitFor(() => expect(result.current.accessStatus).toBe(ACCESS_STATUS.DOMAIN_DENIED));
     expect(verify).not.toHaveBeenCalled();
@@ -163,7 +191,6 @@ describe('useAuth — identity failures', () => {
 describe('useAuth — sign-out', () => {
   it('revokes the token and clears every trace of the session', async () => {
     const { revoke } = stubGis();
-    stubUserinfo();
     const { result } = setup();
 
     await waitFor(() => expect(result.current.accessStatus).toBe(ACCESS_STATUS.AUTHORIZED));
@@ -179,7 +206,6 @@ describe('useAuth — sign-out', () => {
 
   it('does not persist the token anywhere', async () => {
     stubGis();
-    stubUserinfo();
     const { result } = setup();
 
     await waitFor(() => expect(result.current.accessStatus).toBe(ACCESS_STATUS.AUTHORIZED));

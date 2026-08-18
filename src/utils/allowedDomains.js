@@ -41,7 +41,7 @@ export function parseAllowedDomains(raw) {
  * `gmail.com` rather than to the approved-looking prefix. Anything that is not a single
  * well-formed address returns null, and null is never approved.
  *
- * @param {unknown} email the address from Google's userinfo response
+ * @param {unknown} email the address Google reported for the signed-in account
  * @returns {string|null} lowercase domain, or null when the input is missing or malformed
  */
 export function extractEmailDomain(email) {

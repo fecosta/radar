@@ -138,6 +138,7 @@ who has nothing to fix.
 | Everyone sees "RADAR is not configured correctly" | `VITE_RADAR_ALLOWED_DOMAINS` or `VITE_SHARED_DRIVE_ID` is unset in the deployed build | set it and redeploy; the console names which one |
 | Everyone sees a configuration error after a Cloud project change | the Drive API is not enabled for the project — it arrives as a 403 and is reported as configuration, not as a sharing problem | enable it in **APIs & Services → Library**, wait ~1 minute, retry |
 | "We couldn't verify your RADAR access" | Google was unreachable, rate-limited, or returned a server error | retry; this is not a permissions problem |
+| "We couldn't verify your RADAR access" for **everyone**, immediately after signing in | RADAR could not resolve who the signed-in account is, so it never reached the domain or Drive checks | check the console for `[RADAR] identity lookup failed` and its status; a 401/403 there means the token cannot read the identity, not that the user lacks Drive access |
 | Works locally, denies everyone in production | build-time variables were not set in the hosting platform, or the app was not rebuilt after they were | set them and rebuild |
 | A user was removed from the Drive but is still inside RADAR | their page is still open on a live token | Drive refuses their next request; a reload lands them on the denial screen |
 
@@ -151,6 +152,11 @@ who has nothing to fix.
 - The verification request is a single `drives.get` pinned to the configured
   `VITE_SHARED_DRIVE_ID`. No Drive id is ever accepted from a URL, storage, a route, user input
   or an API response.
-- It runs on the existing `drive.readonly` scope. No new consent, and no write scope.
+- It runs on the existing `drive.readonly` scope. No new consent, and no write scope. The
+  signed-in identity is read from the same scope via the Drive API's `about.get`, rather than
+  from the OpenID Connect userinfo endpoint, which would require `openid`/`email`/`profile` and
+  a fresh consent prompt for every existing user.
+- A blank name or missing avatar in the navbar is a symptom of the identity lookup failing, not
+  a cosmetic issue: the same lookup feeds the domain rule and the audit trail's Actor column.
 - OAuth tokens are held in memory for the session only — never `localStorage`, `sessionStorage`,
   a cookie or IndexedDB — and are never logged.

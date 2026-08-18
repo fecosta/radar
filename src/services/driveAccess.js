@@ -94,6 +94,98 @@ function reasonForCode(code) {
 }
 
 /**
+ * Who does this token belong to?
+ *
+ * Asks the Drive API rather than the OpenID Connect userinfo endpoint, for one decisive
+ * reason: userinfo requires `openid`, `email` or `profile`, and RADAR's token carries only
+ * `drive.readonly`. It therefore rejected every request RADAR ever made to it, which went
+ * unnoticed because the failure was swallowed and the app rendered with no identity at all.
+ * `drive.about.get` accepts `drive.readonly`, so this needs no new scope and no re-consent.
+ *
+ * It also puts identity and enforcement behind the same authority: the email the domain rule
+ * judges now comes from the same API that evaluates the Shared Drive ACL.
+ *
+ * @param {object} options
+ * @param {string} options.token         the signed-in user's own read-only OAuth token
+ * @param {Function} [options.fetchImpl] injectable for tests
+ * @param {object} [options.logger]      injectable for tests; defaults to console
+ * @returns {Promise<{ok: true, user: {name: string, email: string, picture: string|null}}
+ *                 | {ok: false, status: number|null}>}
+ */
+export async function fetchDriveIdentity({
+  token,
+  fetchImpl,
+  logger = console,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+} = {}) {
+  if (!token) return { ok: false, status: null };
+
+  const doFetch = fetchImpl || ((...args) => globalThis.fetch(...args));
+
+  const url = new URL(`${DRIVE_API}/about`);
+  // Required on this method. `user` is requested whole rather than sub-selected: the payload is
+  // a few hundred bytes and it keeps the request syntactically trivial.
+  url.searchParams.set('fields', 'user');
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let failure;
+  try {
+    const res = await doFetch(url.toString(), {
+      signal: controller.signal,
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (res.ok) {
+      const body = await res.json().catch(() => null);
+      const identity = body?.user;
+
+      /**
+       * An identity with no email is not an identity RADAR can use, and must never become a
+       * partial `user` object. `useRadarAccess` reads a present-but-emailless user as
+       * "approved organization unknown" and answers DOMAIN_DENIED — telling someone their
+       * organization was refused when the truth is that RADAR never learned who they are.
+       */
+      if (!identity?.emailAddress) {
+        logger.warn('[RADAR] identity lookup failed', {
+          category: ACCESS_LOG_CATEGORY.DRIVE_ACCESS_CHECK_FAILED,
+          status: res.status,
+          cause: 'the Drive profile carried no email address',
+        });
+        return { ok: false, status: res.status };
+      }
+
+      return {
+        ok: true,
+        user: {
+          name: identity.displayName || identity.emailAddress,
+          email: identity.emailAddress,
+          picture: identity.photoLink || null,
+        },
+      };
+    }
+
+    failure = mapApiError(res.status, await res.json().catch(() => null), {
+      stage: 'fetch_drive_identity',
+    });
+  } catch (error) {
+    failure = mapTransportError(error, { stage: 'fetch_drive_identity' });
+  } finally {
+    clearTimeout(timer);
+  }
+
+  // Status and classification only. Never the token, and never Google's message text.
+  logger.warn('[RADAR] identity lookup failed', {
+    category: ACCESS_LOG_CATEGORY.DRIVE_ACCESS_CHECK_FAILED,
+    code: failure.code,
+    status: failure.status,
+  });
+
+  return { ok: false, status: failure.status };
+}
+
+/**
  * Can this token's identity access the configured RADAR Shared Drive?
  *
  * Resolves with a verdict rather than throwing, because every outcome here is a normal state

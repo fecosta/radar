@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ACCESS_STATUS, useRadarAccess } from './useRadarAccess.js';
+import { fetchDriveIdentity } from '../services/driveAccess.js';
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -26,15 +27,16 @@ const SILENT_TIMEOUT_MS = 8000;
  * should gate on `accessStatus`, never on `token` alone.
  *
  * @param {object} [options] injectable seams for tests; production passes nothing
+ * @param {Function} [options.fetchIdentity] resolves who the token belongs to
  */
-export function useAuth(options = {}) {
+export function useAuth({ fetchIdentity = fetchDriveIdentity, ...accessOptions } = {}) {
   const [user, setUser] = useState(null);       // { name, email, picture }
   const [token, setToken] = useState(null);      // access_token string
   const [initializing, setInitializing] = useState(true); // GIS loading + silent attempt
   const [loading, setLoading] = useState(false); // interactive sign-in in flight
   const [error, setError] = useState(null);
   /**
-   * Google issued a token but its userinfo could not be read, so there is no email.
+   * Google issued a token but the identity lookup could not resolve an email for it.
    * Previously this left `user` null beside a live token and the app rendered anyway — the
    * one path that could reach RADAR with no identity at all. It is now an explicit state,
    * because "unknown identity" must fail closed and must not be reported as a domain denial.
@@ -81,25 +83,17 @@ export function useAuth(options = {}) {
             // another's authorization.
             setUser(null);
             setIdentityFailed(false);
-            // Fetch user info
-            fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-              headers: { Authorization: `Bearer ${response.access_token}` },
-            })
-              .then(r => (r.ok ? r.json() : Promise.reject(new Error('userinfo'))))
-              .then(info => {
-                // No email means no organization to judge. Reporting that as "your
-                // organization is not authorized" would name a cause RADAR cannot know, so it
-                // is treated as an identity failure and offered a retry instead.
-                if (!info?.email) {
+            // Ask Drive who this token belongs to. The verifier guarantees either a user with
+            // an email or no user at all, so a partial identity can never reach the domain rule
+            // and be misreported there as an unapproved organization.
+            fetchIdentity({ token: response.access_token })
+              .then(result => {
+                if (!result.ok) {
                   setIdentityFailed(true);
                   finishInit();
                   return;
                 }
-                setUser({
-                  name: info.name,
-                  email: info.email,
-                  picture: info.picture,
-                });
+                setUser(result.user);
                 finishInit();
               })
               .catch(() => {
@@ -167,7 +161,7 @@ export function useAuth(options = {}) {
     setIdentityFailed(false);
   }, [token]);
 
-  const access = useRadarAccess({ user, token, identityFailed, ...options });
+  const access = useRadarAccess({ user, token, identityFailed, ...accessOptions });
 
   return {
     user,

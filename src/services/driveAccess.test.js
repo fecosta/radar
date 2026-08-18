@@ -8,6 +8,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   verifyDriveAccess,
+  fetchDriveIdentity,
   readAccessConfig,
   ACCESS_REASON,
   ACCESS_LOG_CATEGORY,
@@ -219,6 +220,155 @@ describe('verifyDriveAccess — logging', () => {
 
   it('does not log at all on success', async () => {
     const { result, logs } = verifyWith({ body: { id: DRIVE_ID, name: 'RADAR' } });
+    await result;
+    expect(logs).toHaveLength(0);
+  });
+});
+
+/** Build an identity lookup over a single scripted response. */
+function identityWith(response, overrides = {}) {
+  const calls = [];
+  const fetchImpl = vi.fn(async (url, init) => {
+    calls.push({ url: new URL(url), init });
+    if (response.throws) throw response.throws;
+    return {
+      ok: response.ok ?? true,
+      status: response.status ?? 200,
+      json: async () => response.body ?? {},
+    };
+  });
+
+  const logs = [];
+  const logger = { warn: (...args) => logs.push(args) };
+
+  const result = fetchDriveIdentity({ token: TOKEN, fetchImpl, logger, ...overrides });
+  return { result, calls, fetchImpl, logs };
+}
+
+const driveUser = (over = {}) => ({
+  user: {
+    kind: 'drive#user',
+    displayName: 'Approved User',
+    emailAddress: 'user@velezreyesmas.com',
+    photoLink: 'https://lh3.googleusercontent.com/a/example',
+    me: true,
+    ...over,
+  },
+});
+
+describe('fetchDriveIdentity — success', () => {
+  it('returns the signed-in identity in the shape the app already consumes', async () => {
+    const { result } = identityWith({ body: driveUser() });
+    await expect(result).resolves.toEqual({
+      ok: true,
+      user: {
+        name: 'Approved User',
+        email: 'user@velezreyesmas.com',
+        picture: 'https://lh3.googleusercontent.com/a/example',
+      },
+    });
+  });
+
+  /**
+   * The whole point of using Drive rather than the OIDC userinfo endpoint: this must be
+   * answerable on drive.readonly alone. Asserted as a request shape, since the scope lives on
+   * the token rather than in the URL.
+   */
+  it('asks the Drive about endpoint, not the OpenID userinfo endpoint', async () => {
+    const { result, calls } = identityWith({ body: driveUser() });
+    await result;
+
+    expect(calls).toHaveLength(1);
+    const { url, init } = calls[0];
+    expect(url.host).toBe('www.googleapis.com');
+    expect(url.pathname).toBe('/drive/v3/about');
+    expect(url.pathname).not.toContain('userinfo');
+    // `fields` is mandatory on about.get; omitting it is a 400.
+    expect(url.searchParams.get('fields')).toBe('user');
+    expect(init.method).toBeUndefined();
+    expect(init.headers.Authorization).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it('falls back to the email when Drive reports no display name', async () => {
+    const { result } = identityWith({ body: driveUser({ displayName: '' }) });
+    const identity = await result;
+    expect(identity.ok).toBe(true);
+    expect(identity.user.name).toBe('user@velezreyesmas.com');
+  });
+
+  it('normalizes a missing photo to null rather than undefined', async () => {
+    const { result } = identityWith({ body: driveUser({ photoLink: undefined }) });
+    const identity = await result;
+    expect(identity.user.picture).toBeNull();
+  });
+});
+
+describe('fetchDriveIdentity — failure', () => {
+  /**
+   * The invariant that keeps a missing email from being misreported as a rejected
+   * organization: a partial user must never be produced.
+   */
+  it('refuses a 200 that carries no email address', async () => {
+    const { result } = identityWith({ body: driveUser({ emailAddress: undefined }) });
+    await expect(result).resolves.toEqual({ ok: false, status: 200 });
+  });
+
+  it('refuses a 200 with no user object at all', async () => {
+    const { result } = identityWith({ body: {} });
+    const identity = await result;
+    expect(identity.ok).toBe(false);
+    expect(identity.user).toBeUndefined();
+  });
+
+  it.each([
+    ['an expired token', 401],
+    ['a refused request', 403],
+    ['an unexpected status', 500],
+  ])('reports %s as a failure carrying the status', async (_label, status) => {
+    const { result } = identityWith({ ok: false, status, body: {} });
+    await expect(result).resolves.toEqual({ ok: false, status });
+  });
+
+  it('reports a rejected fetch as a failure', async () => {
+    const { result } = identityWith({ throws: new TypeError('Failed to fetch') });
+    const identity = await result;
+    expect(identity.ok).toBe(false);
+  });
+
+  it('fails without calling Google when there is no token', async () => {
+    const { result, fetchImpl } = identityWith({ body: driveUser() }, { token: null });
+    await expect(result).resolves.toEqual({ ok: false, status: null });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+describe('fetchDriveIdentity — logging', () => {
+  /** The missing diagnostic that made this bug need a screenshot to identify. */
+  it('logs the status so the cause is identifiable from the console alone', async () => {
+    const { result, logs } = identityWith({ ok: false, status: 403, body: {} });
+    await result;
+
+    expect(logs).toHaveLength(1);
+    const serialized = JSON.stringify(logs[0]);
+    expect(serialized).toContain('identity lookup failed');
+    expect(serialized).toContain('403');
+  });
+
+  it('never logs the token or Google error text', async () => {
+    const { result, logs } = identityWith({
+      ok: false,
+      status: 403,
+      body: { error: { message: 'Request had insufficient authentication scopes.' } },
+    });
+    await result;
+
+    const serialized = JSON.stringify(logs[0]);
+    expect(serialized).not.toContain(TOKEN);
+    expect(serialized).not.toContain('insufficient authentication scopes');
+  });
+
+  it('does not log on success', async () => {
+    const { result, logs } = identityWith({ body: driveUser() });
     await result;
     expect(logs).toHaveLength(0);
   });
