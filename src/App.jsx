@@ -1,9 +1,11 @@
 import React, { useRef, useState } from 'react';
 import { useAuth } from './hooks/useAuth';
+import { ACCESS_STATUS, isAuthorized } from './hooks/useRadarAccess';
 import { useDriveSearch } from './hooks/useDriveSearch';
 import { listSubfolders } from './utils/driveApi';
 import { formatDate, formatSize, getFileType, getFileColor } from './utils/helpers';
 import LoginScreen from './components/LoginScreen';
+import AccessGate from './components/AccessGate';
 import SearchBar from './components/SearchBar';
 import Filters from './components/Filters';
 import FileList from './components/FileList';
@@ -260,8 +262,19 @@ function DetailPanel({ item, onClose }) {
 /* ─── App ─────────────────────────────────────────────────── */
 
 export default function App() {
-  const { user, token, initializing: authInitializing, loading: authLoading, error: authError, signIn, signOut } = useAuth();
-  const search = useDriveSearch(token);
+  const {
+    user, token, loading: authLoading, error: authError,
+    accessStatus, retryAccessCheck, signIn, signOut,
+  } = useAuth();
+
+  /**
+   * The Drive token is withheld until authorization completes. Passing `token` unconditionally
+   * would have this hook fetch folders and owners the instant Google issued a token — before
+   * the domain and Drive checks resolve, and for accounts RADAR is about to refuse. Google
+   * would still enforce its own permissions, but RADAR should not be asking on their behalf.
+   */
+  const authorized = isAuthorized(accessStatus);
+  const search = useDriveSearch(authorized ? token : null);
 
   const [mode, setMode] = useState('search');
   const [selectedItem, setSelectedItem] = useState(null);
@@ -303,12 +316,29 @@ export default function App() {
     setSelectedItem(null);
   };
 
-  if (authInitializing) {
+  /* ── Access gate ──────────────────────────────────────────
+     The single point where RADAR decides whether to render itself. Every state other than
+     `authorized` returns before the application tree below, so protected content cannot
+     appear while a check is pending or after one has failed. Hiding navigation would not be
+     enough — nothing protected is mounted at all. */
+
+  if (accessStatus === ACCESS_STATUS.INITIALIZING) {
     return <AuthSplash />;
   }
 
-  if (!token) {
+  if (accessStatus === ACCESS_STATUS.SIGNED_OUT) {
     return <LoginScreen onSignIn={signIn} loading={authLoading} error={authError} />;
+  }
+
+  if (!authorized) {
+    return (
+      <AccessGate
+        status={accessStatus}
+        email={user?.email}
+        onRetry={retryAccessCheck}
+        onSignOut={signOut}
+      />
+    );
   }
 
   const displayItems = currentBrowseItems ?? search.results;

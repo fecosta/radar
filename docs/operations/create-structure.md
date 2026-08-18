@@ -50,6 +50,10 @@ Each of these is enforced by a test, not just by convention.
 
 ## Required access
 
+Entering RADAR at all requires an approved organization domain *and* access to the Shared
+Drive — see [access-control.md](access-control.md). This section is about the additional role
+needed to *create* structures once inside.
+
 There is **no RADAR-specific admin list**. The signed-in user's Google Drive role is the
 authorization, and Google enforces it:
 
