@@ -30,10 +30,10 @@ function AuthSplash() {
     }}>
       <div style={{
         width: 38, height: 38,
-        background: 'linear-gradient(135deg, #0648B3 0%, #1A80E8 100%)',
+        background: 'linear-gradient(135deg, #A62BFF 0%, #C97AFF 100%)',
         borderRadius: 11,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 4px 12px rgba(6, 72, 179, 0.3)',
+        boxShadow: '0 4px 12px rgba(166, 43, 255, 0.3)',
       }}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -241,7 +241,7 @@ function DetailPanel({ item, onClose }) {
               fontSize: 13,
               fontWeight: 700,
               transition: 'background 0.15s, box-shadow 0.15s',
-              boxShadow: '0 4px 12px rgba(6, 72, 179, 0.3)',
+              boxShadow: '0 4px 12px rgba(166, 43, 255, 0.3)',
             }}
             onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover)'}
             onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}

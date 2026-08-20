@@ -88,7 +88,7 @@ export function Button({ children, onClick, variant = 'secondary', disabled, typ
         color,
         cursor: disabled ? 'not-allowed' : 'pointer',
         transition: 'all 0.15s',
-        boxShadow: primary && !disabled ? '0 4px 12px rgba(6, 72, 179, 0.3)' : 'none',
+        boxShadow: primary && !disabled ? '0 4px 12px rgba(166, 43, 255, 0.3)' : 'none',
       }}
       {...rest}
     >

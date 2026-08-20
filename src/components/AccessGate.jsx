@@ -26,7 +26,7 @@ function Screen({ children }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(145deg, #0439A0 0%, #0B5FCC 55%, #1A80E8 100%)',
+        background: 'linear-gradient(145deg, #6F15C4 0%, #A62BFF 55%, #C97AFF 100%)',
         fontFamily: 'var(--sans)',
         padding: 24,
       }}
@@ -35,7 +35,7 @@ function Screen({ children }) {
         style={{
           background: '#FFFFFF',
           borderRadius: 20,
-          boxShadow: '0 20px 60px rgba(4, 57, 160, 0.35)',
+          boxShadow: '0 20px 60px rgba(111, 21, 196, 0.35)',
           padding: '44px 44px 36px',
           width: '100%',
           maxWidth: 460,
@@ -111,7 +111,7 @@ export default function AccessGate({ status, email, onRetry, onSignOut }) {
               width: 20,
               height: 20,
               border: '2.5px solid #E0E7F0',
-              borderTopColor: '#0648B3',
+              borderTopColor: '#A62BFF',
               borderRadius: '50%',
               animation: 'spin 0.7s linear infinite',
               flexShrink: 0,

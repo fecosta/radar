@@ -14,7 +14,7 @@ export default function SearchBar({ query, onChange, loading }) {
       borderRadius: 10,
       padding: '10px 16px',
       transition: 'border-color 0.15s, box-shadow 0.15s',
-      boxShadow: focused ? '0 0 0 4px rgba(6, 72, 179, 0.10)' : 'none',
+      boxShadow: focused ? '0 0 0 4px rgba(166, 43, 255, 0.10)' : 'none',
     }}>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
         stroke={focused ? 'var(--accent)' : 'var(--text-muted)'}

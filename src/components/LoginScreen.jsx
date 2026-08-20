@@ -5,14 +5,14 @@ export default function LoginScreen({ onSignIn, loading, error }) {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'linear-gradient(145deg, #0439A0 0%, #0B5FCC 55%, #1A80E8 100%)',
+      background: 'linear-gradient(145deg, #6F15C4 0%, #A62BFF 55%, #C97AFF 100%)',
       fontFamily: 'var(--sans)',
       padding: 24,
     }}>
       <div style={{
         background: '#FFFFFF',
         borderRadius: 20,
-        boxShadow: '0 20px 60px rgba(4, 57, 160, 0.35)',
+        boxShadow: '0 20px 60px rgba(111, 21, 196, 0.35)',
         padding: '48px 44px',
         width: '100%',
         maxWidth: 420,
@@ -21,11 +21,11 @@ export default function LoginScreen({ onSignIn, loading, error }) {
         {/* Logo mark */}
         <div style={{
           width: 56, height: 56,
-          background: 'linear-gradient(135deg, #0648B3, #1A80E8)',
+          background: 'linear-gradient(135deg, #A62BFF, #C97AFF)',
           borderRadius: 16,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           marginBottom: 24,
-          boxShadow: '0 8px 24px rgba(6, 72, 179, 0.35)',
+          boxShadow: '0 8px 24px rgba(166, 43, 255, 0.35)',
         }}>
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8"/>
@@ -71,16 +71,16 @@ export default function LoginScreen({ onSignIn, loading, error }) {
             fontSize: 15,
             fontWeight: 700,
             fontFamily: 'var(--sans)',
-            background: loading ? '#BFD0E8' : '#0648B3',
+            background: loading ? '#E4C3FF' : '#A62BFF',
             color: '#FFFFFF',
             border: 'none',
             borderRadius: 10,
             cursor: loading ? 'wait' : 'pointer',
             transition: 'background 0.15s, transform 0.1s, box-shadow 0.15s',
-            boxShadow: loading ? 'none' : '0 4px 16px rgba(6, 72, 179, 0.35)',
+            boxShadow: loading ? 'none' : '0 4px 16px rgba(166, 43, 255, 0.35)',
           }}
-          onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#0B5FCC'; }}
-          onMouseLeave={e => { if (!loading) e.currentTarget.style.background = '#0648B3'; }}
+          onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#6F15C4'; }}
+          onMouseLeave={e => { if (!loading) e.currentTarget.style.background = '#A62BFF'; }}
           onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.98)'; }}
           onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
         >

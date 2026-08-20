@@ -304,7 +304,7 @@ export default function Classify() {
           borderRadius: 10,
           padding: '10px 14px',
           transition: 'border-color 0.15s, box-shadow 0.15s',
-          boxShadow: focused ? '0 0 0 4px rgba(6, 72, 179, 0.10)' : 'none',
+          boxShadow: focused ? '0 0 0 4px rgba(166, 43, 255, 0.10)' : 'none',
         }}>
           <textarea
             value={description}
@@ -403,7 +403,7 @@ export default function Classify() {
               fontFamily: 'var(--sans)',
               cursor: 'pointer',
               transition: 'background 0.15s, box-shadow 0.15s',
-              boxShadow: '0 4px 12px rgba(6, 72, 179, 0.3)',
+              boxShadow: '0 4px 12px rgba(166, 43, 255, 0.3)',
             }}
             onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover)'}
             onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}

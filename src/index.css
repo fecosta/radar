@@ -9,14 +9,14 @@
   --text: #262B40;
   --text-secondary: #66799E;
   --text-muted: #93A2BB;
-  --accent: #0648B3;
-  --accent-hover: #0B5FCC;
-  --accent-light: #EBF1FB;
+  --accent: #A62BFF;
+  --accent-hover: #6F15C4;
+  --accent-light: #F4E6FF;
   --danger: #EE5050;
   --danger-light: #FEF0F0;
   --success: #05A677;
   --success-light: #E6F7F2;
-  --hover: rgba(6, 72, 179, 0.035);
+  --hover: rgba(166, 43, 255, 0.05);
   --shadow: 0 2px 12px rgba(38, 43, 64, 0.07), 0 1px 3px rgba(38, 43, 64, 0.04);
   --shadow-elevated: 0 8px 32px rgba(38, 43, 64, 0.11);
   --shadow-navbar: 0 2px 8px rgba(38, 43, 64, 0.05);
