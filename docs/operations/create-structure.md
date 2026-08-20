@@ -4,7 +4,8 @@ How the canonical folder creator works, what it deliberately will not do, and wh
 configured before it is useful.
 
 Governance documents outrank this file. If it disagrees with the approved RADAR policy or the
-v05 canonical specification, those win and this file is the bug.
+v06 canonical specification (`docs/specs/2026-08-18_RADAR_Folder_Tree_v06.txt`), those win and
+this file is the bug.
 
 ## What it does
 
@@ -27,9 +28,30 @@ and no auto-creation of missing canonical roots.
 | Formal governance meeting | `03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/{forum}/{YYYY}/{YYYY-MM-DD_Forum}` | — |
 | Annual OKR cycle | `01_STRATEGY/03_OKRs/{YYYY}` | — |
 
-Themes are exactly `Education` and `Democracy`. Forums are exactly Board, Leadership Team,
-All Team and Offsites — Concept Review and Investment Committee are project-level investment
-gates and can never be selected here (policy §3.1, spec design rule 6).
+Themes are **per structure type**, not one global list (v06 design rule 2):
+
+| Structure type | Themes offered |
+|---|---|
+| Pipeline organization | `Education`, `Democracy` |
+| Venture Building initiative | `Education`, `Democracy` |
+| In-house program | `Education`, `Democracy`, `Cross_Thematic` |
+
+`Cross_Thematic` is used only where the canonical tree defines it and is not a general
+"other" category, so the creator rejects it for Pipeline and Venture Building outright.
+**Emergency Response** needs no structure type of its own: it is an In-house program with
+theme `Cross_Thematic` and object name `Emergency_Response`, using the standard template.
+
+`0A_EXPLORATION` is not creatable here. v06 lists exactly six structure types, and an
+exploration folder has no template — it is a plain folder under
+`0A_EXPLORATION/{theme}`. Preview does read those three theme folders, to warn when an
+object being promoted to Pipeline still has an exploration home (design rule 19).
+
+Forums are exactly Board, Leadership Team, All Team and Offsites — Concept Review and
+Investment Committee are project-level investment gates and can never be selected here
+(policy §3.1, spec design rule 6). `05_Weekly email` is deliberately **not** a forum: the v06
+formal-governance template applies only to those four, and the weekly email folder is a
+pre-existing restricted folder the creator never touches (see
+[access-control.md](access-control.md)).
 
 The yearly Meeting Log is a **Google document**; everything else is a folder.
 
@@ -132,7 +154,7 @@ RADAR deliberately does not create these for you. Both take about a minute by ha
 
 **1. Master Registry**
 
-Create a Google Sheet in the Shared Drive — the canonical home per the v05 spec is
+Create a Google Sheet in the Shared Drive — the canonical home per the v06 spec is
 `02_INVESTMENTS_AND_PROGRAMS/00_MASTER_INDEXES/00_Master_Registry`. Paste this into cell
 **A1** (it is tab-separated, so it spreads across the row):
 
@@ -299,11 +321,13 @@ retrying completes the Registry record without touching the folders.
    point.
 2. **Operation results are in-memory.** Status and retry survive re-renders but not a page
    reload. The audit spreadsheet is the durable record.
-3. **The classifier is not yet migrated.** `canonicalTree.js` is the single source of truth
-   for the creator, but `src/utils/radarClassify.js` still builds paths from inline template
-   literals. `src/radar/classifierEquivalence.test.js` proves the two agree and fails the
-   build if they drift; migrating the classifier to consume the config is the documented next
-   step (`AGENTS.md` §4 stages it behind exactly this kind of equivalence test).
+3. **The classifier is only partly migrated.** `canonicalTree.js` is the single source of
+   truth for the creator. `src/utils/radarClassify.js` now imports the theme constants from
+   it — so there is one definition of where `Cross_Thematic` is valid — but still builds its
+   folder *paths* from inline template literals. `src/radar/classifierEquivalence.test.js`
+   proves the two representations agree and fails the build if they drift; migrating the
+   remaining path literals is the documented next step (`AGENTS.md` §4 stages it behind
+   exactly this kind of equivalence test).
 4. **Pre-existing:** the read-only search helper in `src/utils/driveApi.js` escapes
    apostrophes but not backslashes in Drive queries. Left untouched to preserve Search
    behavior. New code uses `escapeDriveQueryValue`, which escapes both.

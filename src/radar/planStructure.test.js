@@ -67,7 +67,7 @@ describe('canonical serialization', () => {
 describe('plan contents', () => {
   it('carries everything needed to preview, execute, report and audit', () => {
     const plan = planStructure(STRUCTURE_TYPES.PIPELINE_ORGANIZATION, PIPELINE);
-    expect(plan.planVersion).toBe('radar-v05');
+    expect(plan.planVersion).toBe('radar-v06');
     expect(plan.structureType).toBe(STRUCTURE_TYPES.PIPELINE_ORGANIZATION);
     expect(plan.inputs).toEqual(PIPELINE);
     expect(plan.destination.path).toContain('Fundación Luminar');

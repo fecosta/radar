@@ -12,7 +12,7 @@ import { MIME_FOLDER, MIME_GOOGLE_DOC, GOVERNANCE_FORUMS } from './canonicalTree
 import { planStructureFromRaw } from './planStructure.js';
 
 /**
- * These assert the canonical v05 templates EXACTLY. If a folder name, order or destination
+ * These assert the canonical v06 templates EXACTLY. If a folder name, order or destination
  * changes here without a corresponding specification change, the specification wins and
  * this test is what should have stopped it.
  */
@@ -59,6 +59,29 @@ describe('destinations', () => {
   it('routes an In-house program to IN_HOUSE_PROGRAMS', () => {
     const d = resolveDestination(STRUCTURE_TYPES.IN_HOUSE_PROGRAM, OBJECT_INPUTS);
     expect(d.path).toBe('02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/Fundación Luminar');
+  });
+
+  /**
+   * v06 SPECIAL CASE - EMERGENCY RESPONSE. No dedicated structure type: it is an In-house
+   * program whose theme is Cross_Thematic, using the standard template unchanged.
+   */
+  it('routes a Cross_Thematic In-house program, including Emergency_Response', () => {
+    const d = resolveDestination(STRUCTURE_TYPES.IN_HOUSE_PROGRAM, {
+      ...OBJECT_INPUTS,
+      objectName: 'Emergency_Response',
+      theme: 'Cross_Thematic',
+    });
+    expect(d.path).toBe(
+      '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Cross_Thematic/Emergency_Response'
+    );
+    expect(d.parentPath).toBe('02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Cross_Thematic');
+
+    // Same template as any other In-house program — Cross_Thematic changes only the theme.
+    expect(topLevelChildren(STRUCTURE_TYPES.IN_HOUSE_PROGRAM, {
+      ...OBJECT_INPUTS,
+      objectName: 'Emergency_Response',
+      theme: 'Cross_Thematic',
+    })).toEqual(topLevelChildren(STRUCTURE_TYPES.IN_HOUSE_PROGRAM, OBJECT_INPUTS));
   });
 
   it('routes a Policy under 03_INSTITUTIONAL/00_POLICIES', () => {
@@ -268,6 +291,41 @@ describe('guard rails', () => {
     for (const banned of ['portfolio_organization', 'root_bootstrap', 'launch_seed', 'aprendo', 'beca_tech', 'democracia']) {
       expect(isSupportedStructureType(banned)).toBe(false);
     }
+  });
+
+  /**
+   * v06 permits Cross_Thematic only where the canonical tree defines it. Every themed
+   * structure must therefore offer exactly the themes its own area allows.
+   */
+  it('offers Cross_Thematic only where the canonical tree defines it', () => {
+    const themesById = Object.fromEntries(SUPPORTED_STRUCTURES.map((s) => [s.id, s.themes]));
+    expect(themesById.pipeline_organization).toEqual(['Education', 'Democracy']);
+    expect(themesById.venture_building_initiative).toEqual(['Education', 'Democracy']);
+    expect(themesById.in_house_program).toEqual(['Education', 'Democracy', 'Cross_Thematic']);
+    // Unthemed structures must not acquire a theme selector.
+    for (const id of ['policy', 'governance_meeting', 'okr_cycle']) {
+      expect(themesById[id]).toBeNull();
+    }
+  });
+
+  /**
+   * 0A_EXPLORATION is pre-Pipeline staging with no template of its own (v06 lists exactly six
+   * structure types). The creator must not be able to target it.
+   */
+  it('never resolves a destination inside 0A_EXPLORATION or the Weekly email folder', () => {
+    const paths = SUPPORTED_STRUCTURES.map((s) => s.id).map((id) => {
+      const inputs =
+        id === 'policy'
+          ? { objectName: 'X' }
+          : id === 'governance_meeting'
+            ? { forum: 'board', meetingDate: '2026-01-01' }
+            : id === 'okr_cycle'
+              ? { okrYear: '2026' }
+              : OBJECT_INPUTS;
+      return resolveDestination(id, inputs).path;
+    });
+    expect(paths.some((p) => p.includes('0A_EXPLORATION'))).toBe(false);
+    expect(paths.some((p) => p.includes('05_Weekly email'))).toBe(false);
   });
 
   it('marks the beneficiary-data folder restricted, and only that one', () => {

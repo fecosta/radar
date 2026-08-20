@@ -1,0 +1,403 @@
+RADAR v06 - CANONICAL FOLDER TREE / AUTOMATION SPEC
+Version: 2026-08-18
+Basis: v05 architecture + Leadership Team feedback + implemented Drive changes + structure-creation automation
+
+DESIGN RULES
+1. Fixed root: 01_STRATEGY, 02_INVESTMENTS_AND_PROGRAMS, 03_INSTITUTIONAL, 99_ARCHIVE.
+2. Core programmatic themes are Education and Democracy. Cross_Thematic is used only where explicitly defined (including Exploration, selected In-house Programs, Learning/External Knowledge, and related Archive paths).
+3. Strategic focus (ECE, K12, Future of Talent, People in Government, etc.) is metadata, not a mandatory physical path.
+4. One object = one official folder.
+5. Pipeline stage changes do NOT move the organization folder. Sourcing, Screening, and Diligence are subfolders inside it; current stage/status is recorded in the Master Registry / CRM.
+6. Investment Process v2 alignment: Concept Review is a project-level gate inside Screening. Investment Committee is a project-level gate inside Investment Due Diligence. Their materials stay with the project, not in central Governance.
+7. Approval: move the entire Pipeline object folder once to Portfolio; retain Pipeline history; add Portfolio operating folders.
+8. Decline/withdrawal: move entire object to 99_ARCHIVE/01_Declined_Pipeline and keep its Master Registry record/link.
+9. Venture graduation: move the complete folder to Portfolio when it becomes an external active investment; to In-house Programs when ver+ becomes the stable operator; or Archive if closed.
+10. Master indexes: maintain ONE 00_Master_Registry. Other indexes are automated views; they are not separate manually maintained databases.
+11. Every Portfolio, Venture Building, and In-house object gets Photos_and_Videos.
+12. Use shortcuts/links instead of duplicate final files.
+13. Policies live in 03_INSTITUTIONAL/00_POLICIES. RADAR is one organizational policy; do not create a separate RADAR_SYSTEM folder.
+14. Charity is a separate Transversal Area, not a Legal subfolder.
+15. External third-party reference material lives in 05_EXTERNAL_KNOWLEDGE; ver+-produced research/learning lives in 03_RESEARCH_AND_LEARNING.
+16. Reusable MEL systems, methodologies, standard instruments, indicator frameworks, and organization-wide MEL guidance live in 03_INSTITUTIONAL/02_TRANSVERSAL_AREAS/MEL, not in Research and Learning.
+17. Do not auto-create detailed Transversal Area subfolders beyond the canonical minimum until area owners validate them.
+18. 0A_EXPLORATION is a pre-Pipeline staging area for substantive contacts, topic/issue explorations, and possible opportunities that are not yet formal Pipeline objects. Use Education, Democracy, or Cross_Thematic.
+19. If an exploration becomes a formal investment opportunity, create the canonical Pipeline organization structure and transfer the relevant exploration material into it; do not keep duplicate official homes.
+20. Standard empty folder structures should be created through the RADAR Drive Finder > Create structure workflow rather than by manually rebuilding or attempting to duplicate folder templates.
+21. Weekly email packages have a central institutional home in 03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/05_Weekly email; source documents keep their official home and are linked rather than duplicated.
+
+CANONICAL ROOT TREE
+RADAR
+├── 01_STRATEGY
+│   ├── 01_ver+_Strategy
+│   │   ├── 01_5_Year_Plan
+│   │   ├── 02_North_Star_and_Investment_Thesis
+│   │   ├── 03_Approved_Strategy
+│   │   └── 99_Drafts
+│   ├── 02_Thematic_Strategies
+│   │   ├── Education
+│   │   │   ├── Approved
+│   │   │   └── 99_Drafts
+│   │   └── Democracy
+│   │       ├── Approved
+│   │       └── 99_Drafts
+│   └── 03_OKRs
+│       └── [YYYY]
+│           ├── 01_Institutional
+│           ├── 02_Areas
+│           └── 99_Drafts
+│
+├── 02_INVESTMENTS_AND_PROGRAMS
+│   ├── 00_MASTER_INDEXES
+│   │   ├── 00_Master_Registry
+│   │   ├── 01_Opportunity_Map                  [automated view]
+│   │   ├── 02_Active_Portfolio                 [automated view]
+│   │   ├── 03_Ventures_and_In_House_Programs  [automated view]
+│   │   └── 04_Archived_and_Declined            [automated view]
+│   ├── 0A_EXPLORATION
+│   │   ├── Education
+│   │   ├── Democracy
+│   │   └── Cross_Thematic
+│   ├── 01_PIPELINE
+│   │   ├── Education
+│   │   └── Democracy
+│   ├── 02_PORTFOLIO
+│   │   ├── Education
+│   │   └── Democracy
+│   ├── 03_VENTURE_BUILDING
+│   │   ├── Education
+│   │   └── Democracy
+│   └── 04_IN_HOUSE_PROGRAMS
+│       ├── Education
+│       ├── Democracy
+│       └── Cross_Thematic
+│           └── Emergency_Response
+│
+├── 03_INSTITUTIONAL
+│   ├── 00_POLICIES
+│   │   └── [Policy_Name]
+│   ├── 01_GOVERNANCE_AND_DECISIONS
+│   │   ├── 00_Decision_Log
+│   │   ├── 01_Board
+│   │   ├── 02_Leadership_Team
+│   │   ├── 03_All_Team
+│   │   ├── 04_Offsites
+│   │   └── 05_Weekly email
+│   ├── 02_TRANSVERSAL_AREAS
+│   │   ├── Charity
+│   │   ├── Comms
+│   │   ├── Finance
+│   │   ├── Legal
+│   │   │   ├── Entities_and_Governance
+│   │   │   ├── Contract_Templates
+│   │   │   └── Regulatory_Frameworks
+│   │   ├── MEL
+│   │   ├── Ops_Admin
+│   │   ├── People
+│   │   └── Tech
+│   ├── 03_RESEARCH_AND_LEARNING
+│   │   ├── 01_Research_Projects
+│   │   │   ├── Education
+│   │   │   ├── Democracy
+│   │   │   └── Institutional
+│   │   ├── 02_Learning_Products
+│   │   │   ├── Education
+│   │   │   ├── Democracy
+│   │   │   └── Cross_Thematic
+│   ├── 04_ECOSYSTEM_AND_PARTNERSHIPS
+│   │   ├── 01_Ecosystem_Architecture
+│   │   │   ├── Education
+│   │   │   └── Democracy
+│   │   └── 02_Co_Investors
+│   │       ├── Mapping
+│   │       └── Active
+│   ├── 05_EXTERNAL_KNOWLEDGE
+│   │   ├── Education
+│   │   ├── Democracy
+│   │   └── Cross_Thematic
+│   └── 06_TEMPLATES
+│
+└── 99_ARCHIVE
+    ├── 01_Declined_Pipeline
+    ├── 02_Closed_Portfolio
+    │   ├── Education
+    │   └── Democracy
+    ├── 03_Closed_Ventures
+    │   ├── Education
+    │   └── Democracy
+    ├── 04_Closed_In_House_Programs
+    │   ├── Education
+    │   ├── Democracy
+    │   └── Cross_Thematic
+    ├── 05_Superseded_Strategies
+    ├── 06_Deprecated_Templates
+    ├── 07_Legacy_Structure
+    └── 08_Old_Admin_Docs
+
+DYNAMIC TEMPLATE - POLICY
+Path: 03_INSTITUTIONAL/00_POLICIES/[Policy_Name]
+[Policy_Name]
+├── 01_Approved
+├── 02_Supporting_Guidance
+└── 99_Drafts
+
+Notes:
+- RADAR information-management rules should be formalized as one policy here.
+- The investment process/criteria may be part of the relevant organizational investment policy.
+- Do not duplicate an approved policy in Transversal Areas; use shortcuts/links if a function needs visibility.
+
+0A_EXPLORATION - OPERATING RULE
+Path: 02_INVESTMENTS_AND_PROGRAMS/0A_EXPLORATION/[Education|Democracy|Cross_Thematic]
+Purpose: preserve substantive pre-Pipeline work that is worth institutional memory but has not yet become a formal investment opportunity.
+Use for: early meetings/Granola notes, concept notes, topic or organization explorations, background material, and other substantive exploratory work.
+- Very light contacts can remain as a Master Registry / Opportunity Map record without a dedicated folder.
+- If an exploration becomes a formal Pipeline opportunity, use Drive Finder > Create structure to create the canonical Pipeline organization folder and transfer the relevant exploration material into that official folder.
+- Do not keep a second official copy in 0A_EXPLORATION after the formal Pipeline object exists.
+
+DYNAMIC TEMPLATE - PIPELINE ORGANIZATION
+Path: 02_INVESTMENTS_AND_PROGRAMS/01_PIPELINE/[Education|Democracy]/[Organization_Name]
+[Organization_Name]
+├── 00_Overview_and_Contacts
+├── 01_Meetings
+│   ├── YYYY_[Organization]_Meeting_Log
+│   └── Raw_Notes
+│       └── [Year]
+├── 02_Sourcing
+├── 03_Screening
+│   ├── 01_Concept_Note_and_Materials
+│   └── 02_Concept_Review
+│       └── [YYYY-MM-DD_Concept_Review]
+│           ├── 01_PreReads_and_Deck
+│           ├── 02_Notes_and_Minutes
+│           └── 03_Decision_and_Next_Steps
+└── 04_Diligence
+    ├── 01_Investment_Due_Diligence
+    │   ├── 01_Application
+    │   ├── 02_Application_Review
+    │   ├── 03_Peer_Reviewed_Investment_Memo
+    │   └── 04_Investment_Committee
+    │       └── [YYYY-MM-DD_Investment_Committee]
+    │           ├── 01_PreReads_and_Memo
+    │           ├── 02_Notes_and_Minutes
+    │           └── 03_Decision_and_Next_Steps
+    └── 02_Legal_Due_Diligence
+
+INVESTMENT PROCESS V2 -> FOLDER MAPPING
+- Prospection / Sourcing -> 02_Sourcing
+- Prospection / Screening -> 03_Screening
+- Concept Review -> 03_Screening/02_Concept_Review/[date]
+- Investment Due Diligence -> 04_Diligence/01_Investment_Due_Diligence
+- Application -> 04_Diligence/01_Investment_Due_Diligence/01_Application
+- Application review -> 04_Diligence/01_Investment_Due_Diligence/02_Application_Review
+- Peer-reviewed memo -> 04_Diligence/01_Investment_Due_Diligence/03_Peer_Reviewed_Investment_Memo
+- Investment Committee -> 04_Diligence/01_Investment_Due_Diligence/04_Investment_Committee/[date]
+- Legal Due Diligence -> 04_Diligence/02_Legal_Due_Diligence
+- Onboarding -> created after approval when object moves to Portfolio
+
+PIPELINE EXPLORATION MOVEMENT RULE
+- 0A_EXPLORATION is prior to formal Pipeline.
+- When an exploration becomes a formal opportunity, create the canonical Pipeline object and transfer the relevant exploratory material into it.
+- Keep the Master Registry / Opportunity Map status current so explorations remain visible even when no dedicated folder is required.
+
+MEETING RULES
+A. General relationship/working meetings
+   -> 01_Meetings / yearly living log + Raw_Notes/[Year]
+B. Concept Review
+   -> 03_Screening/02_Concept_Review/[date]
+C. Investment Committee
+   -> 04_Diligence/01_Investment_Due_Diligence/04_Investment_Committee/[date]
+Concept Review and Investment Committee must NEVER be stored as central Governance meeting folders.
+
+DYNAMIC TEMPLATE - PORTFOLIO ORGANIZATION
+Path: 02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/[Education|Democracy]/[Organization_Name]
+[Organization_Name]
+├── 00_Overview_and_Contacts
+├── 01_Meetings
+│   ├── YYYY_[Organization]_Meeting_Log
+│   └── Raw_Notes/[Year]
+├── 02_Sourcing                    ← retained history
+├── 03_Screening                   ← retained history, including Concept Review
+├── 04_Diligence                   ← retained history, including Investment Committee
+├── 05_Onboarding
+├── 06_Investment_Docs
+├── 07_Execution
+├── 08_Disbursements
+├── 09_Reports
+├── 10_MEL_Evidence
+├── 11_Photos_and_Videos
+└── 12_Decisions_and_Transitions
+
+PORTFOLIO CREATION RULE
+- Move existing Pipeline folder to Portfolio; do not create/copy a new object folder.
+- Preserve Sourcing, Screening/Concept Review, Diligence/Investment Committee, and Legal Due Diligence history.
+- Add subfolders 05-12 after approval.
+
+DYNAMIC TEMPLATE - VENTURE BUILDING
+Path: 02_INVESTMENTS_AND_PROGRAMS/03_VENTURE_BUILDING/[Education|Democracy]/[Initiative_Name]
+[Initiative_Name]
+├── 00_Overview_and_Governance
+├── 01_Meetings
+│   ├── YYYY_[Initiative]_Meeting_Log
+│   └── Raw_Notes/[Year]
+├── 02_Design_and_Structuring
+├── 03_Validation
+├── 04_Implementation
+├── 05_MEL_and_Learning
+├── 06_Finance_and_Legal
+├── 07_Partners_and_Contracts
+├── 08_Comms_and_Reports
+├── 09_Photos_and_Videos
+└── 10_Spinoff_or_Transition
+
+DYNAMIC TEMPLATE - IN-HOUSE PROGRAM
+Path: 02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/[Education|Democracy|Cross_Thematic]/[Program_Name]
+[Program_Name]
+├── 00_Overview_and_Governance
+├── 01_Meetings
+│   ├── YYYY_[Program]_Meeting_Log
+│   └── Raw_Notes/[Year]
+├── 02_Strategy_and_Design
+├── 03_Operations
+├── 04_Partners_and_Providers
+├── 05_Participants_and_Beneficiary_Data   [restricted]
+├── 06_MEL_Evidence
+├── 07_Finance_and_Legal
+├── 08_Comms_and_Reports
+├── 09_Photos_and_Videos
+└── 10_Decisions_and_Transitions
+
+SPECIAL CASE - EMERGENCY RESPONSE
+Official path: 02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Cross_Thematic/Emergency_Response
+- Emergency_Response is treated as a Cross_Thematic In-house Program because ver+ operates the work directly and it does not sit naturally under Education or Democracy.
+- It uses the standard In-house Program template above, including restricted participant/beneficiary data, MEL evidence, finance/legal, communications/reports, photos/videos, and decisions/transitions.
+- Cross_Thematic should be used only when an In-house Program cannot reasonably be assigned to Education or Democracy; it is not a general catch-all category.
+
+SPECIAL TEMPLATE - DEMOCRACIA+
+Provisional path: 02_INVESTMENTS_AND_PROGRAMS/03_VENTURE_BUILDING/Democracy/Democracia+
+(Use while leadership considers Democracia+ an incubation with potential spin-off. If status changes, move the full folder.)
+Democracia+
+├── 00_Overview_and_Governance
+├── 01_Meetings
+│   ├── YYYY_Democracia+_Meeting_Log
+│   └── Raw_Notes/[Year]
+├── 02_Strategy_and_Model
+├── 03_Operations
+├── 04_Subportfolio_and_Organizations
+│   └── [Organization_Name]
+├── 05_Finance_and_Legal
+├── 06_MEL_and_Learning
+├── 07_Comms_and_Reports
+├── 08_Partners_and_Co_Investors
+├── 09_Photos_and_Videos
+└── 10_Spinoff_Preparation
+
+FORMAL INSTITUTIONAL GOVERNANCE TEMPLATE
+Applies only to: Board, Leadership Team, All Team, Offsites.
+Path examples:
+03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/01_Board/[Year]/[YYYY-MM-DD_Board]
+03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/02_Leadership_Team/[Year]/[YYYY-MM-DD_Leadership_Team]
+[YYYY-MM-DD_Forum_or_Meeting]
+├── 01_Agenda
+├── 02_PreReads
+├── 03_Deck
+├── 04_Notes_and_Minutes
+└── 05_Decisions_and_Actions
+
+WEEKLY EMAIL RULE
+Path: 03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/05_Weekly email
+- Save the weekly email package/file and materials created specifically for that recurring communication.
+- Documents that already have an official RADAR home remain there; use links/shortcuts from the weekly email package instead of creating duplicates.
+
+MASTER REGISTRY - RECOMMENDED MINIMUM FIELDS
+- Object_Name
+- Theme [Education|Democracy|Cross_Thematic where applicable]
+- Strategic_Focus [flexible metadata]
+- Object_Type [Exploration|Pipeline|Portfolio|Venture_Building|In_House_Program]
+- Current_Stage_or_Status
+- Country_or_Geography
+- Owner
+- Official_Folder_Link
+- Last_Updated
+- Optional: Decline_or_Closure_Reason; Decision_Link
+
+AUTOMATED VIEWS FROM 00_Master_Registry
+- 01_Opportunity_Map: all known explorations/opportunities/organizations, including declined/closed where useful.
+- 02_Active_Portfolio: Object_Type=Portfolio and active status.
+- 03_Ventures_and_In_House_Programs: Object_Type in {Venture_Building, In_House_Program} and active status.
+- 04_Archived_and_Declined: declined/closed/archived status.
+Human action determines status/type. Automation updates views and folder links; it does not infer investment decisions from file contents.
+
+ANNUAL OKR AUTOMATION RULE
+At the start of each OKR cycle, create:
+01_STRATEGY/03_OKRs/[YYYY]
+├── 01_Institutional
+├── 02_Areas
+└── 99_Drafts
+Do not mix multiple years in the same OKR folder.
+
+EXPLORATION MOVEMENT RULE
+- 0A_EXPLORATION is prior to formal Pipeline.
+- When an exploration becomes a formal opportunity, create the canonical Pipeline object and transfer the relevant exploratory material into it.
+- Keep the Master Registry / Opportunity Map status current so explorations remain visible even when no dedicated folder is required.
+
+MEETING RULES
+- Every organization/venture/in-house program has 01_Meetings for relationship/working history.
+- Create one living yearly log: YYYY_[Object]_Meeting_Log.
+- Raw Granola/AI notes go under Raw_Notes/[Year] with a dated name.
+- Concept Review is stored with the project in Screening.
+- Investment Committee is stored with the project in Investment Due Diligence.
+- Central Governance is only for Board, Leadership Team, All Team, and Offsites.
+- Decision Log is an index; it does not replace minutes, gate records, or the object Meeting Log.
+
+AUDIOVISUAL RULE
+- Portfolio: 11_Photos_and_Videos
+- Venture Building: 09_Photos_and_Videos
+- In-house Program: 09_Photos_and_Videos
+- Democracia+: 09_Photos_and_Videos
+- Institutional Comms keeps organization-wide assets; when it needs an object-specific asset, use a shortcut/link instead of a duplicate.
+
+NAMING RULE
+Recommended file format:
+YYYY-MM-DD_[Object]_[DocumentType]_[Status]_v##
+Statuses when needed: DRAFT | FOR_REVIEW | APPROVED | SIGNED | SUPERSEDED
+Avoid: final, final2, last, new, personal initials.
+
+SPECIAL ACCESS RULE
+- Restrict: In-house/05_Participants_and_Beneficiary_Data, People/HR, sensitive Legal/Charity/Finance/Governance folders.
+- Use role/group-based permissions when possible.
+- Do not store credentials/secrets in general Drive files.
+
+LAUNCH SEED EXAMPLES
+- 1 Pipeline organization currently in Screening or Diligence, including a correctly filed Concept Review or Investment Committee package.
+- 1 Portfolio organization (e.g., Aprendo+), including Photos_and_Videos.
+- Democracia+ using the expanded special template.
+- Beca Tech using In-house Program template.
+- 1 Research/Learning project.
+- 1 formal institutional Governance meeting package (e.g., Board).
+Each example: README / How this folder works + Meeting Log + correctly named files + shortcuts where needed.
+
+EMPTY STRUCTURE CREATION RULE
+Google Drive does not support duplicating a folder template into the same location in the way RADAR users would need. Folder templates in Drive are therefore references; standard new structures should be generated with the RADAR tool.
+Workflow:
+1. Go to the Employee Hub and open the RADAR microsite.
+2. Open the Drive Finder from the link at the top of the page.
+3. Sign in with your VélezReyes+ Google account.
+4. Select the Create structure tab.
+5. Accept the additional Google Drive permissions if prompted.
+6. Choose the structure type and follow the guided steps (Details > Preview > Confirm > Result).
+Current structure types shown in the tool:
+- Pipeline organization
+- Venture Building initiative
+- In-house program
+- Policy
+- Formal governance meeting
+- Annual OKR cycle
+Portfolio note: do not create a separate Portfolio object from scratch. When a Pipeline organization is approved, follow the Portfolio Creation Rule: move the existing Pipeline folder to Portfolio and add the Portfolio operating subfolders while preserving history.
+Emergency Response note: use In-house program and the Cross_Thematic location for Emergency_Response.
+
+OPEN VALIDATIONS
+- Democracia+ current operating model.
+- Beca Tech stable In-house status.
+- Charity detailed substructure, owner, and permissions as a separate Transversal Area.
+- Master Registry owner and status-change workflow.
+- Minimum Granola/raw-note retention practice.
+- Detailed Transversal Area subfolders with each function owner.

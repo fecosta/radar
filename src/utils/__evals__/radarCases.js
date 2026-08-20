@@ -1,6 +1,6 @@
 // Each case: { description, objectName, context, theme, expectedPath, expectConfidence? }
 // context: 'auto' | 'pipeline' | 'portfolio' | 'venture' | 'inhouse' | 'institutional'
-// theme:   'auto' | 'Education' | 'Democracy'
+// theme:   'auto' | 'Education' | 'Democracy' | 'Cross_Thematic'
 // expectConfidence is asserted only when present (stable high/low cases).
 export const evalCases = [
   { description: 'Board meeting minutes and decisions from our August board meeting', objectName: '', context: 'auto', theme: 'auto', expectedPath: '03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/01_Board/2026/2026-06-15_Board_Meeting/04_Notes_and_Minutes' },
@@ -36,6 +36,24 @@ export const evalCases = [
   { description: 'external World Bank report we keep as reference', objectName: '', context: 'auto', theme: 'Education', expectedPath: '03_INSTITUTIONAL/05_EXTERNAL_KNOWLEDGE/Education', expectConfidence: 'high' },
   { description: 'ecosystem mapping and architecture', objectName: '', context: 'auto', theme: 'Democracy', expectedPath: '03_INSTITUTIONAL/04_ECOSYSTEM_AND_PARTNERSHIPS/01_Ecosystem_Architecture/Democracy' },
   { description: 'blank reusable template model', objectName: '', context: 'auto', theme: 'auto', expectedPath: '03_INSTITUTIONAL/06_TEMPLATES' },
+
+  // ── v06 additions ───────────────────────────────────────────────────────────────────
+  // 0A_EXPLORATION (design rule 18): substantive pre-Pipeline work.
+  { description: 'early exploration notes on a possible opportunity', objectName: 'Fundacion Nueva', context: 'auto', theme: 'Education', expectedPath: '02_INVESTMENTS_AND_PROGRAMS/0A_EXPLORATION/Education/Fundacion_Nueva', expectConfidence: 'high' },
+  { description: 'exploratory topic research and background, a possible opportunity we have not taken to pipeline', objectName: 'Tema Nuevo', context: 'auto', theme: 'Cross_Thematic', expectedPath: '02_INVESTMENTS_AND_PROGRAMS/0A_EXPLORATION/Cross_Thematic/Tema_Nuevo', expectConfidence: 'high' },
+  // Emergency Response: a Cross_Thematic In-house Program, template unchanged.
+  { description: 'Emergency Response operations plan for the flood response', objectName: '', context: 'auto', theme: 'auto', expectedPath: '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Cross_Thematic/Emergency_Response/03_Operations', expectConfidence: 'high' },
+  { description: 'Emergency Response participant beneficiary database', objectName: '', context: 'auto', theme: 'auto', expectedPath: '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Cross_Thematic/Emergency_Response/05_Participants_and_Beneficiary_Data', expectConfidence: 'high' },
+  // WEEKLY EMAIL RULE: one institutional home, restricted to the Leadership Team.
+  { description: 'weekly email package for the leadership team', objectName: '', context: 'auto', theme: 'auto', expectedPath: '03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/05_Weekly email' },
+  // Cross_Thematic where v06 already allowed it, now reachable by selection too.
+  { description: 'cross-thematic learning product synthesis across education and democracy', objectName: '', context: 'auto', theme: 'auto', expectedPath: '03_INSTITUTIONAL/03_RESEARCH_AND_LEARNING/02_Learning_Products/Cross_Thematic' },
+  // Archive sections 02/03/04 are theme-partitioned; only 04 admits Cross_Thematic.
+  { description: 'closed portfolio because the investment ended', objectName: 'Aprendo Mas', context: 'auto', theme: 'Education', expectedPath: '99_ARCHIVE/02_Closed_Portfolio/Education/Aprendo_Mas', expectConfidence: 'high' },
+  { description: 'this program closed and should be archived', objectName: 'Vivienda Digna', context: 'auto', theme: 'Cross_Thematic', expectedPath: '99_ARCHIVE/04_Closed_In_House_Programs/Cross_Thematic/Vivienda_Digna' },
+  // Design rule 2: Cross_Thematic must never leak into a core-theme-only container. The
+  // theme is reported as still needed rather than silently swapped for a core theme.
+  { description: 'sourcing notes for a new opportunity', objectName: 'NewOrg', context: 'auto', theme: 'Cross_Thematic', expectedPath: '02_INVESTMENTS_AND_PROGRAMS/01_PIPELINE/[Education|Democracy]/NewOrg/02_Sourcing' },
 ];
 
 // Cases where CURRENT output diverges from the SPEC-correct destination.

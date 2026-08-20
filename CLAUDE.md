@@ -15,7 +15,8 @@ between the approved architecture and the observed Shared Drive.
 When sources conflict:
 
 1. Approved RADAR Information & File Management Policy.
-2. RADAR v05 Canonical Folder Tree — Automation Specification.
+2. RADAR v06 Canonical Folder Tree — Automation Specification
+   (`docs/specs/2026-08-18_RADAR_Folder_Tree_v06.txt`).
 3. Master Registry schema and lifecycle rules.
 4. Accepted ADRs.
 5. `AGENTS.md` and repository operations/testing guidance.
@@ -30,7 +31,10 @@ architecture or treat existing code/Drive state as authority.
 
 - Fixed roots: `01_STRATEGY`, `02_INVESTMENTS_AND_PROGRAMS`,
   `03_INSTITUTIONAL`, `99_ARCHIVE`.
-- Required themes: `Education` and `Democracy`.
+- Core programmatic themes are `Education` and `Democracy`. `Cross_Thematic` is valid
+  only where the canonical tree defines it — Exploration, In-house Programs, Learning
+  Products, External Knowledge, and Closed In-house Programs — and is not a general
+  "other" category.
 - One object, one official folder; use links/shortcuts instead of duplicate
   final files.
 - Pipeline stages remain inside the object folder.
@@ -75,7 +79,7 @@ authorization. Do not use destructive Git commands to clear existing work.
 
 | Task involves | Read first |
 |---|---|
-| Folder names, paths, templates, lifecycle | Canonical v05 specification |
+| Folder names, paths, templates, lifecycle | Canonical v06 specification (`docs/specs/`) |
 | Ownership, exceptions, sensitive access | Approved RADAR policy |
 | Classifier or path resolver | Canonical config, evaluation fixtures, testing guidance |
 | Master Registry | Registry schema and lifecycle documentation |

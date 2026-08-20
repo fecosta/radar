@@ -94,7 +94,8 @@ Drive shortcut or link when the same information needs visibility elsewhere.
 When evidence conflicts, use this precedence order:
 
 1. Approved **RADAR Information & File Management Policy**.
-2. **RADAR v05 Canonical Folder Tree — Automation Specification**.
+2. **RADAR v06 Canonical Folder Tree — Automation Specification**
+   (`docs/specs/2026-08-18_RADAR_Folder_Tree_v06.txt`).
 3. Master Registry schema and documented lifecycle rules.
 4. Accepted Architecture Decision Records (ADRs).
 5. This repository (`AGENTS.md`, operations guides, testing guidance).
@@ -114,7 +115,10 @@ Every implementation must preserve these rules:
 
 1. The fixed roots are `01_STRATEGY`, `02_INVESTMENTS_AND_PROGRAMS`,
    `03_INSTITUTIONAL`, and `99_ARCHIVE`.
-2. Required programmatic themes are `Education` and `Democracy`.
+2. Core programmatic themes are `Education` and `Democracy`. `Cross_Thematic` is used
+   only where the canonical tree explicitly defines it (Exploration, In-house Programs,
+   Learning Products, External Knowledge, Closed In-house Programs); it is not a general
+   "other" category, and theme validity is per location rather than a global enum.
 3. Strategic focus is metadata, not a mandatory physical path.
 4. One object has one official folder; use links or shortcuts instead of a
    second final copy.
@@ -407,7 +411,7 @@ Use the repository's actual paths when available:
 | Need | Reference |
 |---|---|
 | Information governance | RADAR Information & File Management Policy |
-| Exact folder architecture and templates | RADAR v05 Canonical Folder Tree — Automation Specification |
+| Exact folder architecture and templates | RADAR v06 Canonical Folder Tree — Automation Specification (`docs/specs/`) |
 | Current product priorities | RADAR features roadmap |
 | Drive automation behavior | Apps Script source and operations guide |
 | Architecture decisions | `docs/decisions/` |

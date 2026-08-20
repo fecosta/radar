@@ -232,6 +232,50 @@ describe('validation messages', () => {
 
     expect(await screen.findByText(/02_INVESTMENTS_AND_PROGRAMS\/01_PIPELINE\/Education\/Educação & Futuro\+/)).toBeInTheDocument();
   });
+
+  /**
+   * v06 design rule 2: Cross_Thematic is offered only where the canonical tree defines it.
+   * In-house Programs is the one structure type in this wizard that gains it.
+   */
+  describe('Cross_Thematic is offered per structure type', () => {
+    const themeOptions = () =>
+      Array.from(screen.getByLabelText(/^Theme/i).options)
+        .map((o) => o.value)
+        .filter(Boolean);
+
+    it('offers Cross_Thematic for an In-house program and creates Emergency_Response', async () => {
+      const { user } = setup();
+      await user.click(screen.getByRole('button', { name: /grant permission/i }));
+      await user.click(screen.getByRole('radio', { name: /In-house program/i }));
+      await user.click(screen.getByRole('button', { name: /^continue$/i }));
+
+      expect(themeOptions()).toEqual(['Education', 'Democracy', 'Cross_Thematic']);
+
+      await user.type(screen.getByLabelText(/Program name/i), 'Emergency_Response');
+      await user.selectOptions(screen.getByLabelText(/^Theme/i), 'Cross_Thematic');
+      await user.click(screen.getByRole('button', { name: /validate and preview/i }));
+
+      expect(
+        await screen.findByText(
+          /02_INVESTMENTS_AND_PROGRAMS\/04_IN_HOUSE_PROGRAMS\/Cross_Thematic\/Emergency_Response/
+        )
+      ).toBeInTheDocument();
+      // The restricted participant-data acknowledgement still applies, unchanged.
+      expect(screen.getByText('05_Participants_and_Beneficiary_Data')).toBeInTheDocument();
+    });
+
+    it.each([
+      ['Pipeline organization', /Pipeline organization/i],
+      ['Venture Building initiative', /Venture Building initiative/i],
+    ])('does not offer Cross_Thematic for %s', async (_label, radio) => {
+      const { user } = setup();
+      await user.click(screen.getByRole('button', { name: /grant permission/i }));
+      await user.click(screen.getByRole('radio', { name: radio }));
+      await user.click(screen.getByRole('button', { name: /^continue$/i }));
+
+      expect(themeOptions()).toEqual(['Education', 'Democracy']);
+    });
+  });
 });
 
 describe('preview', () => {

@@ -100,6 +100,46 @@ Everything except step 1 is Google administration and cannot be done from RADAR.
    `radar-people`, `radar-leadership`, `radar-board`). These govern folders, not application entry,
    and RADAR neither reads nor manages them.
 
+### Restricting a folder to one group
+
+Two facts have to be held together here, because the obvious approach does not work.
+
+**Shared Drive membership is a floor, not a ceiling.** The access level someone holds on a
+Shared Drive is the *minimum* they have on everything inside it. A folder cannot normally be
+made more restrictive than the Drive, so adding a group to a folder can only *widen* access.
+
+**The one exception is "Limited access".** Google's limited-access folder setting is the single
+supported way to restrict a folder below Drive membership, and it is now the sanctioned
+mechanism: the older per-item restriction inside shared folders was withdrawn on 2025-09-22.
+
+To restrict a folder, as a Shared Drive **Manager**:
+
+1. Right-click the folder → **Manage access**.
+2. Turn on **Limited access**.
+3. Add the group that should keep access — a `radar-*` Google Group, not individuals, so the
+   membership stays maintainable.
+
+Everyone else keeps seeing that the folder exists, greyed out, and can request access. That
+visibility is deliberate: RADAR's own routing rules tell people the folder is the official
+home, so it must not vanish for them.
+
+The Drive API equivalent is `files.update` with `inheritedPermissionsDisabled: true` followed
+by `permissions.create`, and it needs the **organizer** role. RADAR does not call it. Note that
+`STRUCTURE_WRITE_SCOPES` already requests the full `auth/drive` scope for Create structure, so
+a permissions write would need no new consent — the only thing preventing one is the deliberate
+absence of the code, and that is the point. See [ADR 0003](../decisions/0003-v06-per-location-themes-and-restricted-weekly-email.md).
+
+#### Currently restricted folders
+
+| Folder | Who keeps access | Applied by |
+|---|---|---|
+| `02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/{theme}/{program}/05_Participants_and_Beneficiary_Data` | the roles that need participant data | by hand, after Create structure flags it |
+| `03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/05_Weekly email` | Leadership Team (`radar-leadership`) | by hand; created outside RADAR at the CEO's request |
+
+**Expected side effect, not a bug.** For someone outside the group, the Drive Finder lists
+`05_Weekly email` but returns none of its contents, because Google enforces limited access per
+user on every request. Search returning an empty restricted folder is the system working.
+
 Grant the narrowest Drive role that fits. Reading RADAR needs only Viewer; Content Manager is
 required solely for Create structure, per
 [create-structure.md](create-structure.md).

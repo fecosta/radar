@@ -17,6 +17,11 @@ export const TEST_DRIVE_ID = 'test-shared-drive';
 /** Canonical parents that must exist before any structure can be created. */
 export const CANONICAL_PARENT_PATHS = [
   '01_STRATEGY/03_OKRs',
+  // v06 0A_EXPLORATION: no structure type targets it, but preview scans it for a
+  // conflicting pre-Pipeline home (design rule 19).
+  '02_INVESTMENTS_AND_PROGRAMS/0A_EXPLORATION/Education',
+  '02_INVESTMENTS_AND_PROGRAMS/0A_EXPLORATION/Democracy',
+  '02_INVESTMENTS_AND_PROGRAMS/0A_EXPLORATION/Cross_Thematic',
   '02_INVESTMENTS_AND_PROGRAMS/01_PIPELINE/Education',
   '02_INVESTMENTS_AND_PROGRAMS/01_PIPELINE/Democracy',
   '02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education',
@@ -25,11 +30,16 @@ export const CANONICAL_PARENT_PATHS = [
   '02_INVESTMENTS_AND_PROGRAMS/03_VENTURE_BUILDING/Democracy',
   '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education',
   '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Democracy',
+  // v06: the only themed container outside Exploration that permits Cross_Thematic.
+  '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Cross_Thematic',
   '03_INSTITUTIONAL/00_POLICIES',
   '03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/01_Board',
   '03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/02_Leadership_Team',
   '03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/03_All_Team',
   '03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/04_Offsites',
+  // v06 WEEKLY EMAIL RULE. Restricted to the Leadership Team by a Drive "Limited access"
+  // setting applied by hand; no structure type creates or touches it.
+  '03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/05_Weekly email',
   '99_ARCHIVE/01_Declined_Pipeline',
 ];
 

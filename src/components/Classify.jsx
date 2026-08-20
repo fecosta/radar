@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { classifyRadar, getLabels } from '../utils/radarClassify';
+import { THEMES, CROSS_THEMATIC } from '../radar/canonicalTree.js';
 
 const CONTEXTS = [
   { key: 'auto', label: 'Auto' },
+  { key: 'exploration', label: 'Exploration' },
   { key: 'pipeline', label: 'Pipeline' },
   { key: 'portfolio', label: 'Portfolio' },
   { key: 'venture', label: 'Venture' },
@@ -10,10 +12,15 @@ const CONTEXTS = [
   { key: 'institutional', label: 'Institutional' },
 ];
 
-const THEMES = [
+/**
+ * Sourced from the canonical model rather than re-declared. Cross_Thematic is offered
+ * because some destinations accept it; the classifier resolves it per location and reports
+ * the theme as still needed where v06 does not define it.
+ */
+const THEME_OPTIONS = [
   { key: 'auto', label: 'Auto' },
-  { key: 'Education', label: 'Education' },
-  { key: 'Democracy', label: 'Democracy' },
+  ...THEMES.map((t) => ({ key: t, label: t })),
+  { key: CROSS_THEMATIC, label: 'Cross-thematic' },
 ];
 
 const CONFIDENCE = {
@@ -359,7 +366,7 @@ export default function Classify() {
           <RadioChipGroup
             label="Theme"
             ariaLabel="Theme"
-            options={THEMES}
+            options={THEME_OPTIONS}
             value={theme}
             onChange={setTheme}
           />

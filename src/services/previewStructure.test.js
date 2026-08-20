@@ -3,7 +3,7 @@ import { previewStructure, PREVIEW_STATUS, ITEM_STATUS, CONFLICT_CODE } from './
 import { planStructureFromRaw } from '../radar/planStructure.js';
 import { STRUCTURE_TYPES } from '../radar/structureTemplates.js';
 import { REGISTRY_STATUS } from './registryPort.js';
-import { MIME_FOLDER } from '../radar/canonicalTree.js';
+import { MIME_FOLDER, LIFECYCLE_CONFLICT_SCOPES } from '../radar/canonicalTree.js';
 import { createFakeDrive, createFakeRegistry } from './__fixtures__/fakeDrive.js';
 
 const PIPELINE_INPUTS = {
@@ -38,9 +38,26 @@ describe('entire structure missing', () => {
 
   it('does not query Drive for descendants of a folder that will be created', async () => {
     const drive = createFakeDrive();
+    const plan = pipelinePlan();
     await preview(drive);
-    // 15 canonical-parent walks + 1 root probe + 2 lifecycle scans is far fewer than 17 items.
-    expect(drive._calls.findExactChildren).toBeLessThan(17);
+
+    /**
+     * Preview's Drive traffic is fixed reconnaissance, not a walk of the plan: the canonical
+     * parent path, one probe for the structure root, and one path resolve plus one name probe
+     * per lifecycle-conflict scope. It never descends into folders the plan will create, so
+     * this total is independent of the plan's 17 items.
+     *
+     * Asserted exactly rather than as a bound, so that new Drive reads have to be accounted
+     * for here deliberately.
+     */
+    const parentWalk = plan.destination.parentSegments.length;
+    const structureRootProbe = 1;
+    const lifecycleScans = LIFECYCLE_CONFLICT_SCOPES.reduce(
+      (calls, scope) => calls + scope.segments(plan.inputs.theme).length + 1,
+      0
+    );
+
+    expect(drive._calls.findExactChildren).toBe(parentWalk + structureRootProbe + lifecycleScans);
   });
 
   it('never writes anything', async () => {
