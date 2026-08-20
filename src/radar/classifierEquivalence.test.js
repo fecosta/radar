@@ -5,6 +5,9 @@ import {
   CANONICAL_ROOTS,
   SEGMENTS,
   THEMES,
+  CROSS_THEMATIC,
+  OBJECT_AREAS,
+  themesForArea,
   GOVERNANCE_FORUMS,
   POLICIES_SEGMENTS,
   OKR_SEGMENTS,
@@ -82,18 +85,52 @@ describe('object containers agree', () => {
     expect(classified.path.startsWith(created.parentPath)).toBe(true);
   });
 
-  it('routes an in-house program into the same container as the creator', () => {
-    const created = resolveDestination(STRUCTURE_TYPES.IN_HOUSE_PROGRAM, {
-      theme: 'Education',
-      objectName: 'Sample Program',
+  /**
+    * Parametrized over the area's own theme list, so In-house Programs is covered for
+    * Cross_Thematic as well — the one themed container outside Exploration that v06 defines
+    * it in.
+    */
+  it.each(themesForArea(OBJECT_AREAS.IN_HOUSE_PROGRAMS))(
+    'routes a %s in-house program into the same container as the creator',
+    (theme) => {
+      const created = resolveDestination(STRUCTURE_TYPES.IN_HOUSE_PROGRAM, {
+        theme,
+        objectName: 'Sample Program',
+      });
+      const classified = classifyRadar({
+        description: 'program operations materials',
+        objectName: 'Sample Program',
+        context: 'inhouse',
+        theme,
+      });
+      expect(classified.path.startsWith(created.parentPath)).toBe(true);
+      expect(created.parentPath).toBe(
+        joinSegments([CANONICAL_ROOTS.INVESTMENTS_AND_PROGRAMS, SEGMENTS.IN_HOUSE_PROGRAMS, theme])
+      );
+    }
+  );
+
+  /**
+   * v06 design rule 2. Selecting Cross_Thematic must not leak it into a container the
+   * canonical tree keeps to Education and Democracy — the creator rejects such an input
+   * outright, so the classifier must not suggest a path the creator could never build.
+   */
+  it.each([
+    ['pipeline', SEGMENTS.PIPELINE, 'sourcing notes for a new opportunity'],
+    ['portfolio', SEGMENTS.PORTFOLIO, 'disbursement request for the investment'],
+    ['venture', SEGMENTS.VENTURE_BUILDING, 'venture design and structuring materials'],
+  ])('never puts Cross_Thematic inside %s', (context, segment, description) => {
+    const { path } = classifyRadar({
+      description,
+      objectName: 'Sample Org',
+      context,
+      theme: CROSS_THEMATIC,
     });
-    const classified = classifyRadar({
-      description: 'program operations materials',
-      objectName: 'Sample Program',
-      context: 'inhouse',
-      theme: 'Education',
-    });
-    expect(classified.path.startsWith(created.parentPath)).toBe(true);
+    const container = joinSegments([CANONICAL_ROOTS.INVESTMENTS_AND_PROGRAMS, segment]);
+    expect(path.startsWith(container)).toBe(true);
+    expect(path).not.toContain(CROSS_THEMATIC);
+    // The theme is reported as unresolved rather than silently replaced with a core theme.
+    expect(path).toContain(`[${THEMES.join('|')}]`);
   });
 });
 

@@ -1,4 +1,4 @@
-import { THEMES, GOVERNANCE_FORUMS } from '../../../radar/canonicalTree.js';
+import { GOVERNANCE_FORUMS, themesForArea } from '../../../radar/canonicalTree.js';
 import { SUPPORTED_YEAR_RANGE } from '../../../radar/structureInputs.js';
 import { Field, inputStyle, MonoPath, SectionLabel } from '../ui.jsx';
 
@@ -70,13 +70,14 @@ export default function DetailsStep({ template, inputs, fieldErrors, onChange, p
         />
       ) : null}
 
+      {/* Themes are per location: only the areas v06 defines Cross_Thematic in offer it. */}
       {has('theme') ? (
         <SelectField
           field="theme"
           label="Theme"
-          hint="Education and Democracy are the only programmatic themes."
+          hint={template.themeHint}
           placeholder="Select a theme"
-          options={THEMES.map((t) => ({ value: t, label: t }))}
+          options={themesForArea(template.themeArea).map((t) => ({ value: t, label: t }))}
           value={inputs.theme}
           error={err('theme')}
           onChange={onChange}

@@ -70,8 +70,8 @@ describe('folder names — rejected', () => {
 });
 
 describe('theme allowlist', () => {
-  const withTheme = (theme) =>
-    validateStructureInput(STRUCTURE_TYPES.PIPELINE_ORGANIZATION, {
+  const withTheme = (theme, type = STRUCTURE_TYPES.PIPELINE_ORGANIZATION) =>
+    validateStructureInput(type, {
       objectName: 'X',
       theme,
       owner: '',
@@ -92,6 +92,32 @@ describe('theme allowlist', () => {
       expect(result.errors.some((e) => e.code === 'INVALID_THEME')).toBe(true);
     }
   );
+
+  /**
+   * v06 design rule 2: Cross_Thematic exists only where the canonical tree defines it, and is
+   * explicitly "not a general 'other' folder". Theme validity is therefore per structure
+   * type, and a single global allowlist would be wrong.
+   */
+  describe('Cross_Thematic is permitted per location, not globally', () => {
+    it('accepts Cross_Thematic for an In-house program', () => {
+      expect(withTheme('Cross_Thematic', STRUCTURE_TYPES.IN_HOUSE_PROGRAM).ok).toBe(true);
+    });
+
+    it.each([
+      ['a Pipeline organization', STRUCTURE_TYPES.PIPELINE_ORGANIZATION],
+      ['a Venture Building initiative', STRUCTURE_TYPES.VENTURE_BUILDING_INITIATIVE],
+    ])('rejects Cross_Thematic for %s', (_label, type) => {
+      const result = withTheme('Cross_Thematic', type);
+      expect(result.ok).toBe(false);
+      expect(result.errors.some((e) => e.code === 'INVALID_THEME')).toBe(true);
+    });
+
+    it('names only the themes that location permits', () => {
+      const message = withTheme('Cross_Thematic').errors.find((e) => e.field === 'theme').message;
+      expect(message).toBe('Theme must be one of: Education, Democracy.');
+      expect(message).not.toMatch(/Cross_Thematic/);
+    });
+  });
 });
 
 describe('governance forum allowlist', () => {

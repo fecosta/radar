@@ -31,6 +31,7 @@ import {
   MIME_FOR_KIND,
   REGISTRY_OBJECT_TYPES,
   themedContainerSegments,
+  themesForArea,
   forumById,
   joinSegments,
 } from './canonicalTree.js';
@@ -87,9 +88,14 @@ function meetingsNode(objectName, year) {
 /**
  * A template describes:
  *   fields          which inputs the wizard collects
+ *   themeArea       for themed structures, which canonical area decides the permitted themes
+ *   themeHint       the guidance shown under the wizard's theme selector
  *   registry        whether a Master Registry record applies, and its Object_Type
  *   destination()   { parentSegments, createdSegments } — parentSegments MUST already exist
  *   nodes()         the nested tree created beneath the structure root
+ *
+ * Any template collecting the `theme` field MUST declare `themeArea`: theme validity is
+ * per-location in v06, never a global enum.
  */
 const TEMPLATES = {
   [STRUCTURE_TYPES.PIPELINE_ORGANIZATION]: {
@@ -99,6 +105,8 @@ const TEMPLATES = {
       'A new opportunity under evaluation. Sourcing, Screening and Diligence are subfolders inside the object — advancing a stage never moves the folder.',
     objectNameLabel: 'Organization name',
     fields: ['objectName', 'theme', 'owner', 'country', 'strategicFocus', 'meetingLogYear'],
+    themeArea: OBJECT_AREAS.PIPELINE,
+    themeHint: 'Education and Democracy are the only themes for a Pipeline organization.',
     registry: { applicable: true, objectType: REGISTRY_OBJECT_TYPES.PIPELINE },
     destination: ({ theme, objectName }) => ({
       parentSegments: themedContainerSegments(OBJECT_AREAS.PIPELINE, theme),
@@ -143,6 +151,8 @@ const TEMPLATES = {
       'An initiative ver+ is building. If its operating model later changes, the complete folder is moved rather than rebuilt.',
     objectNameLabel: 'Initiative name',
     fields: ['objectName', 'theme', 'owner', 'country', 'strategicFocus', 'meetingLogYear'],
+    themeArea: OBJECT_AREAS.VENTURE_BUILDING,
+    themeHint: 'Education and Democracy are the only themes for a Venture Building initiative.',
     registry: { applicable: true, objectType: REGISTRY_OBJECT_TYPES.VENTURE_BUILDING },
     destination: ({ theme, objectName }) => ({
       parentSegments: themedContainerSegments(OBJECT_AREAS.VENTURE_BUILDING, theme),
@@ -170,6 +180,9 @@ const TEMPLATES = {
       'A program ver+ operates directly. Includes a restricted participant/beneficiary data folder that needs access configured by hand after creation.',
     objectNameLabel: 'Program name',
     fields: ['objectName', 'theme', 'owner', 'country', 'strategicFocus', 'meetingLogYear'],
+    themeArea: OBJECT_AREAS.IN_HOUSE_PROGRAMS,
+    themeHint:
+      'Use Cross_Thematic only when the program cannot reasonably be assigned to Education or Democracy (v06 Cross_Thematic rule).',
     registry: { applicable: true, objectType: REGISTRY_OBJECT_TYPES.IN_HOUSE_PROGRAM },
     destination: ({ theme, objectName }) => ({
       parentSegments: themedContainerSegments(OBJECT_AREAS.IN_HOUSE_PROGRAMS, theme),
@@ -283,6 +296,9 @@ export const SUPPORTED_STRUCTURES = Object.freeze(
       description: t.description,
       objectNameLabel: t.objectNameLabel || null,
       fields: Object.freeze([...t.fields]),
+      // Resolved here so the wizard renders the permitted themes without owning a list.
+      themes: t.themeArea ? themesForArea(t.themeArea) : null,
+      themeHint: t.themeHint || null,
       registryApplicable: t.registry.applicable,
     });
   })

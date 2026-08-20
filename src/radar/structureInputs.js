@@ -11,7 +11,7 @@
  * module rejects unsafe names rather than silently rewriting them into something lossy.
  */
 
-import { THEMES, GOVERNANCE_FORUMS, forumById } from './canonicalTree.js';
+import { GOVERNANCE_FORUMS, forumById, themesForArea } from './canonicalTree.js';
 import { getTemplate, isSupportedStructureType } from './structureTemplates.js';
 
 /* ─── Documented limits ───────────────────────────────────── */
@@ -139,10 +139,15 @@ function validateMetadata(raw, field, label) {
   return { value };
 }
 
-function validateTheme(raw) {
-  if (!THEMES.includes(raw)) {
+/**
+ * Themes are validated against the allowlist for the structure's own canonical area, not a
+ * global enum: v06 permits Cross_Thematic under In-house Programs and Exploration and
+ * forbids it under Pipeline and Venture Building.
+ */
+function validateTheme(raw, themes) {
+  if (!themes.includes(raw)) {
     return {
-      error: err('theme', 'INVALID_THEME', `Theme must be exactly ${THEMES.join(' or ')}.`),
+      error: err('theme', 'INVALID_THEME', `Theme must be one of: ${themes.join(', ')}.`),
     };
   }
   return { value: raw };
@@ -217,7 +222,7 @@ function validateMeetingDate(raw) {
 
 const FIELD_VALIDATORS = {
   objectName: (raw, ctx) => validateFolderName(raw, 'objectName', ctx.objectNameLabel),
-  theme: (raw) => validateTheme(raw),
+  theme: (raw, ctx) => validateTheme(raw, ctx.themes),
   owner: (raw) => validateMetadata(raw, 'owner', 'Owner'),
   country: (raw) => validateMetadata(raw, 'country', 'Country or geography'),
   strategicFocus: (raw) => validateMetadata(raw, 'strategicFocus', 'Strategic focus'),
@@ -259,7 +264,11 @@ export function validateStructureInput(type, raw) {
   if (errors.length > 0) return { ok: false, errors };
 
   const template = getTemplate(type);
-  const ctx = { objectNameLabel: template.objectNameLabel || 'Name' };
+  const ctx = {
+    objectNameLabel: template.objectNameLabel || 'Name',
+    // A template collecting `theme` must declare `themeArea`; themesForArea throws if not.
+    themes: template.fields.includes('theme') ? themesForArea(template.themeArea) : [],
+  };
   const value = {};
 
   for (const field of template.fields) {

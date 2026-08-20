@@ -1,7 +1,8 @@
 /**
- * RADAR v05 canonical folder model — the single source of truth.
+ * RADAR v06 canonical folder model — the single source of truth.
  *
- * Derived from "RADAR v05 — CANONICAL FOLDER TREE — AUTOMATION SPEC" and the approved
+ * Derived from "RADAR v06 — CANONICAL FOLDER TREE / AUTOMATION SPEC"
+ * (docs/specs/2026-08-18_RADAR_Folder_Tree_v06.txt) and the approved
  * RADAR Information & File Management Policy. Governance documents outrank this file:
  * if they disagree, the specification wins and this file is the bug.
  *
@@ -9,7 +10,7 @@
  * and tests — reads from here. Nothing re-declares a folder name of its own.
  *
  * Deliberately NOT modelled here:
- *   - the full root-tree bootstrap (createRADARv05); missing canonical roots are reported
+ *   - the full root-tree bootstrap; missing canonical roots are reported
  *     as architecture drift, never created;
  *   - launch seed / example objects;
  *   - lifecycle transitions (Pipeline → Portfolio, decline, graduation).
@@ -26,8 +27,21 @@ export const CANONICAL_ROOTS = Object.freeze({
   ARCHIVE: '99_ARCHIVE',
 });
 
-/** Spec design rule 2. Themes are an allowlist, never free text. */
+/**
+ * Spec design rule 2. The two core programmatic themes. Required wherever a theme appears,
+ * and an allowlist rather than free text.
+ */
 export const THEMES = Object.freeze(['Education', 'Democracy']);
+
+/**
+ * Spec design rule 2 / v06 "Cross_Thematic rule": used ONLY where the canonical tree
+ * explicitly defines it, and explicitly "not a general 'other' folder". There is therefore
+ * no global theme enum containing it — see THEMES_BY_AREA.
+ */
+export const CROSS_THEMATIC = 'Cross_Thematic';
+
+/** The theme list for locations v06 permits Cross_Thematic in. */
+export const THEMES_WITH_CROSS_THEMATIC = Object.freeze([...THEMES, CROSS_THEMATIC]);
 
 /* ─── Canonical path segments ─────────────────────────────── */
 
@@ -43,6 +57,8 @@ export const SEGMENTS = Object.freeze({
   // 02_INVESTMENTS_AND_PROGRAMS
   MASTER_INDEXES: '00_MASTER_INDEXES',
   MASTER_REGISTRY: '00_Master_Registry',
+  // v06 design rule 18: pre-Pipeline staging, inside 02_ — not a fifth canonical root.
+  EXPLORATION: '0A_EXPLORATION',
   PIPELINE: '01_PIPELINE',
   PORTFOLIO: '02_PORTFOLIO',
   VENTURE_BUILDING: '03_VENTURE_BUILDING',
@@ -51,6 +67,12 @@ export const SEGMENTS = Object.freeze({
   // 03_INSTITUTIONAL
   POLICIES: '00_POLICIES',
   GOVERNANCE_AND_DECISIONS: '01_GOVERNANCE_AND_DECISIONS',
+  /**
+   * v06 WEEKLY EMAIL RULE. Spelled exactly as the specification and the Shared Drive folder
+   * spell it — one space, lowercase "email". It breaks the tree's snake_case convention, but
+   * the specification and the live folder outrank the convention, so the literal must match.
+   */
+  WEEKLY_EMAIL: '05_Weekly email',
 
   // 99_ARCHIVE
   DECLINED_PIPELINE: '01_Declined_Pipeline',
@@ -102,10 +124,26 @@ export function themedContainerSegments(area, theme) {
 }
 
 export const OBJECT_AREAS = Object.freeze({
+  EXPLORATION: SEGMENTS.EXPLORATION,
   PIPELINE: SEGMENTS.PIPELINE,
   PORTFOLIO: SEGMENTS.PORTFOLIO,
   VENTURE_BUILDING: SEGMENTS.VENTURE_BUILDING,
   IN_HOUSE_PROGRAMS: SEGMENTS.IN_HOUSE_PROGRAMS,
+});
+
+/**
+ * Which themes each themed container accepts.
+ *
+ * Deliberately per-area rather than one global enum: v06 design rule 2 permits
+ * Cross_Thematic only where the canonical tree defines it, so a Cross_Thematic Pipeline
+ * organization or Venture Building initiative must remain impossible to express.
+ */
+export const THEMES_BY_AREA = Object.freeze({
+  [OBJECT_AREAS.EXPLORATION]: THEMES_WITH_CROSS_THEMATIC,
+  [OBJECT_AREAS.PIPELINE]: THEMES,
+  [OBJECT_AREAS.PORTFOLIO]: THEMES,
+  [OBJECT_AREAS.VENTURE_BUILDING]: THEMES,
+  [OBJECT_AREAS.IN_HOUSE_PROGRAMS]: THEMES_WITH_CROSS_THEMATIC,
 });
 
 /** Where a policy folder lives (spec design rule 13). */
@@ -113,6 +151,19 @@ export const POLICIES_SEGMENTS = Object.freeze([INSTITUTIONAL, SEGMENTS.POLICIES
 
 /** Where institutional governance forums live. */
 export const GOVERNANCE_SEGMENTS = Object.freeze([INSTITUTIONAL, SEGMENTS.GOVERNANCE_AND_DECISIONS]);
+
+/**
+ * Central home for the recurring weekly email package (v06 WEEKLY EMAIL RULE).
+ *
+ * Restricted to the Leadership Team. RADAR records that fact and never applies it: the
+ * restriction is a Drive "Limited access" setting applied by a Shared Drive manager.
+ * See docs/operations/access-control.md.
+ */
+export const WEEKLY_EMAIL_SEGMENTS = Object.freeze([
+  INSTITUTIONAL,
+  SEGMENTS.GOVERNANCE_AND_DECISIONS,
+  SEGMENTS.WEEKLY_EMAIL,
+]);
 
 /** Where annual OKR cycles live. */
 export const OKR_SEGMENTS = Object.freeze([STRATEGY, SEGMENTS.OKRS]);
@@ -131,6 +182,15 @@ export const MASTER_REGISTRY_SEGMENTS = Object.freeze([
 export const LIFECYCLE_CONFLICT_SCOPES = Object.freeze([
   { label: 'Portfolio', segments: (theme) => [INVESTMENTS_AND_PROGRAMS, SEGMENTS.PORTFOLIO, theme] },
   { label: 'Declined Pipeline archive', segments: () => [ARCHIVE, SEGMENTS.DECLINED_PIPELINE] },
+  /**
+   * v06 design rule 19: once a formal object exists, its exploration material moves into it
+   * and no second official home is kept. Every exploration theme is checked, because an
+   * exploration filed as Cross_Thematic can graduate into an Education or Democracy object.
+   */
+  ...THEMES_WITH_CROSS_THEMATIC.map((theme) => ({
+    label: `Exploration (${theme})`,
+    segments: () => [INVESTMENTS_AND_PROGRAMS, SEGMENTS.EXPLORATION, theme],
+  })),
 ]);
 
 /* ─── Registry ────────────────────────────────────────────── */
@@ -163,8 +223,16 @@ export const REGISTRY_REQUIRED_FIELDS = Object.freeze([
   'Official_Folder_Link',
 ]);
 
-/** Registry Object_Type allowlist (spec: Pipeline|Portfolio|Venture_Building|In_House_Program). */
+/**
+ * Registry Object_Type allowlist
+ * (spec: Exploration|Pipeline|Portfolio|Venture_Building|In_House_Program).
+ *
+ * EXPLORATION is recorded for hand-maintained Registry rows: v06 keeps explorations visible
+ * in the Registry and Opportunity Map even when no dedicated folder exists, and no structure
+ * type creates one.
+ */
 export const REGISTRY_OBJECT_TYPES = Object.freeze({
+  EXPLORATION: 'Exploration',
   PIPELINE: 'Pipeline',
   PORTFOLIO: 'Portfolio',
   VENTURE_BUILDING: 'Venture_Building',
@@ -182,6 +250,16 @@ export function forumById(id) {
   return GOVERNANCE_FORUMS.find((f) => f.id === id) || null;
 }
 
-export function isCanonicalTheme(value) {
-  return THEMES.includes(value);
+/** The themes a themed container accepts. Throws for an area with no declared rule. */
+export function themesForArea(area) {
+  const themes = THEMES_BY_AREA[area];
+  if (!themes) {
+    throw new Error(`No canonical theme rule for area: ${String(area)}`);
+  }
+  return themes;
+}
+
+/** Is `value` a permitted theme *for this area*? Theme validity is never global. */
+export function isCanonicalTheme(value, area) {
+  return themesForArea(area).includes(value);
 }

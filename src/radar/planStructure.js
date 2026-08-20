@@ -17,7 +17,7 @@ import {
 import { validateStructureInput } from './structureInputs.js';
 import { stableHash } from './planHash.js';
 
-export const PLAN_VERSION = 'radar-v05';
+export const PLAN_VERSION = 'radar-v06';
 
 /** Warning codes a plan can carry before any Drive state is known. */
 export const PLAN_WARNING = Object.freeze({
