@@ -134,10 +134,10 @@ absence of the code, and that is the point. See [ADR 0003](../decisions/0003-v06
 | Folder | Who keeps access | Applied by |
 |---|---|---|
 | `02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/{theme}/{program}/05_Participants_and_Beneficiary_Data` | the roles that need participant data | by hand, after Create structure flags it |
-| `03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/05_Weekly email` | Leadership Team (`radar-leadership`) | by hand; created outside RADAR at the CEO's request |
+| `03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/05_Weekly_Email` | Leadership Team (`radar-leadership`) | by hand; created outside RADAR at the CEO's request |
 
 **Expected side effect, not a bug.** For someone outside the group, the Drive Finder lists
-`05_Weekly email` but returns none of its contents, because Google enforces limited access per
+`05_Weekly_Email` but returns none of its contents, because Google enforces limited access per
 user on every request. Search returning an empty restricted folder is the system working.
 
 Grant the narrowest Drive role that fits. Reading RADAR needs only Viewer; Content Manager is

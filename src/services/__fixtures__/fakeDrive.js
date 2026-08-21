@@ -39,7 +39,7 @@ export const CANONICAL_PARENT_PATHS = [
   '03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/04_Offsites',
   // v06 WEEKLY EMAIL RULE. Restricted to the Leadership Team by a Drive "Limited access"
   // setting applied by hand; no structure type creates or touches it.
-  '03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/05_Weekly email',
+  '03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/05_Weekly_Email',
   '99_ARCHIVE/01_Declined_Pipeline',
 ];
 

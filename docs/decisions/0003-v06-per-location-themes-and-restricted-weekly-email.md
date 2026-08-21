@@ -118,10 +118,22 @@ the canonical model, which is one step of that staged migration rather than the 
   `Institutional` for non-thematic work), `02_Thematic_Strategies`,
   `01_Ecosystem_Architecture`, `02_Closed_Portfolio` and `03_Closed_Ventures`.
 
-## Open item for the RADAR owner
+## Resolved 2026-08-21 — the Weekly Email folder name
 
-`05_Weekly email` breaks the tree's `snake_case` convention — it contains a space and a
-lowercase "email". Both v06 documents and the live Drive folder spell it that way, so the
-code matches exactly and a rename is **not** proposed here. Flagged for a deliberate
-decision: renaming it later is a canonical change affecting the live Drive, the classifier
-route and the test fixtures together.
+The open item recorded here was that `05_Weekly email` broke the tree's `snake_case`
+convention, with a space and a lowercase "email", and that both v06 documents and the live
+Drive folder spelled it that way.
+
+The Drive folder has since been renamed to **`05_Weekly_Email`**, matching the convention the
+rest of the tree uses. The RADAR Owner chose to follow the Drive, so `SEGMENTS.WEEKLY_EMAIL`,
+the classifier route, the evaluation case, the Drive test fixture and the operations docs all
+now read `05_Weekly_Email`. The reason to follow rather than wait: the classifier hands this
+path to users, and a recommended path that does not resolve is a live defect, not a
+cosmetic one.
+
+**Outstanding, and deliberately not done here:** the v06 specification text
+(`docs/specs/2026-08-18_RADAR_Folder_Tree_v06.txt`, three places) still reads
+`05_Weekly email`. That document is precedence authority #2 and amending it is the owner's
+action, not something to change in passing — so the repository currently holds code that
+disagrees with its own governing specification on this one literal. Recorded here so it stays
+tracked divergence rather than drift. It closes when the specification text is corrected.

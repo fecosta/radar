@@ -210,7 +210,7 @@ export function route(text, suppliedObject, selectedContext, selectedTheme){
       add(s+4,path+`/${today()}_${type}`+sub,type,'This is a formal institutional governance meeting.');
     }
   }
-  add(kw(['weekly email','weekly update','weekly newsletter','weekly digest','correo semanal','email semanal','boletin semanal','boletín semanal','e-mail semanal','informativo semanal'],12),`03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/05_Weekly email`,'Weekly_Email','The recurring weekly email package has one institutional home, restricted to the Leadership Team. Documents that already have an official RADAR home stay there and are linked rather than duplicated.');
+  add(kw(['weekly email','weekly update','weekly newsletter','weekly digest','correo semanal','email semanal','boletin semanal','boletín semanal','e-mail semanal','informativo semanal'],12),`03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/05_Weekly_Email`,'Weekly_Email','The recurring weekly email package has one institutional home, restricted to the Leadership Team. Documents that already have an official RADAR home stay there and are linked rather than duplicated.');
   add(kw(['decision log','registro de decisiones','registro de decisoes','registro de decisões'],8),`03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/00_Decision_Log`,'Decision_Log','Material institutional decisions are indexed in the central Decision Log.');
 
   if(kw(['concept review','revision de concepto','revisión de concepto','revisao de conceito','revisão de conceito'])>0){
