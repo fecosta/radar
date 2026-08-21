@@ -2,6 +2,10 @@
 
 A standalone React app that connects to your Google Shared Drive and provides full-text search, filters, and direct file access.
 
+> **Using RADAR rather than setting it up?** This README is Google Cloud setup and deployment.
+> For how to sign in and drive the three tabs, see
+> **[docs/operations/using-radar.md](docs/operations/using-radar.md)**.
+
 ## Features
 
 - **Full-text search** — searches file names AND file contents via Google Drive API
