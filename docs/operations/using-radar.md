@@ -13,6 +13,25 @@ here does not match what you see, that file is the first place to look.
 
 ---
 
+## First-time tour
+
+The first time you reach RADAR after a successful sign-in, a short tour opens: a welcome screen,
+one step each for Search, Classify and Create structure, and a closing screen. It takes under a
+minute and teaches what the three workflows are for — the detail is in the rest of this guide.
+
+- **You can leave at any point.** "Skip for now" or "Skip tour" closes it, and so does Escape.
+  Skipping counts as having seen it, so it will not reappear at every sign-in.
+- **You can reopen it whenever you like** with **Take the RADAR tour** in the top bar.
+- **It reads nothing and changes nothing.** The tour requests no additional Drive permission,
+  makes no Drive or Sheets request, and changes no file, folder or permission. The step about
+  Create structure describes that workflow without opening it, precisely so it cannot prompt you
+  for write access you have not chosen to grant.
+- **Whether you have seen it is remembered in your browser**, not in an account. So it reappears
+  if you clear your browser storage, use a different browser, or sign in on another device — and
+  each person on a shared browser gets their own first run.
+
+---
+
 ## What RADAR is
 
 RADAR searches your Shared Drive, tells you where a document officially belongs, and builds
