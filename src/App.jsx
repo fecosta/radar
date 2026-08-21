@@ -10,6 +10,8 @@ import SearchBar from './components/SearchBar';
 import Filters from './components/Filters';
 import FileList from './components/FileList';
 import Classify from './components/Classify';
+import OnboardingTour from './components/onboarding/OnboardingTour.jsx';
+import { useOnboarding } from './hooks/useOnboarding.js';
 import CreateStructure from './components/CreateStructure/CreateStructure';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -118,6 +120,7 @@ function ModeTabs({ mode, onChange }) {
             aria-selected={active}
             aria-controls={`panel-${m.key}`}
             tabIndex={active ? 0 : -1}
+            data-tour={m.key}
             onClick={() => onChange(m.key)}
             style={{
               padding: '9px 22px',
@@ -283,6 +286,11 @@ export default function App() {
   const search = useDriveSearch(authorized ? token : null);
 
   const [mode, setMode] = useState('search');
+
+  /* The tour is keyed on the signed-in address so one browser shared by two people does not
+     swallow the second person's first run. `enabled` keeps it from deciding anything until the
+     three access checks have actually passed. */
+  const onboarding = useOnboarding({ email: user?.email, enabled: authorized });
   const [selectedItem, setSelectedItem] = useState(null);
   const [browseStack, setBrowseStack] = useState([]);
   const [browseLoading, setBrowseLoading] = useState(false);
@@ -390,6 +398,27 @@ export default function App() {
           >
             {initialsOf(user?.name)}
           </div>
+          <button
+            onClick={onboarding.replay}
+            data-tour="help"
+            style={{
+              fontFamily: 'var(--sans)',
+              fontSize: 11, fontWeight: 700,
+              letterSpacing: 0.8, textTransform: 'uppercase',
+              background: 'transparent',
+              border: '1.5px solid var(--ink-border)',
+              borderRadius: 'var(--radius-pill)',
+              padding: '8px 16px',
+              cursor: 'pointer',
+              color: 'var(--on-ink)',
+              transition: 'all 0.15s',
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--on-ink)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--ink-border)'; }}
+          >
+            Take the RADAR tour
+          </button>
           <button
             onClick={signOut}
             style={{
@@ -571,6 +600,9 @@ export default function App() {
           </ErrorBoundary>
         </div>
       </div>
+
+      {/* Presentation only: the tour reads no Drive data and requests no permission. */}
+      <OnboardingTour tour={onboarding} onActivateTab={setMode} />
     </div>
   );
 }

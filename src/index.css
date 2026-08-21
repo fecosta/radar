@@ -173,6 +173,207 @@ button[data-on-ink]:focus-visible {
   box-shadow: 0 0 0 7px rgba(166, 43, 255, 0.22);
 }
 
+/**
+ * First-time onboarding tour.
+ *
+ * Above the navbar's z-index of 100. The spotlight is one element on the target's own rectangle
+ * with a very large box-shadow spread, which paints everything outside it — so the highlighted
+ * control is never cloned, moved or restyled and no layout shifts.
+ */
+.onboarding-scrim,
+.onboarding-spotlight {
+  position: fixed;
+  z-index: 200;
+  pointer-events: none;
+}
+
+.onboarding-scrim {
+  inset: 0;
+  background: rgba(26, 26, 26, 0.55);
+}
+
+.onboarding-spotlight {
+  border-radius: var(--radius-pill);
+  /* Ring first: in a shadow list the earlier shadow paints on top, so listing the dim first
+     would bury the accent outline under it. */
+  box-shadow: 0 0 0 3px var(--accent), 0 0 0 9999px rgba(26, 26, 26, 0.55);
+  transition: top 0.2s ease, left 0.2s ease, width 0.2s ease, height 0.2s ease;
+}
+
+.onboarding-card {
+  position: fixed;
+  z-index: 201;
+  box-sizing: border-box;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-elevated);
+  padding: 24px 26px;
+  max-width: calc(100vw - 28px);
+  font-family: var(--body);
+}
+
+/* Welcome and completion sit in the middle of the viewport rather than beside a control. */
+.onboarding-card--centred {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 460px;
+}
+
+/**
+ * Narrow viewports, and the fallback when a tour target cannot be found: a bottom sheet, which
+ * needs no anchor and cannot push the page sideways.
+ */
+.onboarding-card--sheet {
+  top: auto;
+  bottom: 14px;
+  left: 14px;
+  right: 14px;
+  width: auto;
+  transform: none;
+}
+
+.onboarding-progress {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.onboarding-title {
+  font-family: var(--sans);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+.onboarding-body {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+
+.onboarding-note {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin-top: 10px;
+}
+
+.onboarding-safety {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--accent-light);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-top: 16px;
+}
+
+.onboarding-workflows {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1.5px dotted var(--border);
+}
+
+.onboarding-workflows li {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.onboarding-workflow-name {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.onboarding-workflow-text {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.onboarding-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1.5px dotted var(--border);
+}
+
+/* The primary action sits at the far right; anything before it is pushed left. */
+.onboarding-actions .onboarding-btn--primary { margin-left: auto; }
+
+.onboarding-btn {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 10px 20px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.onboarding-btn:hover:not(:disabled) {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+.onboarding-btn:disabled {
+  color: var(--text-disabled);
+  border-color: var(--border);
+  cursor: not-allowed;
+}
+
+.onboarding-btn--quiet {
+  border-color: transparent;
+}
+
+.onboarding-btn--primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.onboarding-btn--primary:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+  color: var(--on-accent);
+}
+
+@media (max-width: 860px) {
+  .onboarding-card--centred {
+    top: auto;
+    bottom: 14px;
+    left: 14px;
+    right: 14px;
+    width: auto;
+    transform: none;
+  }
+}
+
+/* The tour is the only thing here that animates on a moving target, so it is also the only
+   thing that needs to stop when a reader has asked for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-spotlight { transition: none; }
+}
+
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @keyframes fadeSlideIn {
