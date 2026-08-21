@@ -17,6 +17,9 @@
   --surface-raised: #F3F1E7;
   --surface-sunken: #E4E3D6;
   --hover: #F7F6EE;
+  /* A control that is present but not actionable: an unselected tab under the cursor, a
+     button mid-request. Distinct from --surface-sunken, which is the deepest flat field. */
+  --surface-inert: #E7E5D8;
 
   /* Lines. `--rule` is for the dotted separators the brand uses instead of hairlines. */
   --border: #D6D3C4;
@@ -121,6 +124,54 @@ button[data-on-ink]:focus-visible {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/**
+ * The two auth screens (sign-in and the access gate) share one split shell: an ink brand
+ * panel beside the content. Expressed here rather than inline because a media query cannot
+ * live in a style attribute — this is the only breakpoint in the app.
+ */
+.auth-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.auth-brand,
+.auth-content {
+  padding: 56px 48px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The brand panel anchors its footer to the bottom of a full-height column... */
+.auth-brand { justify-content: space-between; gap: 40px; }
+.auth-content { justify-content: center; }
+
+/* ...but stacked there is no column to fill, so both panels size to their content and the
+   footer sits directly under the wordmark instead of behind a band of empty ink. */
+@media (max-width: 860px) {
+  .auth-split {
+    grid-template-columns: 1fr;
+    align-content: start;
+  }
+
+  .auth-brand,
+  .auth-content {
+    padding: 40px 32px;
+  }
+
+  .auth-brand { justify-content: flex-start; gap: 28px; }
+}
+
+/**
+ * The sign-in button carries the brand's full focus treatment: the ink outline every control
+ * gets, plus the accent halo. Also inline-style territory that a pseudo-class cannot reach.
+ */
+.auth-cta:focus-visible {
+  outline: 2px solid var(--ink-hover);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 7px rgba(166, 43, 255, 0.22);
+}
 
 @keyframes spin { to { transform: rotate(360deg); } }
 

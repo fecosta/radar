@@ -130,7 +130,7 @@ function ModeTabs({ mode, onChange }) {
               cursor: 'pointer',
               transition: 'all 0.15s',
             }}
-            onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--surface-sunken)'; }}
+            onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--surface-inert)'; }}
             onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
           >
             {m.label}
