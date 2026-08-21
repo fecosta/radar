@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { formatSize, formatDate, getFileType } from '../utils/helpers';
 
-function FileRow({ file, onSingleClick, onDoubleClick }) {
+function FileRow({ file, onSingleClick, onDoubleClick, first }) {
   const clickTimerRef = useRef(null);
 
   const handleClick = () => {
@@ -25,7 +25,8 @@ function FileRow({ file, onSingleClick, onDoubleClick }) {
         alignItems: 'center',
         gap: 14,
         padding: '12px 20px',
-        borderTop: '1.5px dotted var(--rule)',
+        // The first row sits directly under the header band, which is its own separator.
+        borderTop: first ? 'none' : '1.5px dotted var(--rule)',
         cursor: 'pointer',
         transition: 'background 0.1s',
         userSelect: 'none',
@@ -115,23 +116,23 @@ function ColumnHeader() {
       alignItems: 'center',
       gap: 14,
       padding: '11px 20px',
-      background: 'var(--surface-raised)',
+      background: 'var(--accent)',
       position: 'sticky',
       top: 0,
       zIndex: 1,
       fontFamily: 'var(--sans)',
     }}>
       <div style={{ width: 20, flexShrink: 0 }} />
-      <div style={{ flex: 1, fontSize: 10, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>
+      <div style={{ flex: 1, fontSize: 10, fontWeight: 800, color: 'var(--on-accent)', textTransform: 'uppercase', letterSpacing: 1 }}>
         Name
       </div>
-      <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, flexShrink: 0, width: 76 }}>
+      <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--on-accent)', textTransform: 'uppercase', letterSpacing: 1, flexShrink: 0, width: 76 }}>
         Type
       </div>
-      <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, flexShrink: 0, width: 132, textAlign: 'right' }}>
+      <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--on-accent)', textTransform: 'uppercase', letterSpacing: 1, flexShrink: 0, width: 132, textAlign: 'right' }}>
         Owner
       </div>
-      <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, flexShrink: 0, width: 86, textAlign: 'right' }}>
+      <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--on-accent)', textTransform: 'uppercase', letterSpacing: 1, flexShrink: 0, width: 86, textAlign: 'right' }}>
         Modified
       </div>
     </div>
@@ -202,10 +203,11 @@ export default function FileList({ results, loading, nextPageToken, loadMore, on
     <div>
       <ColumnHeader />
 
-      {results.map((file) => (
+      {results.map((file, i) => (
         <FileRow
           key={file.id}
           file={file}
+          first={i === 0}
           onSingleClick={onSingleClick}
           onDoubleClick={onDoubleClick}
         />
