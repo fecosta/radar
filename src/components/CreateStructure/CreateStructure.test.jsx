@@ -297,8 +297,8 @@ describe('preview', () => {
     await fillPipeline(user);
     await user.click(screen.getByRole('button', { name: /validate and preview/i }));
 
-    await screen.findByRole('tree');
-    expect(screen.getAllByText('Will create')).toHaveLength(17);
+    const tree = await screen.findByRole('tree');
+    expect(within(tree).getAllByText('Will create')).toHaveLength(17);
   });
 
   it('distinguishes items that already exist from items to create', async () => {
@@ -310,9 +310,9 @@ describe('preview', () => {
     await fillPipeline(user);
     await user.click(screen.getByRole('button', { name: /validate and preview/i }));
 
-    await screen.findByRole('tree');
-    expect(screen.getAllByText('Already exists')).toHaveLength(1);
-    expect(screen.getAllByText('Will create')).toHaveLength(16);
+    const tree = await screen.findByRole('tree');
+    expect(within(tree).getAllByText('Already exists')).toHaveLength(1);
+    expect(within(tree).getAllByText('Will create')).toHaveLength(16);
   });
 
   it('announces a blocking drift error and refuses to continue', async () => {
@@ -406,7 +406,9 @@ describe('confirmation gate', () => {
     await user.click(screen.getByRole('button', { name: /validate and preview/i }));
     await screen.findByRole('tree');
 
-    expect(screen.getByText('RESTRICTED')).toBeInTheDocument();
+    // Mixed case in the DOM, uppercased by CSS: screen readers announce a word rather than
+    // spelling out an all-caps string. The point of the assertion is that the flag is words.
+    expect(screen.getByText('Restricted')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /continue to confirmation/i }));
 
     const create = screen.getByRole('button', { name: /create structure/i });

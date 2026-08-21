@@ -33,6 +33,7 @@
   --accent: #A62BFF;
   --accent-hover: #8E1FE0;
   --accent-light: #F6ECFF;
+  --on-accent: #FFFFFF;
 
   /* Ink — the near-black bands: navbar, filled pills, the write-confirmation panel. */
   --ink: #1A1A1A;

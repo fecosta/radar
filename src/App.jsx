@@ -126,7 +126,7 @@ function ModeTabs({ mode, onChange }) {
               border: 'none',
               borderRadius: 'var(--radius-pill)',
               background: active ? 'var(--accent)' : 'transparent',
-              color: active ? '#FFFFFF' : 'var(--text-secondary)',
+              color: active ? 'var(--on-accent)' : 'var(--text-secondary)',
               cursor: 'pointer',
               transition: 'all 0.15s',
             }}
@@ -203,7 +203,7 @@ function DetailPanel({ item, onClose }) {
           fontFamily: 'var(--sans)',
           fontSize: 10, fontWeight: 800,
           letterSpacing: 0.9, textTransform: 'uppercase',
-          color: '#FFFFFF',
+          color: 'var(--on-accent)',
           background: 'var(--accent)',
           borderRadius: 'var(--radius-pill)',
           padding: '4px 11px',
@@ -383,7 +383,7 @@ export default function App() {
               width: 38, height: 38, flexShrink: 0,
               borderRadius: 'var(--radius-pill)',
               background: 'var(--accent)',
-              color: '#FFFFFF',
+              color: 'var(--on-accent)',
               fontFamily: 'var(--sans)', fontSize: 13, fontWeight: 800,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}

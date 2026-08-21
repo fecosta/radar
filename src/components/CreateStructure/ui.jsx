@@ -79,7 +79,7 @@ export function Button({ children, onClick, variant = 'secondary', disabled, typ
   const color = disabled
     ? 'var(--text-disabled)'
     : primary
-      ? '#FFFFFF'
+      ? 'var(--on-accent)'
       : signal
         ? 'var(--ink)'
         : danger
@@ -247,8 +247,9 @@ export function Callout({ tone = 'info', title, children, role }) {
 }
 
 /** Checkbox with its label, used for acknowledgements and the final confirmation. */
-export function CheckboxRow({ checked, onChange, children }) {
+export function CheckboxRow({ checked, onChange, children, tone }) {
   const id = useId();
+  const onInk = tone === 'on-ink';
   return (
     <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
       <input
@@ -256,14 +257,17 @@ export function CheckboxRow({ checked, onChange, children }) {
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0, accentColor: 'var(--accent)' }}
+        style={{
+          marginTop: 2, width: 16, height: 16, flexShrink: 0,
+          accentColor: onInk ? 'var(--signal)' : 'var(--accent)',
+        }}
       />
       <label
         htmlFor={id}
         style={{
           fontFamily: 'var(--body)',
           fontSize: 12.5,
-          color: 'var(--text)',
+          color: onInk ? 'var(--on-ink)' : 'var(--text)',
           lineHeight: 1.6,
           cursor: 'pointer',
         }}

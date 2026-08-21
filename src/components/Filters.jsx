@@ -1,6 +1,6 @@
 function Chip({ label, active, onClick, tone = 'accent' }) {
   const fill = tone === 'ink' ? 'var(--ink)' : 'var(--accent)';
-  const onFill = tone === 'ink' ? 'var(--on-ink)' : '#FFFFFF';
+  const onFill = tone === 'ink' ? 'var(--on-ink)' : 'var(--on-accent)';
   return (
     <button
       onClick={onClick}
