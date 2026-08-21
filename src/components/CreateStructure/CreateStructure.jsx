@@ -26,7 +26,7 @@ function StepNav({ currentId }) {
   const currentIndex = STEPS.findIndex((s) => s.id === currentId);
 
   return (
-    <nav aria-label="Progress" style={{ marginBottom: 20 }}>
+    <nav aria-label="Progress" style={{ marginBottom: 22 }}>
       <ol style={{ display: 'flex', flexWrap: 'wrap', gap: 8, listStyle: 'none' }}>
         {STEPS.map((step, index) => {
           const isCurrent = step.id === currentId;
@@ -38,19 +38,20 @@ function StepNav({ currentId }) {
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 6,
-                padding: '4px 12px',
-                borderRadius: 20,
-                border: `1.5px solid ${isCurrent ? 'var(--accent)' : 'var(--border)'}`,
+                gap: 7,
+                padding: '6px 14px',
+                borderRadius: 'var(--radius-pill)',
+                border: `1.5px solid ${isCurrent ? 'var(--ink)' : 'var(--border)'}`,
                 // The longhand, not the `background` shorthand: jsdom cannot parse a custom
                 // property inside the shorthand, which breaks node cloning in the tests.
-                backgroundColor: isCurrent ? 'var(--accent-light)' : 'transparent',
-                fontSize: 12,
+                backgroundColor: isCurrent ? 'var(--ink)' : 'transparent',
+                fontFamily: 'var(--sans)',
+                fontSize: 11.5,
                 fontWeight: 700,
-                color: isCurrent ? 'var(--accent)' : isDone ? 'var(--text-secondary)' : 'var(--text-muted)',
+                color: isCurrent ? 'var(--on-ink)' : isDone ? 'var(--text-secondary)' : 'var(--text-disabled)',
               }}
             >
-              <span aria-hidden="true">{isDone ? '✓' : index + 1}</span>
+              <span aria-hidden="true" style={{ fontWeight: 800 }}>{isDone ? '✓' : index + 1}</span>
               {step.label}
             </li>
           );
@@ -98,10 +99,10 @@ export default function CreateStructure({ user, servicesFactory, config }) {
   if (!elevated.token) {
     return (
       <Card>
-        <h3 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>
+        <h3 style={{ fontFamily: 'var(--sans)', fontSize: 24, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.4, lineHeight: 1.2, marginBottom: 8 }}>
           Create a canonical structure
         </h3>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 18 }}>
+        <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 18, maxWidth: 720 }}>
           Search and Classify are read-only. Creating folders needs additional Google permission,
           which RADAR requests only when you open this workflow.
         </p>
@@ -152,10 +153,12 @@ export default function CreateStructure({ user, servicesFactory, config }) {
         ref={headingRef}
         tabIndex={-1}
         style={{
-          fontSize: 20,
+          fontFamily: 'var(--sans)',
+          fontSize: 24,
           fontWeight: 800,
           color: 'var(--text)',
-          letterSpacing: -0.3,
+          letterSpacing: -0.4,
+          lineHeight: 1.2,
           marginBottom: 6,
           outline: 'none',
         }}
@@ -207,9 +210,9 @@ export default function CreateStructure({ user, servicesFactory, config }) {
             display: 'flex',
             gap: 10,
             justifyContent: 'space-between',
-            marginTop: 24,
-            borderTop: '1px solid var(--border)',
-            paddingTop: 16,
+            marginTop: 26,
+            borderTop: '1.5px dotted var(--border)',
+            paddingTop: 20,
           }}
         >
           {stepId === 'type' ? (
@@ -239,8 +242,9 @@ export default function CreateStructure({ user, servicesFactory, config }) {
               </Button>
             ) : null}
 
+            {/* The one action that writes to Drive takes the reserved signal colour. */}
             {stepId === 'confirm' ? (
-              <Button variant="primary" onClick={wizard.execute} disabled={!wizard.canCreate}>
+              <Button variant="signal" onClick={wizard.execute} disabled={!wizard.canCreate}>
                 {wizard.executing ? 'Creating…' : 'Create structure'}
               </Button>
             ) : null}

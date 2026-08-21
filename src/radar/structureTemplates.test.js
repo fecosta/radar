@@ -8,7 +8,7 @@ import {
   documentNameToken,
   isSupportedStructureType,
 } from './structureTemplates.js';
-import { MIME_FOLDER, MIME_GOOGLE_DOC, GOVERNANCE_FORUMS } from './canonicalTree.js';
+import { MIME_FOLDER, MIME_GOOGLE_DOC, GOVERNANCE_FORUMS, SEGMENTS } from './canonicalTree.js';
 import { planStructureFromRaw } from './planStructure.js';
 
 /**
@@ -324,8 +324,8 @@ describe('guard rails', () => {
               : OBJECT_INPUTS;
       return resolveDestination(id, inputs).path;
     });
-    expect(paths.some((p) => p.includes('0A_EXPLORATION'))).toBe(false);
-    expect(paths.some((p) => p.includes('05_Weekly email'))).toBe(false);
+    expect(paths.some((p) => p.includes(SEGMENTS.EXPLORATION))).toBe(false);
+    expect(paths.some((p) => p.includes(SEGMENTS.WEEKLY_EMAIL))).toBe(false);
   });
 
   it('marks the beneficiary-data folder restricted, and only that one', () => {

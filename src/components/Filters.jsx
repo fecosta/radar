@@ -1,32 +1,31 @@
-function Chip({ label, active, onClick, color }) {
-  const activeColor = color || 'var(--accent)';
+function Chip({ label, active, onClick, tone = 'accent' }) {
+  const fill = tone === 'ink' ? 'var(--ink)' : 'var(--accent)';
+  const onFill = tone === 'ink' ? 'var(--on-ink)' : 'var(--on-accent)';
   return (
     <button
       onClick={onClick}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 5,
-        padding: '4px 12px',
+        gap: 7,
+        padding: '6px 14px',
         fontSize: 12,
         fontWeight: 700,
         fontFamily: 'var(--sans)',
-        border: `1.5px solid ${active ? activeColor : 'var(--border)'}`,
-        borderRadius: 20,
-        background: active ? (color ? color + '18' : 'var(--accent-light)') : 'transparent',
-        color: active ? activeColor : 'var(--text-secondary)',
+        border: `1.5px solid ${active ? fill : 'var(--border)'}`,
+        borderRadius: 'var(--radius-pill)',
+        background: active ? fill : 'transparent',
+        color: active ? onFill : 'var(--text-secondary)',
         cursor: 'pointer',
         transition: 'all 0.15s ease',
         whiteSpace: 'nowrap',
       }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.borderColor = 'var(--border-strong)'; }}
-      onMouseLeave={e => { if (!active) e.currentTarget.style.borderColor = 'var(--border)'; }}
+      onMouseEnter={e => { if (!active) { e.currentTarget.style.borderColor = 'var(--text)'; e.currentTarget.style.color = 'var(--text)'; } }}
+      onMouseLeave={e => { if (!active) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
     >
       {label}
       {active && (
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
+        <span aria-hidden="true" style={{ fontWeight: 800 }}>&times;</span>
       )}
     </button>
   );
@@ -40,21 +39,6 @@ const FILE_TYPES = [
   { key: 'folder', label: 'Folders' },
   { key: 'image', label: 'Images' },
 ];
-
-const AREA_COLORS = {
-  '01_STRATEGY': '#0F766E',
-  '02_INVESTMENT_PIPELINE': '#B45309',
-  '03_PORTFOLIO': '#1D4ED8',
-  '04_VENTURE_BUILDING': '#6D28D9',
-  '05_ECOSYSTEM_ARCHITECTURE': '#047857',
-  '06_RESEARCH': '#BE185D',
-  '07_CO-INVESTORS': '#9333EA',
-  '08_TRANSVERSAL_AREAS': '#475569',
-  '09_GOVERNANCE_AND_DECISIONS': '#DC2626',
-  '10_KNOWLEDGE_BASE': '#0369A1',
-  '11_TEMPLATES': '#65A30D',
-  '12_ARCHIVE': '#78716C',
-};
 
 export default function Filters({
   topFolders, owners,
@@ -78,7 +62,6 @@ export default function Filters({
               key={f.id}
               label={f.name.replace(/^\d+_/, '').replace(/_/g, ' ')}
               active={filterFolder?.id === f.id}
-              color={AREA_COLORS[f.name]}
               onClick={() => setFilterFolder(filterFolder?.id === f.id ? null : f)}
             />
           ))}
@@ -90,6 +73,7 @@ export default function Filters({
         {FILE_TYPES.map(t => (
           <Chip
             key={t.key}
+            tone="ink"
             label={t.label}
             active={filterType === t.key}
             onClick={() => setFilterType(filterType === t.key ? null : t.key)}
@@ -126,10 +110,10 @@ export default function Filters({
               fontSize: 12,
               fontFamily: 'var(--sans)',
               fontWeight: 700,
-              padding: '5px 10px',
+              padding: '6px 12px',
               border: '1.5px solid var(--border)',
-              borderRadius: 'var(--radius-sm)',
-              background: 'var(--surface)',
+              borderRadius: 'var(--radius-xs)',
+              background: 'var(--surface-raised)',
               color: 'var(--text)',
               cursor: 'pointer',
               outline: 'none',
@@ -145,9 +129,10 @@ export default function Filters({
 
       {/* Results count + clear */}
       {hasFilters && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
-            {totalShown} result{totalShown !== 1 ? 's' : ''}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, borderTop: '1.5px dotted var(--border)' }}>
+          <span style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>
+            <strong style={{ fontFamily: 'var(--sans)', fontWeight: 800, color: 'var(--text)' }}>{totalShown}</strong>
+            {' '}result{totalShown !== 1 ? 's' : ''}
           </span>
           <button
             onClick={clearFilters}
@@ -155,7 +140,7 @@ export default function Filters({
               fontSize: 12, fontWeight: 700,
               fontFamily: 'var(--sans)',
               background: 'none', border: 'none',
-              cursor: 'pointer', color: 'var(--accent)',
+              cursor: 'pointer', color: 'var(--link)',
               padding: '2px 4px', borderRadius: 4,
             }}
             onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
@@ -181,11 +166,11 @@ function FilterRow({ label, children }) {
 function FilterLabel({ text }) {
   return (
     <span style={{
-      fontSize: 11, fontWeight: 800,
+      fontSize: 10.5, fontWeight: 800,
       color: 'var(--text-muted)',
-      letterSpacing: 0.9, textTransform: 'uppercase',
+      letterSpacing: 1, textTransform: 'uppercase',
       fontFamily: 'var(--sans)',
-      flexShrink: 0, minWidth: 46,
+      flexShrink: 0, minWidth: 56,
     }}>
       {text}
     </span>
@@ -201,13 +186,13 @@ function DateInput({ value, onChange, placeholder }) {
       placeholder={placeholder}
       style={{
         fontSize: 12,
-        fontFamily: 'var(--sans)',
-        fontWeight: 600,
-        padding: '5px 10px',
+        fontFamily: 'var(--mono)',
+        fontWeight: 400,
+        padding: '6px 12px',
         border: '1.5px solid var(--border)',
-        borderRadius: 'var(--radius-sm)',
-        background: 'var(--surface)',
-        color: value ? 'var(--text)' : 'var(--text-muted)',
+        borderRadius: 'var(--radius-xs)',
+        background: 'var(--surface-raised)',
+        color: value ? 'var(--text-secondary)' : 'var(--text-disabled)',
         outline: 'none',
         cursor: 'pointer',
       }}

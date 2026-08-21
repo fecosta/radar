@@ -24,9 +24,9 @@ const THEME_OPTIONS = [
 ];
 
 const CONFIDENCE = {
-  high: { fg: 'var(--success)', bg: 'var(--success-light)' },
-  medium: { fg: 'var(--accent)', bg: 'var(--accent-light)' },
-  low: { fg: 'var(--danger)', bg: 'var(--danger-light)' },
+  high: { band: 'var(--success)', fg: 'var(--ink-hover)', chipBorder: 'solid' },
+  medium: { band: 'var(--accent-light)', fg: 'var(--text)', chipBorder: 'solid' },
+  low: { band: 'var(--bg)', fg: 'var(--text)', chipBorder: 'dashed' },
 };
 
 /* ─── Small controls ──────────────────────────────────────── */
@@ -43,20 +43,20 @@ function Chip({ label, active, onClick, role, tabIndex }) {
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        padding: '4px 12px',
-        fontSize: 12,
+        padding: '5px 12px',
+        fontSize: 11.5,
         fontWeight: 700,
         fontFamily: 'var(--sans)',
-        border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
-        borderRadius: 20,
-        background: active ? 'var(--accent-light)' : 'transparent',
-        color: active ? 'var(--accent)' : 'var(--text-secondary)',
+        border: `1.5px solid ${active ? 'var(--ink)' : 'var(--border)'}`,
+        borderRadius: 'var(--radius-pill)',
+        background: active ? 'var(--ink)' : 'transparent',
+        color: active ? 'var(--on-ink)' : 'var(--text-secondary)',
         cursor: 'pointer',
         transition: 'all 0.15s ease',
         whiteSpace: 'nowrap',
       }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.borderColor = 'var(--border-strong)'; }}
-      onMouseLeave={e => { if (!active) e.currentTarget.style.borderColor = 'var(--border)'; }}
+      onMouseEnter={e => { if (!active) { e.currentTarget.style.borderColor = 'var(--text)'; e.currentTarget.style.color = 'var(--text)'; } }}
+      onMouseLeave={e => { if (!active) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
     >
       {label}
     </button>
@@ -118,11 +118,11 @@ function FieldRow({ label, children }) {
 function FieldLabel({ text }) {
   return (
     <span style={{
-      fontSize: 11, fontWeight: 800,
+      fontSize: 10.5, fontWeight: 800,
       color: 'var(--text-muted)',
-      letterSpacing: 0.9, textTransform: 'uppercase',
+      letterSpacing: 1, textTransform: 'uppercase',
       fontFamily: 'var(--sans)',
-      flexShrink: 0, minWidth: 62,
+      flexShrink: 0, minWidth: 58,
     }}>
       {text}
     </span>
@@ -157,17 +157,17 @@ function CopyButton({ value }) {
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 5,
         flexShrink: 0,
-        fontSize: 11, fontWeight: 700,
+        fontSize: 10.5, fontWeight: 700,
         fontFamily: 'var(--sans)',
-        background: 'var(--surface)',
+        background: 'transparent',
         border: `1.5px solid ${done ? 'var(--success)' : failed ? 'var(--danger)' : 'var(--border)'}`,
-        borderRadius: 'var(--radius-sm)',
-        padding: '4px 10px',
+        borderRadius: 'var(--radius-pill)',
+        padding: '4px 11px',
         cursor: 'pointer',
         color,
         transition: 'all 0.15s',
       }}
-      onMouseEnter={e => { if (!state) { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; } }}
+      onMouseEnter={e => { if (!state) { e.currentTarget.style.borderColor = 'var(--text)'; e.currentTarget.style.color = 'var(--text)'; } }}
       onMouseLeave={e => { if (!state) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
     >
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -186,9 +186,10 @@ function CopyButton({ value }) {
 function ResultLabel({ text }) {
   return (
     <span style={{
-      fontSize: 11, fontWeight: 700,
+      fontFamily: 'var(--sans)',
+      fontSize: 10.5, fontWeight: 800,
       color: 'var(--text-muted)',
-      textTransform: 'uppercase', letterSpacing: 0.7,
+      textTransform: 'uppercase', letterSpacing: 1,
     }}>
       {text}
     </span>
@@ -207,13 +208,12 @@ function CopyableBlock({ label, value }) {
       </div>
       <div style={{
         fontFamily: 'var(--mono)',
-        fontSize: 13, fontWeight: 700,
+        fontSize: 12.5, fontWeight: 500,
         color: 'var(--text)',
-        lineHeight: 1.55,
+        lineHeight: 1.6,
         background: 'var(--surface-raised)',
-        border: '1px solid var(--border)',
-        borderRadius: 'var(--radius-sm)',
-        padding: '10px 12px',
+        borderRadius: 'var(--radius-xs)',
+        padding: '12px 14px',
         wordBreak: 'break-word',
         overflowWrap: 'anywhere',
       }}>
@@ -256,55 +256,49 @@ export default function Classify() {
   const conf = result ? (CONFIDENCE[result.confidence] || CONFIDENCE.low) : null;
 
   return (
-    <div>
+    /* Input beside result on a wide viewport; the minmax lets it stack when narrow, since
+       the app has no breakpoints of its own. */
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+      gap: 20,
+      alignItems: 'start',
+    }}>
       {/* ── Input card ── */}
       <div style={{
         background: 'var(--surface)',
         borderRadius: 'var(--radius)',
-        boxShadow: 'var(--shadow)',
-        padding: '20px 24px',
+        padding: '24px',
       }}>
         {/* Heading */}
         <h3 style={{
-          fontSize: 22,
+          fontSize: 24,
           fontWeight: 800,
           fontFamily: 'var(--sans)',
           color: 'var(--text)',
-          letterSpacing: -0.3,
-          lineHeight: 1.25,
-          marginBottom: 5,
+          letterSpacing: -0.4,
+          lineHeight: 1.2,
         }}>
           Where should I save this?
         </h3>
-        <h4 style={{
-          fontSize: 16,
-          fontWeight: 700,
-          fontFamily: 'var(--sans)',
-          color: 'var(--text)',
-          lineHeight: 1.45,
-          marginBottom: 20,
+        <p style={{
+          fontSize: 13.5,
+          color: 'var(--text-secondary)',
+          lineHeight: 1.6,
+          marginTop: 8,
+          marginBottom: 18,
         }}>
           Describe the file, note, document, photo, report, or material in English, Spanish, or Portuguese. RADAR will suggest its official folder and a consistent file name.
-        </h4>
-        <h5 style={{
-          fontSize: 16,
-          fontWeight: 700,
-          fontFamily: 'var(--sans)',
-          color: 'var(--text)',
-          lineHeight: 1.45,
-          marginBottom: 20,
-        }}>
-          Describe what you want to save
-        </h5>
+        </p>
 
         {/* Description */}
         <div style={{
-          background: 'var(--surface)',
-          border: `2px solid ${focused ? 'var(--accent)' : 'var(--border)'}`,
-          borderRadius: 10,
-          padding: '10px 14px',
+          background: 'var(--surface-raised)',
+          border: `1.5px solid ${focused ? 'var(--text)' : 'var(--border)'}`,
+          borderRadius: 'var(--radius-sm)',
+          padding: '14px 16px',
           transition: 'border-color 0.15s, box-shadow 0.15s',
-          boxShadow: focused ? '0 0 0 4px rgba(6, 72, 179, 0.10)' : 'none',
+          boxShadow: focused ? '0 0 0 6px rgba(166, 43, 255, 0.22)' : 'none',
         }}>
           <textarea
             value={description}
@@ -319,11 +313,11 @@ export default function Classify() {
               width: '100%',
               border: 'none',
               background: 'transparent',
-              fontSize: 14,
-              fontWeight: 600,
-              fontFamily: 'var(--sans)',
+              fontSize: 13.5,
+              fontWeight: 400,
+              fontFamily: 'var(--body)',
               color: 'var(--text)',
-              lineHeight: 1.6,
+              lineHeight: 1.65,
               outline: 'none',
               resize: 'vertical',
             }}
@@ -341,14 +335,14 @@ export default function Classify() {
               onChange={e => setObjectName(e.target.value)}
               placeholder="Organization, program or topic (optional)"
               style={{
-                flex: 1, minWidth: 220,
-                fontSize: 12,
-                fontFamily: 'var(--sans)',
-                fontWeight: 600,
-                padding: '5px 10px',
+                flex: 1, minWidth: 180,
+                fontSize: 12.5,
+                fontFamily: 'var(--body)',
+                fontWeight: 500,
+                padding: '7px 12px',
                 border: '1.5px solid var(--border)',
-                borderRadius: 'var(--radius-sm)',
-                background: 'var(--surface)',
+                borderRadius: 'var(--radius-xs)',
+                background: 'var(--surface-raised)',
                 color: 'var(--text)',
                 outline: 'none',
               }}
@@ -375,12 +369,11 @@ export default function Classify() {
         {/* Error */}
         {error && (
           <div style={{
-            fontSize: 13, fontWeight: 600,
+            fontSize: 12.5, fontWeight: 500,
             color: 'var(--danger)',
             background: 'var(--danger-light)',
-            border: '1px solid #FECACA',
-            padding: '10px 16px',
-            borderRadius: 8,
+            padding: '12px 16px',
+            borderRadius: 'var(--radius-sm)',
             marginTop: 16,
           }}>
             {error}
@@ -388,22 +381,22 @@ export default function Classify() {
         )}
 
         {/* Submit */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
           <button
             onClick={handleClassify}
             style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-              padding: '10px 22px',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '12px 30px',
               background: 'var(--accent)',
-              color: '#fff',
+              color: 'var(--on-accent)',
               border: 'none',
-              borderRadius: 'var(--radius-sm)',
+              borderRadius: 'var(--radius-pill)',
               fontSize: 13,
               fontWeight: 700,
+              letterSpacing: 0.3,
               fontFamily: 'var(--sans)',
               cursor: 'pointer',
-              transition: 'background 0.15s, box-shadow 0.15s',
-              boxShadow: '0 4px 12px rgba(6, 72, 179, 0.3)',
+              transition: 'background 0.15s',
             }}
             onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover)'}
             onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
@@ -421,39 +414,41 @@ export default function Classify() {
         <div style={{
           background: 'var(--surface)',
           borderRadius: 'var(--radius)',
-          boxShadow: 'var(--shadow)',
-          padding: '20px 24px',
-          marginTop: 20,
+          overflow: 'hidden',
           animation: 'fadeSlideIn 0.2s ease',
         }}>
-          {/* Header */}
+          {/* Header band */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            gap: 12, marginBottom: 18,
+            gap: 12,
+            padding: '16px 22px',
+            background: conf.band,
           }}>
-            <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.2 }}>
+            <span style={{ fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 800, color: conf.fg }}>
               {result.title}
             </span>
             <span style={{
-              display: 'inline-block', flexShrink: 0,
-              padding: '3px 10px',
-              background: conf.bg,
+              flexShrink: 0,
+              fontFamily: 'var(--sans)',
+              padding: '4px 12px',
               color: conf.fg,
-              borderRadius: 20,
-              fontSize: 10, fontWeight: 700,
+              border: `1.5px ${conf.chipBorder} ${conf.fg}`,
+              borderRadius: 'var(--radius-pill)',
+              fontSize: 10.5, fontWeight: 800,
+              letterSpacing: 1, textTransform: 'uppercase',
               whiteSpace: 'nowrap',
             }}>
               {result.confidenceLabel}
             </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ padding: '22px', display: 'flex', flexDirection: 'column', gap: 18 }}>
             <CopyableBlock label={L.recommended} value={result.path} />
             <CopyableBlock label={L.name} value={result.filename} />
 
             {/* Why */}
-            <div style={{ fontSize: 13, lineHeight: 1.6 }}>
-              <span style={{ fontWeight: 700, color: 'var(--text)' }}>{L.why} </span>
+            <div style={{ fontSize: 13, lineHeight: 1.65 }}>
+              <span style={{ fontFamily: 'var(--sans)', fontWeight: 700, color: 'var(--text)' }}>{L.why} </span>
               <span style={{ color: 'var(--text-secondary)' }}>{result.why}</span>
             </div>
 
@@ -462,17 +457,18 @@ export default function Classify() {
               <div style={{
                 background: 'var(--accent-light)',
                 borderRadius: 'var(--radius-sm)',
-                padding: '12px 14px',
+                padding: '14px 16px',
               }}>
                 <div style={{
-                  fontSize: 11, fontWeight: 700,
+                  fontFamily: 'var(--sans)',
+                  fontSize: 10.5, fontWeight: 800,
                   color: 'var(--accent)',
-                  textTransform: 'uppercase', letterSpacing: 0.7,
-                  marginBottom: 6,
+                  textTransform: 'uppercase', letterSpacing: 1,
+                  marginBottom: 7,
                 }}>
                   {result.specialLabel}
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
                   {result.specialText}
                 </div>
               </div>
@@ -480,33 +476,53 @@ export default function Classify() {
 
             {/* Needs */}
             {result.needs.length > 0 && (
-              <div>
-                <ResultLabel text={result.needsLabel} />
-                <ul style={{ listStyle: 'disc', paddingLeft: 18, marginTop: 6 }}>
-                  {result.needs.map(need => (
-                    <li key={need} style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.7 }}>
-                      {need}
+              <div style={{
+                background: 'var(--surface-raised)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '14px 16px',
+              }}>
+                <div style={{ marginBottom: 9 }}>
+                  <ResultLabel text={result.needsLabel} />
+                </div>
+                <ol style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 7 }}>
+                  {result.needs.map((need, i) => (
+                    <li key={need} style={{ display: 'flex', gap: 10, alignItems: 'baseline' }}>
+                      <span aria-hidden="true" style={{
+                        fontFamily: 'var(--sans)',
+                        fontSize: 10, fontWeight: 800,
+                        color: 'var(--on-accent)', background: 'var(--accent)',
+                        borderRadius: 'var(--radius-pill)',
+                        width: 18, height: 18, flexShrink: 0,
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {i + 1}
+                      </span>
+                      <span style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+                        {need}
+                      </span>
                     </li>
                   ))}
-                </ul>
+                </ol>
               </div>
             )}
 
             {/* Alternatives */}
             {result.alternatives.length > 0 && (
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
-                <ResultLabel text={result.alternativesLabel} />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 8 }}>
+              <div style={{ borderTop: '1.5px dotted var(--border)', paddingTop: 16 }}>
+                <div style={{ marginBottom: 10 }}>
+                  <ResultLabel text={result.alternativesLabel} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {/* Two candidates can share a path (e.g. the Democracia+ subportfolio
                       records), so the index is part of the key. */}
                   {result.alternatives.map((alt, i) => (
                     <div key={`${alt.path}-${i}`}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                      <div style={{ fontFamily: 'var(--sans)', fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>
                         {alt.title}
                       </div>
                       <div style={{
                         fontFamily: 'var(--mono)',
-                        fontSize: 11,
+                        fontSize: 11.5,
                         color: 'var(--text-muted)',
                         lineHeight: 1.5,
                         wordBreak: 'break-word',

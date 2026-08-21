@@ -68,11 +68,15 @@ export const SEGMENTS = Object.freeze({
   POLICIES: '00_POLICIES',
   GOVERNANCE_AND_DECISIONS: '01_GOVERNANCE_AND_DECISIONS',
   /**
-   * v06 WEEKLY EMAIL RULE. Spelled exactly as the specification and the Shared Drive folder
-   * spell it — one space, lowercase "email". It breaks the tree's snake_case convention, but
-   * the specification and the live folder outrank the convention, so the literal must match.
+   * v06 WEEKLY EMAIL RULE, spelled as the live Shared Drive folder spells it.
+   *
+   * The v06 specification text still reads `05_Weekly email` — one space, lowercase — and the
+   * folder was since renamed to snake_case, matching the rest of the tree. The RADAR Owner
+   * chose to follow the Drive, so this literal does, because a path the classifier hands out
+   * has to resolve. The specification text needs the same correction; until it lands, this is
+   * a known and recorded divergence from precedence authority #2. See ADR 0003.
    */
-  WEEKLY_EMAIL: '05_Weekly email',
+  WEEKLY_EMAIL: '05_Weekly_Email',
 
   // 99_ARCHIVE
   DECLINED_PIPELINE: '01_Declined_Pipeline',

@@ -48,7 +48,7 @@ object being promoted to Pipeline still has an exploration home (design rule 19)
 
 Forums are exactly Board, Leadership Team, All Team and Offsites — Concept Review and
 Investment Committee are project-level investment gates and can never be selected here
-(policy §3.1, spec design rule 6). `05_Weekly email` is deliberately **not** a forum: the v06
+(policy §3.1, spec design rule 6). `05_Weekly_Email` is deliberately **not** a forum: the v06
 formal-governance template applies only to those four, and the weekly email folder is a
 pre-existing restricted folder the creator never touches (see
 [access-control.md](access-control.md)).

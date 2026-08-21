@@ -9,15 +9,15 @@ export default function SearchBar({ query, onChange, loading }) {
       display: 'flex',
       alignItems: 'center',
       gap: 10,
-      background: 'var(--surface)',
-      border: `2px solid ${focused ? 'var(--accent)' : 'var(--border)'}`,
-      borderRadius: 10,
-      padding: '10px 16px',
+      background: 'var(--surface-raised)',
+      border: `1.5px solid ${focused ? 'var(--text)' : 'var(--border)'}`,
+      borderRadius: 'var(--radius-sm)',
+      padding: '12px 16px',
       transition: 'border-color 0.15s, box-shadow 0.15s',
-      boxShadow: focused ? '0 0 0 4px rgba(6, 72, 179, 0.10)' : 'none',
+      boxShadow: focused ? '0 0 0 6px rgba(166, 43, 255, 0.22)' : 'none',
     }}>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-        stroke={focused ? 'var(--accent)' : 'var(--text-muted)'}
+        stroke={focused ? 'var(--text)' : 'var(--text-secondary)'}
         strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
         style={{ flexShrink: 0, transition: 'stroke 0.15s' }}
       >
@@ -36,8 +36,8 @@ export default function SearchBar({ query, onChange, loading }) {
           border: 'none',
           background: 'transparent',
           fontSize: 14,
-          fontWeight: 600,
-          fontFamily: 'var(--sans)',
+          fontWeight: 500,
+          fontFamily: 'var(--body)',
           color: 'var(--text)',
           outline: 'none',
         }}

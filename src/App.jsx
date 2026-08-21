@@ -3,7 +3,7 @@ import { useAuth } from './hooks/useAuth';
 import { ACCESS_STATUS, isAuthorized } from './hooks/useRadarAccess';
 import { useDriveSearch } from './hooks/useDriveSearch';
 import { listSubfolders } from './utils/driveApi';
-import { formatDate, formatSize, getFileType, getFileColor } from './utils/helpers';
+import { formatDate, formatSize, getFileType } from './utils/helpers';
 import LoginScreen from './components/LoginScreen';
 import AccessGate from './components/AccessGate';
 import SearchBar from './components/SearchBar';
@@ -30,12 +30,11 @@ function AuthSplash() {
     }}>
       <div style={{
         width: 38, height: 38,
-        background: 'linear-gradient(135deg, #0648B3 0%, #1A80E8 100%)',
-        borderRadius: 11,
+        background: 'var(--ink)',
+        borderRadius: 'var(--radius-sm)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 4px 12px rgba(6, 72, 179, 0.3)',
       }}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--on-ink)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
       </div>
@@ -48,6 +47,23 @@ function AuthSplash() {
       }} />
     </div>
   );
+}
+
+/* ─── Navbar helpers ──────────────────────────────────────── */
+
+/** The initial letters of RADAR are picked out of the expansion. */
+const Initial = ({ children }) => (
+  <span style={{ color: 'var(--on-ink)', fontWeight: 800 }}>{children}</span>
+);
+
+/**
+ * Up to two initials for the avatar. The brand shows initials rather than the Google
+ * profile photo, so nothing is fetched from a third-party image host to render the navbar.
+ */
+function initialsOf(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '';
+  return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
 }
 
 /* ─── Mode tabs ───────────────────────────────────────────── */
@@ -84,11 +100,11 @@ function ModeTabs({ mode, onChange }) {
       onKeyDown={handleKeyDown}
       style={{
         display: 'inline-flex',
-        gap: 3,
-        padding: 3,
-        background: 'var(--surface)',
+        gap: 4,
+        padding: 4,
+        background: 'var(--surface-raised)',
         border: '1.5px solid var(--border)',
-        borderRadius: 'var(--radius-sm)',
+        borderRadius: 'var(--radius-pill)',
         marginBottom: 20,
       }}>
       {MODES.map((m, i) => {
@@ -104,17 +120,17 @@ function ModeTabs({ mode, onChange }) {
             tabIndex={active ? 0 : -1}
             onClick={() => onChange(m.key)}
             style={{
-              padding: '6px 18px',
-              fontSize: 12, fontWeight: 700,
+              padding: '9px 22px',
+              fontSize: 12.5, fontWeight: 700,
               fontFamily: 'var(--sans)',
               border: 'none',
-              borderRadius: 'var(--radius-xs)',
+              borderRadius: 'var(--radius-pill)',
               background: active ? 'var(--accent)' : 'transparent',
-              color: active ? '#fff' : 'var(--text-secondary)',
+              color: active ? 'var(--on-accent)' : 'var(--text-secondary)',
               cursor: 'pointer',
               transition: 'all 0.15s',
             }}
-            onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--hover)'; }}
+            onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--surface-inert)'; }}
             onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
           >
             {m.label}
@@ -127,18 +143,18 @@ function ModeTabs({ mode, onChange }) {
 
 /* ─── Detail panel ────────────────────────────────────────── */
 
-function DetailRow({ label, value }) {
+function DetailRow({ label, value, mono }) {
   return (
     <div style={{
       display: 'flex', justifyContent: 'space-between',
       alignItems: 'flex-start', gap: 12,
-      padding: '9px 0',
-      borderBottom: '1px solid var(--border)',
+      padding: '11px 0',
+      borderBottom: '1.5px dotted var(--rule)',
     }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.7, flexShrink: 0 }}>
+      <span style={{ fontFamily: 'var(--sans)', fontSize: 10, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.9, flexShrink: 0 }}>
         {label}
       </span>
-      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', textAlign: 'right', wordBreak: 'break-word' }}>
+      <span style={{ fontFamily: mono ? 'var(--mono)' : 'var(--body)', fontSize: 12, fontWeight: mono ? 400 : 500, color: 'var(--text)', textAlign: 'right', wordBreak: 'break-word' }}>
         {value}
       </span>
     </div>
@@ -146,38 +162,33 @@ function DetailRow({ label, value }) {
 }
 
 function DetailPanel({ item, onClose }) {
-  const color = getFileColor(item.mimeType);
   const isFolder = item.mimeType === 'application/vnd.google-apps.folder';
 
   return (
     <div style={{
-      width: 272,
+      width: 296,
       flexShrink: 0,
       background: 'var(--surface)',
       borderRadius: 'var(--radius)',
-      boxShadow: 'var(--shadow-elevated)',
       overflow: 'hidden',
       animation: 'fadeSlideIn 0.2s ease',
     }}>
-      {/* Panel header */}
+      {/* Panel header — the brand's green band */}
       <div style={{
         padding: '14px 18px',
-        background: 'var(--surface-raised)',
-        borderBottom: '1px solid var(--border)',
+        background: 'var(--success)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.9 }}>
-          {isFolder ? 'Folder' : 'File'} Info
+        <span style={{ fontFamily: 'var(--sans)', fontSize: 10.5, fontWeight: 800, color: 'var(--ink-hover)', textTransform: 'uppercase', letterSpacing: 1.1 }}>
+          {isFolder ? 'Folder' : 'File'} info
         </span>
         <button
           onClick={onClose}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--text-muted)', padding: 2, borderRadius: 4,
+            color: 'var(--ink-hover)', padding: 2, borderRadius: 4,
             display: 'flex', lineHeight: 1,
           }}
-          onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
-          onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -185,37 +196,32 @@ function DetailPanel({ item, onClose }) {
         </button>
       </div>
 
-      {/* Icon + name */}
-      <div style={{ padding: '18px 18px 14px', borderBottom: '1px solid var(--border)' }}>
-        <div style={{
-          width: 44, height: 44,
-          background: color + '18',
-          borderRadius: 12,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
+      {/* Type + name */}
+      <div style={{ padding: '18px', borderBottom: '1.5px dotted var(--rule)' }}>
+        <span style={{
+          display: 'inline-block',
+          fontFamily: 'var(--sans)',
+          fontSize: 10, fontWeight: 800,
+          letterSpacing: 0.9, textTransform: 'uppercase',
+          color: 'var(--on-accent)',
+          background: 'var(--accent)',
+          borderRadius: 'var(--radius-pill)',
+          padding: '4px 11px',
           marginBottom: 12,
         }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill={color + '22'} stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            {isFolder
-              ? <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-              : <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></>
-            }
-          </svg>
-        </div>
-
-        <span style={{ display: 'inline-block', padding: '2px 8px', background: color + '15', color, borderRadius: 20, fontWeight: 700, fontSize: 10, marginBottom: 8 }}>
           {getFileType(item.mimeType)}
         </span>
 
-        <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--mono)', color: 'var(--text)', lineHeight: 1.45, wordBreak: 'break-word' }}>
+        <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--mono)', color: 'var(--text)', lineHeight: 1.5, wordBreak: 'break-word' }}>
           {item.name}
         </div>
       </div>
 
       {/* Details */}
-      <div style={{ padding: '0 18px' }}>
-        {item.size && <DetailRow label="Size" value={formatSize(item.size)} />}
-        <DetailRow label="Modified" value={formatDate(item.modifiedTime)} />
-        {item.createdTime && <DetailRow label="Created" value={formatDate(item.createdTime)} />}
+      <div style={{ padding: '4px 18px' }}>
+        {item.size && <DetailRow label="Size" value={formatSize(item.size)} mono />}
+        <DetailRow label="Modified" value={formatDate(item.modifiedTime)} mono />
+        {item.createdTime && <DetailRow label="Created" value={formatDate(item.createdTime)} mono />}
         {item.lastModifyingUser?.displayName && (
           <DetailRow label="Last by" value={item.lastModifyingUser.displayName} />
         )}
@@ -226,25 +232,25 @@ function DetailPanel({ item, onClose }) {
 
       {/* CTA */}
       {item.webViewLink && (
-        <div style={{ padding: '16px 18px' }}>
+        <div style={{ padding: '16px 18px 20px' }}>
           <a
             href={item.webViewLink}
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-              padding: '10px 16px',
-              background: 'var(--accent)',
-              color: '#fff',
-              borderRadius: 'var(--radius-sm)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '12px 16px',
+              background: 'var(--ink)',
+              color: 'var(--on-ink)',
+              borderRadius: 'var(--radius-pill)',
               textDecoration: 'none',
-              fontSize: 13,
+              fontFamily: 'var(--sans)',
+              fontSize: 12.5,
               fontWeight: 700,
-              transition: 'background 0.15s, box-shadow 0.15s',
-              boxShadow: '0 4px 12px rgba(6, 72, 179, 0.3)',
+              transition: 'background 0.15s',
             }}
-            onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--ink-hover)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'var(--ink)'}
           >
             Open in Drive
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -345,54 +351,61 @@ export default function App() {
   const displayLoading = browseLoading || (currentBrowseItems === null && search.loading);
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', fontFamily: 'var(--sans)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', fontFamily: 'var(--body)' }}>
 
       {/* ── Navbar ── */}
-      <nav style={{
+      <nav data-on-ink style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: 'var(--surface)',
-        borderBottom: '1px solid var(--border)',
-        boxShadow: 'var(--shadow-navbar)',
-        padding: '0 32px',
-        height: 64,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-around',
+        background: 'var(--ink)',
+        padding: '16px 32px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24,
       }}>
-        {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.4, lineHeight: 1.2 }}>RADAR</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', lineHeight: 1.2 }}>
-              <h4>Repository for Assets, Decisions, Analysis, and Research</h4>
-            </div>
+        {/* Brand — the wordmark, with the acronym spelled out beneath it */}
+        <div>
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 24, fontWeight: 800, letterSpacing: 2.5, color: 'var(--on-ink)', lineHeight: 1 }}>RADAR</div>
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 10, fontWeight: 600, letterSpacing: 1.3, textTransform: 'uppercase', color: 'var(--on-ink-muted)', marginTop: 6 }}>
+            <Initial>R</Initial>epository for <Initial>A</Initial>ssets, <Initial>D</Initial>ecisions,{' '}
+            <Initial>A</Initial>nalysis, and <Initial>R</Initial>esearch
           </div>
         </div>
 
         {/* User */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {user?.picture && (
-            <img src={user.picture} alt="" style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid var(--border)' }} />
-          )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', lineHeight: 1.2 }}>{user?.name}</div>
+            <div style={{ fontFamily: 'var(--sans)', fontSize: 13, fontWeight: 700, color: 'var(--on-ink)', lineHeight: 1.3 }}>{user?.name}</div>
             {user?.email && (
-              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{user.email}</div>
+              <div style={{ fontSize: 11, color: 'var(--on-ink-muted)' }}>{user.email}</div>
             )}
+          </div>
+          <div
+            aria-hidden="true"
+            style={{
+              width: 38, height: 38, flexShrink: 0,
+              borderRadius: 'var(--radius-pill)',
+              background: 'var(--accent)',
+              color: 'var(--on-accent)',
+              fontFamily: 'var(--sans)', fontSize: 13, fontWeight: 800,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            {initialsOf(user?.name)}
           </div>
           <button
             onClick={signOut}
             style={{
-              fontSize: 12, fontWeight: 700,
               fontFamily: 'var(--sans)',
-              background: 'none',
-              border: '1.5px solid var(--border)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '6px 14px',
+              fontSize: 11, fontWeight: 700,
+              letterSpacing: 0.8, textTransform: 'uppercase',
+              background: 'transparent',
+              border: '1.5px solid var(--ink-border)',
+              borderRadius: 'var(--radius-pill)',
+              padding: '8px 16px',
               cursor: 'pointer',
-              color: 'var(--text-secondary)',
+              color: 'var(--on-ink)',
               transition: 'all 0.15s',
             }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--danger)'; e.currentTarget.style.color = 'var(--danger)'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--on-ink)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--ink-border)'; }}
           >
             Sign out
           </button>
@@ -422,12 +435,11 @@ export default function App() {
           <div style={{
             background: 'var(--surface)',
             borderRadius: 'var(--radius)',
-            boxShadow: 'var(--shadow)',
             padding: '20px 24px',
-            marginBottom: 20,
+            marginBottom: 18,
           }}>
             <SearchBar query={search.query} onChange={search.handleQueryChange} loading={search.loading} />
-            <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+            <div style={{ marginTop: 18, borderTop: '1.5px dotted var(--border)', paddingTop: 16 }}>
               <Filters
                 topFolders={search.topFolders}
                 owners={search.owners}
@@ -454,7 +466,7 @@ export default function App() {
           {browseStack.length > 0 && (
             <div style={{
               display: 'flex', alignItems: 'center',
-              gap: 8, marginBottom: 12,
+              gap: 9, marginBottom: 12, flexWrap: 'wrap',
             }}>
               <button
                 onClick={handleBack}
@@ -462,14 +474,15 @@ export default function App() {
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   background: 'var(--surface)',
                   border: '1.5px solid var(--border)',
-                  borderRadius: 'var(--radius-sm)',
-                  padding: '5px 12px',
+                  borderRadius: 'var(--radius-pill)',
+                  padding: '7px 14px',
                   cursor: 'pointer',
                   color: 'var(--text-secondary)',
-                  fontSize: 12, fontWeight: 700,
+                  fontFamily: 'var(--sans)',
+                  fontSize: 11.5, fontWeight: 700,
                   transition: 'all 0.15s',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text)'; e.currentTarget.style.color = 'var(--text)'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -478,32 +491,34 @@ export default function App() {
                 Back
               </button>
 
-              <span style={{ color: 'var(--border-strong)', fontSize: 12 }}>·</span>
-
-              {browseStack.map((entry, i) => (
-                <React.Fragment key={entry.folder.id}>
-                  {i > 0 && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>/</span>}
-                  <span style={{
-                    fontSize: 13, fontWeight: 700,
-                    color: i === browseStack.length - 1 ? 'var(--text)' : 'var(--text-secondary)',
-                  }}>
-                    {entry.folder.name}
-                  </span>
-                </React.Fragment>
-              ))}
+              {browseStack.map((entry, i) => {
+                const last = i === browseStack.length - 1;
+                return (
+                  <React.Fragment key={entry.folder.id}>
+                    {i > 0 && <span style={{ color: 'var(--text-disabled)', fontSize: 12 }}>/</span>}
+                    <span style={{
+                      fontFamily: 'var(--mono)',
+                      fontSize: 12.5,
+                      fontWeight: last ? 700 : 400,
+                      color: last ? 'var(--text)' : 'var(--text-muted)',
+                    }}>
+                      {entry.folder.name}
+                    </span>
+                  </React.Fragment>
+                );
+              })}
             </div>
           )}
 
           {/* Results area */}
-          <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start' }}>
             {/* File list card */}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{
                 background: 'var(--surface)',
                 borderRadius: 'var(--radius)',
-                boxShadow: 'var(--shadow)',
                 overflow: 'hidden',
-                maxHeight: 'calc(100vh - 320px)',
+                maxHeight: 'calc(100vh - 340px)',
                 overflowY: 'auto',
               }}>
                 <FileList
@@ -513,6 +528,8 @@ export default function App() {
                   loadMore={currentBrowseItems ? undefined : search.loadMore}
                   onSingleClick={handleSingleClick}
                   onDoubleClick={handleDoubleClick}
+                  hasFilters={search.hasFilters}
+                  onClearFilters={search.clearFilters}
                 />
               </div>
             </div>

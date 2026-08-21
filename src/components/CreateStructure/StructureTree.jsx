@@ -15,10 +15,10 @@ import { ITEM_KIND } from '../../radar/canonicalTree.js';
  */
 
 const STATUS_META = {
-  [ITEM_STATUS.CREATE]: { label: 'Will create', color: 'var(--accent)', symbol: '+' },
-  [ITEM_STATUS.EXISTS]: { label: 'Already exists', color: 'var(--success)', symbol: '=' },
-  [ITEM_STATUS.CONFLICT]: { label: 'Conflict', color: 'var(--danger)', symbol: '!' },
-  [ITEM_STATUS.BLOCKED]: { label: 'Blocked', color: 'var(--text-muted)', symbol: '·' },
+  [ITEM_STATUS.CREATE]: { label: 'Will create', color: 'var(--accent)', symbol: '+', tint: 'var(--accent-light)' },
+  [ITEM_STATUS.EXISTS]: { label: 'Already exists', color: 'var(--text-muted)', symbol: '=', tint: 'transparent' },
+  [ITEM_STATUS.CONFLICT]: { label: 'Conflict', color: 'var(--danger)', symbol: '!', tint: 'var(--danger-light)' },
+  [ITEM_STATUS.BLOCKED]: { label: 'Blocked', color: 'var(--text-disabled)', symbol: '·', tint: 'transparent' },
 };
 
 /** Rebuild the nested shape from the flat, parents-first item list. */
@@ -70,10 +70,9 @@ export default function StructureTree({ items, label = 'Planned structure' }) {
       aria-label={label}
       onKeyDown={onKeyDown}
       style={{
-        border: '1px solid var(--border)',
         borderRadius: 'var(--radius-sm)',
         background: 'var(--surface-raised)',
-        padding: '10px 6px',
+        padding: '12px 6px',
         maxHeight: 420,
         overflowY: 'auto',
       }}
@@ -100,10 +99,11 @@ export default function StructureTree({ items, label = 'Planned structure' }) {
             style={{
               display: 'flex',
               alignItems: 'baseline',
-              gap: 8,
-              padding: '3px 8px',
-              paddingLeft: 8 + (level - 1) * 18,
-              borderRadius: 4,
+              gap: 10,
+              padding: '4px 12px',
+              paddingLeft: 12 + (level - 1) * 18,
+              borderRadius: 'var(--radius-xs)',
+              background: meta.tint,
             }}
           >
             <span
@@ -111,9 +111,9 @@ export default function StructureTree({ items, label = 'Planned structure' }) {
               style={{
                 fontFamily: 'var(--mono)',
                 fontSize: 12,
-                fontWeight: 700,
+                fontWeight: 800,
                 color: meta.color,
-                width: 12,
+                width: 11,
                 flexShrink: 0,
               }}
             >
@@ -124,8 +124,8 @@ export default function StructureTree({ items, label = 'Planned structure' }) {
               style={{
                 fontFamily: 'var(--mono)',
                 fontSize: 12,
-                fontWeight: isDoc ? 600 : 700,
-                color: 'var(--text)',
+                fontWeight: isDoc ? 500 : 700,
+                color: node.status === ITEM_STATUS.EXISTS ? 'var(--text-muted)' : 'var(--text)',
                 wordBreak: 'break-word',
                 overflowWrap: 'anywhere',
               }}
@@ -134,29 +134,45 @@ export default function StructureTree({ items, label = 'Planned structure' }) {
             </span>
 
             {isDoc ? (
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', flexShrink: 0 }}>
-                Google&nbsp;doc
+              <span style={{
+                fontFamily: 'var(--sans)',
+                fontSize: 9.5, fontWeight: 800,
+                letterSpacing: 0.6, textTransform: 'uppercase',
+                color: 'var(--text-secondary)',
+                border: '1.5px solid var(--border)',
+                borderRadius: 'var(--radius-pill)',
+                padding: '2px 7px',
+                flexShrink: 0, whiteSpace: 'nowrap',
+              }}>
+                Google doc
               </span>
             ) : null}
 
             {restricted ? (
               <span
                 style={{
-                  fontSize: 10,
+                  fontFamily: 'var(--sans)',
+                  fontSize: 9.5,
                   fontWeight: 800,
-                  color: 'var(--danger)',
-                  letterSpacing: 0.5,
+                  letterSpacing: 0.6,
+                  textTransform: 'uppercase',
+                  color: 'var(--on-accent)',
+                  background: 'var(--accent)',
+                  borderRadius: 'var(--radius-pill)',
+                  padding: '2px 8px',
                   flexShrink: 0,
+                  whiteSpace: 'nowrap',
                 }}
               >
-                RESTRICTED
+                Restricted
               </span>
             ) : null}
 
             <span
               style={{
                 marginLeft: 'auto',
-                fontSize: 11,
+                fontFamily: 'var(--sans)',
+                fontSize: 10.5,
                 fontWeight: 700,
                 color: meta.color,
                 whiteSpace: 'nowrap',

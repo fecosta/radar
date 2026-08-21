@@ -1,11 +1,13 @@
+import AuthShell, { AuthHeading, AuthBody } from './AuthShell.jsx';
 import { Button, Callout } from './CreateStructure/ui.jsx';
 import { ACCESS_STATUS } from '../hooks/useRadarAccess.js';
 
 /**
  * Everything the user sees between signing in and being let in.
  *
- * Full-viewport, matching LoginScreen's shell, because each of these states replaces the
- * application rather than sitting inside it.
+ * Rendered into the shared AuthShell — the same split shell as sign-in, because these states
+ * replace the application rather than sitting inside it, and the two screens are siblings a
+ * user meets one after the other.
  *
  * The copy is deliberately specific about *which* of the three layers refused, because the
  * remedy differs — a wrong organization needs a different account, a missing Drive membership
@@ -16,62 +18,13 @@ import { ACCESS_STATUS } from '../hooks/useRadarAccess.js';
  * No raw Google response, status code or stack trace reaches this component.
  */
 
-/* ─── Shell ───────────────────────────────────────────────── */
+/* ─── Local pieces ────────────────────────────────────────── */
 
-function Screen({ children }) {
-  return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(145deg, #0439A0 0%, #0B5FCC 55%, #1A80E8 100%)',
-        fontFamily: 'var(--sans)',
-        padding: 24,
-      }}
-    >
-      <div
-        style={{
-          background: '#FFFFFF',
-          borderRadius: 20,
-          boxShadow: '0 20px 60px rgba(4, 57, 160, 0.35)',
-          padding: '44px 44px 36px',
-          width: '100%',
-          maxWidth: 460,
-          animation: 'fadeSlideIn 0.4s ease',
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
+const Screen = AuthShell;
+const Heading = AuthHeading;
 
-function Heading({ children }) {
-  return (
-    <h1
-      style={{
-        fontSize: 21,
-        fontWeight: 800,
-        color: '#262B40',
-        letterSpacing: -0.3,
-        marginBottom: 10,
-        lineHeight: 1.3,
-      }}
-    >
-      {children}
-    </h1>
-  );
-}
-
-function Body({ children }) {
-  return (
-    <p style={{ fontSize: 14.5, color: '#66799E', lineHeight: 1.65, marginBottom: 24 }}>
-      {children}
-    </p>
-  );
-}
+/** Body copy, with the spacing the action row below it expects. */
+const Body = ({ children }) => <AuthBody style={{ marginBottom: 24 }}>{children}</AuthBody>;
 
 function Actions({ children }) {
   return <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>{children}</div>;
@@ -110,14 +63,14 @@ export default function AccessGate({ status, email, onRetry, onSignOut }) {
             style={{
               width: 20,
               height: 20,
-              border: '2.5px solid #E0E7F0',
-              borderTopColor: '#0648B3',
+              border: '2.5px solid var(--border)',
+              borderTopColor: 'var(--accent)',
               borderRadius: '50%',
               animation: 'spin 0.7s linear infinite',
               flexShrink: 0,
             }}
           />
-          <span style={{ fontSize: 15, fontWeight: 600, color: '#262B40' }}>
+          <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--text)' }}>
             Checking RADAR access…
           </span>
         </div>

@@ -58,10 +58,16 @@ export default function PreviewStep({ preview, loading, error }) {
   return (
     <div style={{ display: 'grid', gap: 16 }}>
       {/* Announced as one sentence so a screen reader gets the outcome without walking the tree. */}
-      <div role="status" aria-live="polite" style={{ display: 'grid', gap: 4 }}>
+      <div role="status" aria-live="polite" style={{ display: 'grid', gap: 8 }}>
         <SectionLabel>Destination in {drive.name}</SectionLabel>
-        <MonoPath>{destination.path}</MonoPath>
-        <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
+        <div style={{
+          background: 'var(--surface-raised)',
+          borderRadius: 'var(--radius-xs)',
+          padding: '11px 14px',
+        }}>
+          <MonoPath>{destination.path}</MonoPath>
+        </div>
+        <span style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>
           {isBlocked
             ? `Preview blocked: ${blocking.length} conflict${blocking.length === 1 ? '' : 's'} must be resolved first.`
             : `${counts.create} item${counts.create === 1 ? '' : 's'} will be created, ` +
@@ -102,7 +108,17 @@ export default function PreviewStep({ preview, loading, error }) {
       ) : null}
 
       <div>
-        <SectionLabel>Planned structure</SectionLabel>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <SectionLabel>Planned structure</SectionLabel>
+          <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--sans)', fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)' }}>
+              <span aria-hidden="true" style={{ fontFamily: 'var(--mono)', fontWeight: 800 }}>=</span> Already exists
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--sans)', fontSize: 10.5, fontWeight: 700, color: 'var(--text)' }}>
+              <span aria-hidden="true" style={{ fontFamily: 'var(--mono)', fontWeight: 800, color: 'var(--accent)' }}>+</span> Will create
+            </span>
+          </div>
+        </div>
         <div style={{ marginTop: 8 }}>
           <StructureTree items={items} />
         </div>

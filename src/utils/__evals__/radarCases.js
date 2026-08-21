@@ -45,7 +45,7 @@ export const evalCases = [
   { description: 'Emergency Response operations plan for the flood response', objectName: '', context: 'auto', theme: 'auto', expectedPath: '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Cross_Thematic/Emergency_Response/03_Operations', expectConfidence: 'high' },
   { description: 'Emergency Response participant beneficiary database', objectName: '', context: 'auto', theme: 'auto', expectedPath: '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Cross_Thematic/Emergency_Response/05_Participants_and_Beneficiary_Data', expectConfidence: 'high' },
   // WEEKLY EMAIL RULE: one institutional home, restricted to the Leadership Team.
-  { description: 'weekly email package for the leadership team', objectName: '', context: 'auto', theme: 'auto', expectedPath: '03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/05_Weekly email' },
+  { description: 'weekly email package for the leadership team', objectName: '', context: 'auto', theme: 'auto', expectedPath: '03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/05_Weekly_Email' },
   // Cross_Thematic where v06 already allowed it, now reachable by selection too.
   { description: 'cross-thematic learning product synthesis across education and democracy', objectName: '', context: 'auto', theme: 'auto', expectedPath: '03_INSTITUTIONAL/03_RESEARCH_AND_LEARNING/02_Learning_Products/Cross_Thematic' },
   // Archive sections 02/03/04 are theme-partitioned; only 04 admits Cross_Thematic.

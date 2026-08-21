@@ -34,7 +34,7 @@ export default function TypeStep({ value, onSelect }) {
       role="radiogroup"
       aria-label="Structure type"
       onKeyDown={onKeyDown}
-      style={{ display: 'grid', gap: 10 }}
+      style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}
     >
       {SUPPORTED_STRUCTURES.map((structure, index) => {
         const active = value === structure.id;
@@ -51,26 +51,33 @@ export default function TypeStep({ value, onSelect }) {
             onClick={() => onSelect(structure.id)}
             style={{
               textAlign: 'left',
-              padding: '14px 16px',
-              border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
-              borderRadius: 'var(--radius-sm)',
-              background: active ? 'var(--accent-light)' : 'var(--surface)',
+              padding: 16,
+              border: active ? '2px solid var(--ink)' : '1.5px solid var(--border)',
+              borderRadius: 'var(--radius-md)',
+              background: active ? 'var(--bg)' : 'var(--surface-raised)',
               cursor: 'pointer',
               fontFamily: 'var(--sans)',
               transition: 'all 0.15s',
             }}
           >
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 800,
-                color: active ? 'var(--accent)' : 'var(--text)',
-                marginBottom: 4,
-              }}
-            >
-              {structure.label}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>
+                {structure.label}
+              </div>
+              {/* The selection says so in words, not by border colour alone. */}
+              {active ? (
+                <span style={{
+                  fontSize: 9.5, fontWeight: 800,
+                  letterSpacing: 0.8, textTransform: 'uppercase',
+                  color: 'var(--on-ink)', background: 'var(--ink)',
+                  borderRadius: 'var(--radius-pill)',
+                  padding: '3px 9px', flexShrink: 0,
+                }}>
+                  Selected
+                </span>
+              ) : null}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+            <div style={{ fontFamily: 'var(--body)', fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.55, marginTop: 6 }}>
               {structure.description}
             </div>
           </button>
