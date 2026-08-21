@@ -1,9 +1,13 @@
 /**
  * Small presentational primitives for the Create structure wizard.
  *
- * Inline styles with the existing CSS custom properties, matching Classify and Search — no
- * new styling approach is introduced. They live here so the step components stay readable
- * and so spacing/colour choices are made once.
+ * Inline styles reading the ver+ brand tokens from index.css — no new styling approach is
+ * introduced. They live here so the step components stay readable and so spacing, colour and
+ * type choices are made once.
+ *
+ * Type convention, applied throughout: `--sans` (Montserrat) for chrome — labels, buttons,
+ * headings, anything uppercase or tracked-out. `--body` (Roboto) for prose. `--mono` for
+ * identifiers.
  */
 
 import { useId } from 'react';
@@ -13,8 +17,7 @@ export const Card = ({ children, style }) => (
     style={{
       background: 'var(--surface)',
       borderRadius: 'var(--radius)',
-      boxShadow: 'var(--shadow)',
-      padding: '20px 24px',
+      padding: '24px 26px',
       ...style,
     }}
   >
@@ -22,14 +25,16 @@ export const Card = ({ children, style }) => (
   </div>
 );
 
+/** Tracked-out uppercase eyebrow. The brand's only label voice. */
 export const SectionLabel = ({ children }) => (
   <span
     style={{
-      fontSize: 11,
-      fontWeight: 700,
+      fontFamily: 'var(--sans)',
+      fontSize: 10.5,
+      fontWeight: 800,
       color: 'var(--text-muted)',
       textTransform: 'uppercase',
-      letterSpacing: 0.7,
+      letterSpacing: 1,
     }}
   >
     {children}
@@ -40,8 +45,8 @@ export const MonoPath = ({ children }) => (
   <span
     style={{
       fontFamily: 'var(--mono)',
-      fontSize: 12,
-      fontWeight: 700,
+      fontSize: 12.5,
+      fontWeight: 500,
       color: 'var(--text)',
       wordBreak: 'break-word',
       overflowWrap: 'anywhere',
@@ -51,44 +56,64 @@ export const MonoPath = ({ children }) => (
   </span>
 );
 
+/**
+ * Pill button.
+ *
+ * `signal` is the write-to-Drive variant: the brand reserves the yellow for actions that
+ * change the Shared Drive, so it must not be spent on ordinary primaries.
+ */
 export function Button({ children, onClick, variant = 'secondary', disabled, type = 'button', ...rest }) {
   const primary = variant === 'primary';
   const danger = variant === 'danger';
+  const signal = variant === 'signal';
+  const onInk = variant === 'on-ink';
+  const filled = primary || signal;
 
   const background = disabled
     ? 'var(--surface-raised)'
     : primary
       ? 'var(--accent)'
-      : 'transparent';
+      : signal
+        ? 'var(--signal)'
+        : 'transparent';
   const color = disabled
-    ? 'var(--text-muted)'
+    ? 'var(--text-disabled)'
     : primary
-      ? '#fff'
-      : danger
-        ? 'var(--danger)'
-        : 'var(--text-secondary)';
+      ? '#FFFFFF'
+      : signal
+        ? 'var(--ink)'
+        : danger
+          ? 'var(--danger)'
+          : onInk
+            ? 'var(--on-ink)'
+            : 'var(--text-secondary)';
+  const borderColor = disabled
+    ? 'var(--border)'
+    : onInk
+      ? 'var(--ink-border)'
+      : 'var(--border)';
 
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
+      {...(onInk || signal ? { 'data-on-ink': '' } : {})}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 7,
-        padding: '9px 20px',
-        fontSize: 13,
+        gap: 8,
+        padding: '12px 26px',
+        fontSize: 12.5,
         fontWeight: 700,
         fontFamily: 'var(--sans)',
-        border: primary ? 'none' : `1.5px solid ${disabled ? 'var(--border)' : 'var(--border-strong)'}`,
-        borderRadius: 'var(--radius-sm)',
+        border: filled ? 'none' : `1.5px solid ${borderColor}`,
+        borderRadius: 'var(--radius-pill)',
         background,
         color,
         cursor: disabled ? 'not-allowed' : 'pointer',
         transition: 'all 0.15s',
-        boxShadow: primary && !disabled ? '0 4px 12px rgba(166, 43, 255, 0.3)' : 'none',
       }}
       {...rest}
     >
@@ -110,14 +135,14 @@ export function Field({ label, hint, error, required, children }) {
   const describedBy = [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
       <label
         htmlFor={id}
         style={{
-          fontSize: 11,
+          fontSize: 10.5,
           fontWeight: 800,
           color: 'var(--text-muted)',
-          letterSpacing: 0.9,
+          letterSpacing: 1,
           textTransform: 'uppercase',
           fontFamily: 'var(--sans)',
         }}
@@ -130,7 +155,10 @@ export function Field({ label, hint, error, required, children }) {
       {children({ id, describedBy, invalid: Boolean(error) })}
 
       {hint ? (
-        <span id={hintId} style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+        <span
+          id={hintId}
+          style={{ fontFamily: 'var(--body)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.55 }}
+        >
           {hint}
         </span>
       ) : null}
@@ -138,7 +166,13 @@ export function Field({ label, hint, error, required, children }) {
       {error ? (
         <span
           id={errorId}
-          style={{ fontSize: 12, fontWeight: 700, color: 'var(--danger)', lineHeight: 1.5 }}
+          style={{
+            fontFamily: 'var(--body)',
+            fontSize: 12,
+            fontWeight: 700,
+            color: 'var(--danger)',
+            lineHeight: 1.55,
+          }}
         >
           {error}
         </span>
@@ -149,13 +183,13 @@ export function Field({ label, hint, error, required, children }) {
 
 export const inputStyle = (invalid) => ({
   width: '100%',
-  fontSize: 13,
-  fontFamily: 'var(--sans)',
-  fontWeight: 600,
-  padding: '8px 12px',
+  fontSize: 12.5,
+  fontFamily: 'var(--body)',
+  fontWeight: 500,
+  padding: '9px 12px',
   border: `1.5px solid ${invalid ? 'var(--danger)' : 'var(--border)'}`,
-  borderRadius: 'var(--radius-sm)',
-  background: 'var(--surface)',
+  borderRadius: 'var(--radius-xs)',
+  background: 'var(--surface-raised)',
   color: 'var(--text)',
 });
 
@@ -163,7 +197,7 @@ const TONE = {
   info: { fg: 'var(--accent)', bg: 'var(--accent-light)' },
   success: { fg: 'var(--success)', bg: 'var(--success-light)' },
   danger: { fg: 'var(--danger)', bg: 'var(--danger-light)' },
-  neutral: { fg: 'var(--text-secondary)', bg: 'var(--surface-raised)' },
+  neutral: { fg: 'var(--text-muted)', bg: 'var(--surface-raised)' },
 };
 
 /**
@@ -177,27 +211,36 @@ export function Callout({ tone = 'info', title, children, role }) {
       role={role}
       style={{
         background: bg,
-        borderLeft: `3px solid ${fg}`,
         borderRadius: 'var(--radius-sm)',
-        padding: '12px 14px',
+        padding: '14px 16px',
       }}
     >
       {title ? (
         <div
           style={{
-            fontSize: 11,
+            fontFamily: 'var(--sans)',
+            fontSize: 10.5,
             fontWeight: 800,
             color: fg,
             textTransform: 'uppercase',
-            letterSpacing: 0.7,
-            marginBottom: children ? 6 : 0,
+            letterSpacing: 1,
+            marginBottom: children ? 7 : 0,
           }}
         >
           {title}
         </div>
       ) : null}
       {children ? (
-        <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{children}</div>
+        <div
+          style={{
+            fontFamily: 'var(--body)',
+            fontSize: 12.5,
+            color: 'var(--text-secondary)',
+            lineHeight: 1.65,
+          }}
+        >
+          {children}
+        </div>
       ) : null}
     </div>
   );
@@ -213,9 +256,18 @@ export function CheckboxRow({ checked, onChange, children }) {
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        style={{ marginTop: 3, width: 15, height: 15, flexShrink: 0, accentColor: 'var(--accent)' }}
+        style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0, accentColor: 'var(--accent)' }}
       />
-      <label htmlFor={id} style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6, cursor: 'pointer' }}>
+      <label
+        htmlFor={id}
+        style={{
+          fontFamily: 'var(--body)',
+          fontSize: 12.5,
+          color: 'var(--text)',
+          lineHeight: 1.6,
+          cursor: 'pointer',
+        }}
+      >
         {children}
       </label>
     </div>
