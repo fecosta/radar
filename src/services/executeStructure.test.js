@@ -730,3 +730,106 @@ describe('Portfolio operating folders', () => {
     expect(drive._calls.createFolder).toBe(0);
   });
 });
+
+describe('Existing Portfolio investment', () => {
+  const TYPE = STRUCTURE_TYPES.EXISTING_PORTFOLIO_INVESTMENT;
+  const INPUTS = {
+    objectName: 'Aprendo+',
+    theme: 'Education',
+    owner: 'A. Ruiz',
+    country: 'Mexico',
+    strategicFocus: 'Early Childhood',
+    meetingLogYear: '2026',
+  };
+  const DESTINATION = '02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education/Aprendo+';
+
+  const runLegacy = (drive, extra = {}) => run({ drive, type: TYPE, inputs: INPUTS, ...extra });
+
+  it('builds the complete object for a grant with no home anywhere', async () => {
+    const drive = createFakeDrive();
+
+    const result = await runLegacy(drive);
+
+    expect(result.outcome).toBe(OUTCOME.SUCCESS);
+    expect(drive._calls.createFolder).toBe(24);
+    expect(drive._calls.createGoogleDoc).toBe(1);
+    expect(result.created.map((i) => i.name)).toContain('00_Overview_and_Contacts');
+    expect(result.created.map((i) => i.name)).toContain('12_Decisions_and_Transitions');
+    expect(result.rootFolderLink).toBeTruthy();
+  });
+
+  /**
+   * THE write-path proof. The browser gate is a courtesy, so the precondition has to hold in
+   * executeStructure, which re-plans from raw inputs and re-previews against live Drive. A
+   * caller submitting a valid, non-stale hash while the object lives elsewhere gets nothing.
+   */
+  it('writes nothing when the object already has a home elsewhere', async () => {
+    const drive = createFakeDrive();
+    drive._seedPath('02_INVESTMENTS_AND_PROGRAMS/01_PIPELINE/Education/Aprendo+');
+
+    const result = await runLegacy(drive);
+
+    expect(result.outcome).toBe(OUTCOME.BLOCKED);
+    expect(result.failureStage).toBe(FAILURE_STAGE.REVALIDATION);
+    expect(result.errors[0].code).toBe('OBJECT_HAS_ANOTHER_HOME');
+    expect(drive._calls.createFolder).toBe(0);
+    expect(drive._calls.createGoogleDoc).toBe(0);
+  });
+
+  it('writes nothing when a home appears between confirmation and the write', async () => {
+    const drive = createFakeDrive();
+    const hash = planFor(TYPE, INPUTS).hash;
+    // Someone else files the organization while the administrator is on the confirm screen.
+    drive._seedPath('02_INVESTMENTS_AND_PROGRAMS/03_VENTURE_BUILDING/Education/Aprendo+');
+
+    const result = await runLegacy(drive, { hash });
+
+    expect(result.outcome).toBe(OUTCOME.BLOCKED);
+    expect(drive._calls.createFolder).toBe(0);
+  });
+
+  it('never scaffolds fabricated history into an object that arrived by a move', async () => {
+    const drive = createFakeDrive();
+    drive._seedPath(`${DESTINATION}/02_Sourcing`);
+
+    const result = await runLegacy(drive);
+
+    expect(result.outcome).toBe(OUTCOME.BLOCKED);
+    expect(result.errors[0].code).toBe('OBJECT_ALREADY_IN_PORTFOLIO');
+    expect(drive._calls.createFolder).toBe(0);
+  });
+
+  it('records the object in the Master Registry as Portfolio', async () => {
+    const drive = createFakeDrive();
+    const registry = createFakeRegistry();
+
+    const result = await runLegacy(drive, { registry });
+
+    expect(result.registry.status).toBe(REGISTRY_STATUS.CREATED);
+    expect(registry._rows).toHaveLength(1);
+    expect(registry._rows[0].Object_Type).toBe('Portfolio');
+    expect(registry._rows[0].Object_Name).toBe('Aprendo+');
+    // A human still owns the stage: automation must not infer an investment decision.
+    expect(registry._rows[0].Current_Stage_or_Status).toBe('');
+  });
+
+  it('appends no second Registry row for an object already recorded under another type', async () => {
+    const drive = createFakeDrive();
+    const registry = createFakeRegistry({
+      rows: [
+        {
+          Object_Name: 'Aprendo+',
+          Theme: 'Education',
+          Object_Type: 'Pipeline',
+          Official_Folder_Link: 'https://drive.google.com/drive/folders/elsewhere',
+        },
+      ],
+    });
+
+    const result = await runLegacy(drive, { registry });
+
+    expect(result.outcome).toBe(OUTCOME.BLOCKED);
+    expect(registry._rows).toHaveLength(1);
+    expect(drive._calls.createFolder).toBe(0);
+  });
+});

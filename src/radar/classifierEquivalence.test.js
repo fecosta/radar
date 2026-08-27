@@ -373,3 +373,48 @@ describe('Portfolio operating folders agree with the classifier', () => {
     expect(built).not.toContain('00_Overview_and_Contacts');
   });
 });
+
+/**
+ * The additive structure deliberately does NOT build 00-04 (the move preserved them); the
+ * from-scratch structure MUST, because for a legacy object nothing preserved anything. Both
+ * asymmetries are asserted so neither is "fixed" into the other.
+ */
+describe('the from-scratch Portfolio structure builds what the additive one omits', () => {
+  const INPUTS = { theme: 'Education', objectName: 'SampleOrg', meetingLogYear: 2026 };
+
+  it('builds the retained-history folders the additive structure leaves alone', () => {
+    const legacy = expandTemplate(STRUCTURE_TYPES.EXISTING_PORTFOLIO_INVESTMENT, INPUTS)
+      .items.map((i) => i.name);
+    const additive = expandTemplate(STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS, INPUTS)
+      .items.map((i) => i.name);
+
+    for (const name of ['00_Overview_and_Contacts', '01_Meetings', '02_Sourcing', '03_Screening', '04_Diligence']) {
+      expect(legacy).toContain(name);
+      expect(additive).not.toContain(name);
+    }
+  });
+
+  it('builds the same operating folders as the additive structure, from one definition', () => {
+    const legacy = expandTemplate(STRUCTURE_TYPES.EXISTING_PORTFOLIO_INVESTMENT, INPUTS)
+      .items.map((i) => i.name);
+    const additive = expandTemplate(STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS, INPUTS)
+      .items.map((i) => i.name);
+
+    // Shared constant, so the two cannot drift apart.
+    for (const name of additive) expect(legacy).toContain(name);
+  });
+
+  it('builds the same history folders a Pipeline object gets, from one definition', () => {
+    const legacy = expandTemplate(STRUCTURE_TYPES.EXISTING_PORTFOLIO_INVESTMENT, INPUTS)
+      .items.map((i) => i.relativePath.replace(/^SampleOrg\/?/, ''));
+    const pipeline = expandTemplate(STRUCTURE_TYPES.PIPELINE_ORGANIZATION, {
+      ...INPUTS,
+      owner: 'A',
+      country: 'MX',
+      strategicFocus: 'ECE',
+    }).items.map((i) => i.relativePath.replace(/^SampleOrg\/?/, ''));
+
+    // Every path a Pipeline object has, a legacy Portfolio object has too.
+    for (const path of pipeline.filter(Boolean)) expect(legacy).toContain(path);
+  });
+});

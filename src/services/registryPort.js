@@ -12,7 +12,13 @@
  * Contract:
  *   isConfigured() -> boolean
  *   lookup(identity) -> { status, found, officialFolderLink?, rowNumber? }
+ *   lookupAnyType({ objectName, theme }) -> same shape, ignoring Object_Type
  *   upsert({ identity, record, officialFolderLink }) -> { status, ... }
+ *
+ * `lookupAnyType` exists because Object_Type is part of a row's identity for writing but must
+ * NOT be part of it when asking "does this object already have an official folder?". An object
+ * being onboarded into Portfolio may already have a Pipeline or Exploration row; a typed lookup
+ * would miss it and a duplicate would be appended.
  */
 
 export const REGISTRY_STATUS = Object.freeze({
@@ -49,6 +55,9 @@ export function createUnconfiguredRegistry(reason = 'No Master Registry spreadsh
   return {
     isConfigured: () => false,
     async lookup() {
+      return { status: REGISTRY_STATUS.PENDING_CONFIGURATION, found: false, reason };
+    },
+    async lookupAnyType() {
       return { status: REGISTRY_STATUS.PENDING_CONFIGURATION, found: false, reason };
     },
     async upsert() {

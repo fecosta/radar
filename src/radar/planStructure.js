@@ -54,14 +54,28 @@ function registryPlanFor(type, inputs, officialFolderPath) {
     applicable: true,
     objectType: template.registry.objectType,
     /**
-     * The identity a Registry row is matched on. Deliberately does NOT include status or
-     * stage: a human sets those, and re-running creation must find the same row rather
-     * than inserting a duplicate.
+     * The identity a Registry row is matched on for the UPSERT. Deliberately does NOT include
+     * status or stage: a human sets those, and re-running creation must find the same row
+     * rather than inserting a duplicate.
      */
     identity: {
       objectName: inputs.objectName,
       theme: inputs.theme,
       objectType: template.registry.objectType,
+    },
+    /**
+     * The identity the "second official home" CONFLICT check uses — deliberately type-blind.
+     *
+     * These answer different questions. The upsert asks "which row do I write?", so it needs
+     * the type. The conflict check asks "does this object already have an official folder
+     * recorded, under ANY type?" — and including the type there is a trap: an object being
+     * onboarded into Portfolio may well already have a row saying Pipeline, Venture_Building
+     * or Exploration. A Portfolio-typed lookup would miss it, report no conflict, and append a
+     * second row for an object the specification requires to appear once.
+     */
+    conflictIdentity: {
+      objectName: inputs.objectName,
+      theme: inputs.theme,
     },
     /**
      * Proposed field values. Current_Stage_or_Status is intentionally left blank — the

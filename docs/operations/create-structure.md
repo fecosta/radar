@@ -28,6 +28,7 @@ and no auto-creation of missing canonical roots.
 | Formal governance meeting | `03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/{forum}/{YYYY}/{YYYY-MM-DD_Forum}` | — |
 | Annual OKR cycle | `01_STRATEGY/03_OKRs/{YYYY}` | — |
 | Portfolio operating folders | `02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/{theme}/{name}` — **must already exist** | — (change `Object_Type` by hand) |
+| Existing Portfolio investment | `02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/{theme}/{name}` — **must not exist anywhere** | Portfolio |
 
 Themes are **per structure type**, not one global list (v06 design rule 2):
 
@@ -37,6 +38,7 @@ Themes are **per structure type**, not one global list (v06 design rule 2):
 | Venture Building initiative | `Education`, `Democracy` |
 | In-house program | `Education`, `Democracy`, `Cross_Thematic` |
 | Portfolio operating folders | `Education`, `Democracy` |
+| Existing Portfolio investment | `Education`, `Democracy` |
 
 `Cross_Thematic` is used only where the canonical tree defines it and is not a general
 "other" category, so the creator rejects it for Pipeline and Venture Building outright.
@@ -70,6 +72,11 @@ Each of these is enforced by a test, not just by convention.
 - **No Master Registry lifecycle change.** A Registry row is matched on Object_Name + Theme +
   Object_Type, so writing a Portfolio row would append a duplicate rather than update the
   existing Pipeline one. RADAR reports the change and never makes it.
+- **No Portfolio object for an organization that already has a folder.** *Existing Portfolio
+  investment* builds a complete object, but only after searching the whole Shared Drive and
+  finding no folder of that name. If one exists — in Pipeline, Venture Building, Exploration, an
+  archive, or Portfolio itself — it blocks and names the path. See
+  [ADR 0005](../decisions/0005-legacy-portfolio-objects-only-on-proven-absence.md).
 - **No root-tree bootstrap and no launch seeds.** A missing canonical root is architecture
   drift: it is reported to the administrator and never repaired automatically. No sample
   organizations are ever created.
@@ -241,7 +248,7 @@ purpose.
 cp .env.example .env      # then fill in real values — point at a TEST Shared Drive
 npm install
 npm run dev               # http://localhost:5173
-npm run test              # 588 tests; no Google credentials required
+npm run test              # 617 tests; no Google credentials required
 npm run build
 ```
 
@@ -291,6 +298,8 @@ Creation is refused, and nothing is written, when:
 | the Registry records a different official folder | would create a second official home |
 | a folder the structure must be added *inside* does not exist | the approved folder has not been moved there yet; RADAR will not build it |
 | two folders share that organization's name | RADAR will not guess which is the official home |
+| the object already has a folder elsewhere in the Drive | an object has one official folder; move that one instead of building a second |
+| the object is already in Portfolio | *Portfolio operating folders* is the right tool; building 00-04 into it would fabricate history |
 
 Warnings requiring explicit acknowledgement (not blocking): the restricted beneficiary-data
 folder; an object name that already exists in Portfolio or the declined-pipeline archive; the
@@ -357,6 +366,31 @@ empty shell created by hand. The second is a warning rather than a block because
 organization may hold its record under non-canonical names.
 
 See [ADR 0004](../decisions/0004-portfolio-operating-folders-are-additive.md).
+
+## Which Portfolio structure to use
+
+Two structures write into Portfolio and their preconditions are **opposite**. You do not have to
+decide correctly in advance — each one blocks and names the other — but the rule is:
+
+| Situation | Structure | Why |
+|---|---|---|
+| A Pipeline organization was approved | move the folder yourself, then **Portfolio operating folders** | Approval moves the complete folder and keeps its history. RADAR adds 05-12. |
+| A grant or investment predates RADAR and has no folder anywhere | **Existing Portfolio investment** | There is nothing to move. RADAR builds the complete 00-12. |
+| The organization already has a folder somewhere else | neither — move that folder first | An object has exactly one official folder. |
+
+**Why building from scratch is restricted at all.** The v06 PORTFOLIO CREATION RULE forbids
+creating an object folder *instead of moving one*, and the harm it names is losing history that
+exists. RADAR enforces that as a question about live Drive rather than a blanket ban: it searches
+the whole Shared Drive for the name and refuses if it finds anything. You may build from scratch
+only when there is genuinely nothing to move.
+
+That search is case-insensitive but **cannot fold accents** — `Fundacion Luminar` will not match
+`Fundación Luminar`. Read the destination before confirming.
+
+An object that arrived by a move is refused with a message pointing at *Portfolio operating
+folders*. That refusal matters: building `00`-`04` into a folder that already carries real
+history would create an empty `03_Screening/02_Concept_Review` asserting a gate that never
+happened, which no later reader could tell from a real one.
 
 ## Recovery after partial failure
 

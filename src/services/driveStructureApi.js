@@ -200,6 +200,61 @@ export function createDriveStructureClient({
       return (result?.files || []).filter((f) => f.name === name);
     },
 
+    /**
+     * Every non-trashed FOLDER anywhere in the Shared Drive whose name matches, case-insensitively.
+     *
+     * The opposite matching policy to findExactChildren, deliberately. That one is strict
+     * because it decides what to REUSE, and reusing `aprendo+` for `Aprendo+` would adopt the
+     * wrong folder. This one decides what to PROHIBIT, so it must fail closed: a near-miss it
+     * does not return becomes a second official home. Drive's `name =` is already
+     * case-insensitive (see findExactChildren), so this is the unfiltered result — the loose
+     * comparison is free, not extra work.
+     *
+     * One request instead of walking every lifecycle area, and it finds homes nobody thought to
+     * enumerate. It cannot fold accents, which is the residual gap recorded in ADR 0005.
+     */
+    async findFoldersNamedAnywhere(name) {
+      const q = [
+        `name = '${escapeDriveQueryValue(name)}'`,
+        `mimeType = '${MIME_FOLDER}'`,
+        'trashed = false',
+      ].join(' and ');
+
+      const result = await request('/files', {
+        params: {
+          q,
+          ...driveScope,
+          fields: `files(${ITEM_FIELDS})`,
+          pageSize: 100,
+          orderBy: 'createdTime',
+        },
+        stage: 'find_folders_named_anywhere',
+      });
+
+      return (result?.files || []).map((item) => assertInSharedDrive(item, 'find_folders_named_anywhere'));
+    },
+
+    /**
+     * The canonical path of a file, walked up through its parents. Used to tell an
+     * administrator WHERE a conflicting folder is — "it already exists" is not actionable on
+     * its own. Stops at the Shared Drive root; a broken chain degrades to what it resolved.
+     */
+    async pathOf(fileId) {
+      const segments = [];
+      let currentId = fileId;
+      // Bounded: a canonical path is 4-5 deep, and a cycle must not hang the preview.
+      for (let hops = 0; hops < 12 && currentId && currentId !== sharedDriveId; hops += 1) {
+        const file = await request(`/files/${encodeURIComponent(currentId)}`, {
+          params: { supportsAllDrives: 'true', fields: 'id, name, parents' },
+          stage: 'path_of',
+        });
+        if (!file?.name) break;
+        segments.unshift(file.name);
+        currentId = file.parents?.[0];
+      }
+      return segments.join('/');
+    },
+
     /** Walk a canonical path from the Shared Drive root. See resolveCanonicalPath. */
     async resolvePath(segments) {
       const result = await resolveCanonicalPath({

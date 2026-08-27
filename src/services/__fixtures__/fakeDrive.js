@@ -58,7 +58,7 @@ export function createFakeDrive({
   /** id -> { id, name, mimeType, parentId, driveId, webViewLink } */
   const items = new Map();
   let nextId = 1;
-  const calls = { findExactChildren: 0, createFolder: 0, createGoogleDoc: 0 };
+  const calls = { findExactChildren: 0, findFoldersNamedAnywhere: 0, createFolder: 0, createGoogleDoc: 0 };
 
   /** Fault injection: a queue of one-shot behaviours keyed by item name. */
   const failures = new Map();
@@ -110,6 +110,26 @@ export function createFakeDrive({
       calls.findExactChildren += 1;
       // Exact, case-sensitive — mirrors the production client's post-filter.
       return childrenOf(parentId).filter((i) => i.name === name);
+    },
+
+    /** Case-insensitive, drive-wide folder search. Mirrors the real client's loose policy. */
+    async findFoldersNamedAnywhere(name) {
+      calls.findFoldersNamedAnywhere += 1;
+      const want = String(name).toLowerCase();
+      return [...items.values()].filter(
+        (i) => i.mimeType === MIME_FOLDER && i.name.toLowerCase() === want
+      );
+    },
+
+    /** Canonical path of an item, walked up through its parents. */
+    async pathOf(fileId) {
+      const segments = [];
+      let current = items.get(fileId);
+      while (current) {
+        segments.unshift(current.name);
+        current = items.get(current.parentId);
+      }
+      return segments.join('/');
     },
 
     async resolvePath(segments) {
@@ -185,10 +205,10 @@ export function createFakeDrive({
 export function createFakeRegistry({ rows = [], configured = true, failOnUpsert = null } = {}) {
   const store = [...rows];
   const norm = (v) => String(v ?? '').trim().toLowerCase();
+  const matchNameTheme = (r, identity) =>
+    norm(r.Object_Name) === norm(identity.objectName) && norm(r.Theme) === norm(identity.theme);
   const match = (r, identity) =>
-    norm(r.Object_Name) === norm(identity.objectName) &&
-    norm(r.Theme) === norm(identity.theme) &&
-    norm(r.Object_Type) === norm(identity.objectType);
+    matchNameTheme(r, identity) && norm(r.Object_Type) === norm(identity.objectType);
 
   return {
     isConfigured: () => configured,
@@ -199,6 +219,18 @@ export function createFakeRegistry({ rows = [], configured = true, failOnUpsert 
       const found = store.find((r) => match(r, identity));
       return found
         ? { found: true, officialFolderLink: found.Official_Folder_Link || '' }
+        : { found: false };
+    },
+    /** Name + theme only — mirrors registrySheet's type-blind conflict lookup. */
+    async lookupAnyType(identity) {
+      if (!configured) return { status: 'PENDING_CONFIGURATION', found: false };
+      const found = store.find((r) => matchNameTheme(r, identity));
+      return found
+        ? {
+            found: true,
+            officialFolderLink: found.Official_Folder_Link || '',
+            objectType: found.Object_Type || '',
+          }
         : { found: false };
     },
     async upsert({ identity, record, officialFolderLink }) {

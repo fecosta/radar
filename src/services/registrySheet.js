@@ -66,8 +66,14 @@ export function createSheetRegistry({ sheetsClient, spreadsheetId, sheetTitle, n
 
   const cell = (row, i) => (i === undefined || i === null ? '' : row[i] ?? '');
 
-  /** Find the row whose canonical identity matches. Returns a 1-based sheet row number. */
-  async function findRow(identity) {
+  /**
+   * Find the row whose canonical identity matches. Returns a 1-based sheet row number.
+   *
+   * `matchObjectType: false` answers a different question: "does this object have a row under
+   * ANY type?" Used only by the conflict check, never by the upsert — the strict three-field
+   * match is what makes re-running a creation find its own row instead of appending.
+   */
+  async function findRow(identity, { matchObjectType = true } = {}) {
     const { quoted, index } = await schema();
     const rows = await sheetsClient.getValues(spreadsheetId, `${quoted}!A2:ZZ`, 'registry_rows');
 
@@ -79,25 +85,37 @@ export function createSheetRegistry({ sheetsClient, spreadsheetId, sheetTitle, n
       const row = rows[i];
       if (normalizeRegistryValue(cell(row, index.get('Object_Name'))) !== wantName) continue;
       if (normalizeRegistryValue(cell(row, index.get('Theme'))) !== wantTheme) continue;
-      if (normalizeRegistryValue(cell(row, index.get('Object_Type'))) !== wantType) continue;
+      if (matchObjectType && normalizeRegistryValue(cell(row, index.get('Object_Type'))) !== wantType) continue;
       return { rowNumber: i + 2, row };
     }
     return null;
+  }
+
+  /** Shape a findRow result the way both lookups report it. */
+  async function reportRow(match) {
+    if (!match) return { status: REGISTRY_STATUS.UNCHANGED, found: false };
+    const { index } = await schema();
+    return {
+      found: true,
+      rowNumber: match.rowNumber,
+      officialFolderLink: String(cell(match.row, index.get('Official_Folder_Link')) || '').trim(),
+      objectType: String(cell(match.row, index.get('Object_Type')) || '').trim(),
+    };
   }
 
   return {
     isConfigured: () => true,
 
     async lookup(identity) {
-      const { index } = await schema();
-      const match = await findRow(identity);
-      if (!match) return { status: REGISTRY_STATUS.UNCHANGED, found: false };
+      return reportRow(await findRow(identity));
+    },
 
-      return {
-        found: true,
-        rowNumber: match.rowNumber,
-        officialFolderLink: String(cell(match.row, index.get('Official_Folder_Link')) || '').trim(),
-      };
+    /**
+     * Name + theme only. Reports the row's Object_Type so the caller can say what it found —
+     * "already recorded as Pipeline" is far more actionable than "already recorded".
+     */
+    async lookupAnyType(identity) {
+      return reportRow(await findRow(identity, { matchObjectType: false }));
     },
 
     /**

@@ -376,12 +376,13 @@ keep working and you can press it again.
 from it, so it never holds write permission in a tab nobody is looking at. Coming back asks
 again. That is the design, not a bug.
 
-### The seven structure types
+### The eight structure types
 
 | Type | Creates it under | Themes offered |
 |---|---|---|
 | **Pipeline organization** | `02_INVESTMENTS_AND_PROGRAMS/01_PIPELINE/{theme}/` | Education, Democracy |
 | **Portfolio operating folders** | *inside* an organization folder already in `02_PORTFOLIO/{theme}/` | Education, Democracy |
+| **Existing Portfolio investment** | `02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/{theme}/` — only if the organization has no folder anywhere | Education, Democracy |
 | **Venture Building initiative** | `02_INVESTMENTS_AND_PROGRAMS/03_VENTURE_BUILDING/{theme}/` | Education, Democracy |
 | **In-house program** | `02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/{theme}/` | Education, Democracy, **Cross_Thematic** |
 | **Policy** | `03_INSTITUTIONAL/00_POLICIES/` | — |
@@ -390,10 +391,13 @@ again. That is the design, not a bug.
 
 Two things worth understanding:
 
-- **The Portfolio option adds folders; it never builds the organization.** When a Pipeline
-  organization is approved you *move* its existing folder to Portfolio yourself — never build a
-  new one, or you lose its history. RADAR then adds the operating folders 05–12 to the folder
-  you moved. If the folder is not there yet, the preview stops and tells you to move it first.
+- **There are two Portfolio options, with opposite preconditions.** When a Pipeline organization
+  is approved you *move* its existing folder to Portfolio yourself — never build a new one, or
+  you lose its history — and then **Portfolio operating folders** adds 05–12 to the folder you
+  moved. **Existing Portfolio investment** is for the other case: a grant or investment that
+  predates RADAR and has no folder anywhere, where there is nothing to move and RADAR builds the
+  complete structure. You do not have to get this right first time; each one checks the Drive and
+  points you at the other.
 - **Emergency Response is not a type.** It is an **In-house program** with theme
   `Cross_Thematic` and the name `Emergency_Response`.
 
@@ -402,7 +406,7 @@ Investment Committee are project gates and belong with the project, never here.
 
 ### The five steps
 
-**1 · Structure type** — pick one of the seven cards; the chosen one shows a "Selected" pill.
+**1 · Structure type** — pick one of the eight cards; the chosen one shows a "Selected" pill.
 Arrow keys move the selection. Press **Continue**.
 
 **2 · Details** — the fields depend on the type. Required fields are marked `*`; everything else
@@ -454,6 +458,25 @@ already exists in the Declined Pipeline archive or Exploration, which usually me
 should be *moved* rather than rebuilt — RADAR only reports that; it never moves anything. For a
 Portfolio transition you will also be asked to confirm the **Master Registry** change you still
 owe (below), and — if the folder looks empty of history — that you did not create it by hand.
+
+#### Onboarding a grant or investment that predates RADAR
+
+Use **Existing Portfolio investment**. RADAR builds the whole canonical structure — `00` through
+`12`, including this year's Meeting Log — and records the organization in the Master Registry as
+`Portfolio`.
+
+Before it writes anything it searches the **entire Shared Drive** for a folder with that name. If
+it finds one, it stops and tells you where. That is the point: an object has exactly one official
+folder, so if the organization already has one anywhere, that folder must be *moved* into
+Portfolio rather than a second one built.
+
+Two things to know:
+
+- The search matches names ignoring capitalisation, but **not accents**. `Fundacion Luminar` will
+  not match `Fundación Luminar`, so read the destination path before you confirm.
+- If the organization is already in Portfolio, RADAR refuses and points you at *Portfolio
+  operating folders*. Building the early folders into a folder that already holds real history
+  would create empty Screening and Diligence folders that look like a gate nobody ever held.
 
 #### After approval: moving a Pipeline organization to Portfolio
 
