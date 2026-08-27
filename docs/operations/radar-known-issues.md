@@ -187,19 +187,24 @@ correctly — real `<label htmlFor>`, `aria-describedby`, `aria-invalid`. Classi
 stranded. Presumably meant to be `'Board meeting minutes for August' or 'Fotos del evento de
 Beca Tech'`.
 
-### 14. The application has four names
+### 14. The application has three names
 
 | Where | Name |
 |---|---|
 | v06 spec, and how users are told to find it | RADAR Drive Finder |
-| Browser tab (`index.html:6`) | Vélezreyes+ Drive Search |
-| **Google consent screen** (`README.md:83`) | **Vélezreyes Drive Search** |
+| Browser tab (`index.html:6`) | RADAR — Drive Finder |
+| **Google consent screen** (`README.md:93`) | **Vélezreyes Drive Search** |
 | The app itself | RADAR |
 
-The consent screen is the one that matters: it is the single moment a user is right to be
-suspicious of an unfamiliar app requesting Drive access, and it shows a lowercase `r` and no `+`.
-The browser title is a one-line fix; the consent name is a Google Cloud Console setting, and
-renaming a live OAuth app is worth doing deliberately.
+Was four. The browser tab now matches the name the specification uses for this app (spec L25,
+L153, L382), so the tab and the instructions users follow finally agree.
+
+The consent screen is the one that matters, and it is still wrong: it is the single moment a
+user is right to be suspicious of an unfamiliar app requesting Drive access, and it shows a
+lowercase `r` and no `+`. Unlike the browser title, it is a Google Cloud Console setting rather
+than a repo setting, and renaming a live OAuth app is worth doing deliberately.
+
+`package.json`'s `name` field is also still `velezreyes-drive-search`, but nobody sees it.
 
 ### 15. "Cross-thematic" the chip, `Cross_Thematic` the folder
 

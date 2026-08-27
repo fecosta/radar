@@ -65,7 +65,7 @@ The application answers to several names. All of these are the same tool:
 | Where you see it | What it says |
 |---|---|
 | How you are told to find it | RADAR Drive Finder |
-| The browser tab | Vélezreyes+ Drive Search |
+| The browser tab | RADAR — Drive Finder |
 | **The Google permission screen** | **Vélezreyes Drive Search** |
 | The app itself | RADAR |
 
