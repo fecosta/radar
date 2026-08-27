@@ -61,6 +61,17 @@ export default function DetailsStep({ template, inputs, fieldErrors, onChange, p
     <div style={{ display: 'grid', gap: 18 }}>
       {/* A structure that adds to an existing folder needs its precondition stated before the
           administrator fills the form, not after a blocked preview explains it. */}
+      {/* Two Portfolio structures now exist with opposite preconditions, and picking the wrong
+          one is the mistake to prevent. Say which case this is before the form is filled. */}
+      {template.requireNoOtherHome ? (
+        <Callout tone="info" title="This is for an investment with no folder yet">
+          Use this only for a grant or investment that predates RADAR and has no folder anywhere
+          in the Shared Drive. RADAR searches the whole Drive and refuses if it finds one — if
+          the organization already has a folder, move that folder into Portfolio and use
+          <strong> Portfolio operating folders</strong> instead, which keeps its history.
+        </Callout>
+      ) : null}
+
       {template.requiresExistingObject ? (
         <Callout tone="info" title="This adds to a folder that must already exist">
           RADAR does not move folders. Move the approved organization folder into Portfolio

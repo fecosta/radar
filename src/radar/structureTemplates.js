@@ -68,6 +68,12 @@ export const STRUCTURE_TYPES = Object.freeze({
    * this tool must never offer, and structureInputs.test.js asserts it stays unsupported.
    */
   PORTFOLIO_OPERATING_FOLDERS: 'portfolio_operating_folders',
+  /**
+   * Likewise not `portfolio_organization`: that id names the UNGUARDED from-scratch structure
+   * the rule forbids, and structureInputs.test.js asserts it stays unsupported. This one is
+   * guarded by mustNotExistIn and is a different thing.
+   */
+  EXISTING_PORTFOLIO_INVESTMENT: 'existing_portfolio_investment',
 });
 
 /* ─── Naming helpers ──────────────────────────────────────── */
@@ -106,6 +112,66 @@ function meetingsNode(objectName, year) {
   };
 }
 
+/**
+ * The pre-approval half of an investment object: 00-04.
+ *
+ * Shared verbatim by the Pipeline template and by the from-scratch Portfolio template, because
+ * a Portfolio object that arrived by a MOVE carries exactly this and a legacy object onboarded
+ * from scratch must be indistinguishable from it. Defined once so the two cannot drift.
+ */
+function investmentHistoryNodes(objectName, meetingLogYear) {
+  return [
+    { name: '00_Overview_and_Contacts' },
+    meetingsNode(objectName, meetingLogYear),
+    { name: '02_Sourcing' },
+    {
+      name: '03_Screening',
+      children: [
+        { name: '01_Concept_Note_and_Materials' },
+        // Empty by design: the dated [YYYY-MM-DD_Concept_Review] package is created when
+        // the gate is actually held, not when the opportunity is opened.
+        { name: '02_Concept_Review' },
+      ],
+    },
+    {
+      name: '04_Diligence',
+      children: [
+        {
+          name: '01_Investment_Due_Diligence',
+          children: [
+            { name: '01_Application' },
+            { name: '02_Application_Review' },
+            { name: '03_Peer_Reviewed_Investment_Memo' },
+            // Likewise empty: the dated Investment Committee package comes later.
+            { name: '04_Investment_Committee' },
+          ],
+        },
+        { name: '02_Legal_Due_Diligence' },
+      ],
+    },
+  ];
+}
+
+/**
+ * The post-approval half: 05-12 (spec DYNAMIC TEMPLATE - PORTFOLIO ORGANIZATION).
+ *
+ * Shared by the additive Portfolio structure, which adds only these to a moved folder, and by
+ * the from-scratch structure, which builds them alongside 00-04.
+ */
+function portfolioOperatingNodes() {
+  return [
+    { name: '05_Onboarding' },
+    { name: '06_Investment_Docs' },
+    { name: '07_Execution' },
+    { name: '08_Disbursements' },
+    { name: '09_Reports' },
+    { name: '10_MEL_Evidence' },
+    // v06 AUDIOVISUAL RULE: Portfolio uses 11_, unlike Venture Building and In-house (09_).
+    { name: '11_Photos_and_Videos' },
+    { name: '12_Decisions_and_Transitions' },
+  ];
+}
+
 /* ─── Template definitions ────────────────────────────────── */
 
 /**
@@ -136,36 +202,7 @@ const TEMPLATES = {
       parentSegments: themedContainerSegments(OBJECT_AREAS.PIPELINE, theme),
       createdSegments: [objectName],
     }),
-    nodes: ({ objectName, meetingLogYear }) => [
-      { name: '00_Overview_and_Contacts' },
-      meetingsNode(objectName, meetingLogYear),
-      { name: '02_Sourcing' },
-      {
-        name: '03_Screening',
-        children: [
-          { name: '01_Concept_Note_and_Materials' },
-          // Empty by design: the dated [YYYY-MM-DD_Concept_Review] package is created when
-          // the gate is actually held, not when the opportunity is opened.
-          { name: '02_Concept_Review' },
-        ],
-      },
-      {
-        name: '04_Diligence',
-        children: [
-          {
-            name: '01_Investment_Due_Diligence',
-            children: [
-              { name: '01_Application' },
-              { name: '02_Application_Review' },
-              { name: '03_Peer_Reviewed_Investment_Memo' },
-              // Likewise empty: the dated Investment Committee package comes later.
-              { name: '04_Investment_Committee' },
-            ],
-          },
-          { name: '02_Legal_Due_Diligence' },
-        ],
-      },
-    ],
+    nodes: ({ objectName, meetingLogYear }) => investmentHistoryNodes(objectName, meetingLogYear),
   },
 
   [STRUCTURE_TYPES.VENTURE_BUILDING_INITIATIVE]: {
@@ -234,6 +271,69 @@ const TEMPLATES = {
       { name: '08_Comms_and_Reports' },
       { name: '09_Photos_and_Videos' },
       { name: '10_Decisions_and_Transitions' },
+    ],
+  },
+
+  /**
+   * A grant or investment that predates RADAR and therefore never had a Pipeline folder to be
+   * moved from.
+   *
+   * This is the ONLY structure permitted to create a Portfolio object folder, and the
+   * permission is conditional, not granted. The v06 PORTFOLIO CREATION RULE forbids creating
+   * an object folder *instead of moving one*; the harm it names is losing history that exists.
+   * So the rule is enforced as a live-Drive question rather than a blanket ban: `mustNotExistIn`
+   * declares every area the object could already occupy, and the preview refuses if it is found
+   * in any of them. You may build from scratch only when there is genuinely nothing to move.
+   *
+   * What makes the from-scratch case legitimate at all is design rule 4, "one object = one
+   * official folder": an investment predating RADAR has ZERO official folders, and refusing to
+   * create one leaves it permanently in violation. The spec's own LAUNCH SEED EXAMPLES require
+   * a Portfolio organization to exist at launch and supply no mechanism to produce it.
+   *
+   * See ADR 0005, which supersedes ADR 0004's decision that this must be structurally
+   * impossible, and records what is given up by replacing that guarantee with a check.
+   */
+  [STRUCTURE_TYPES.EXISTING_PORTFOLIO_INVESTMENT]: {
+    id: STRUCTURE_TYPES.EXISTING_PORTFOLIO_INVESTMENT,
+    label: 'Existing Portfolio investment',
+    description:
+      'Builds the complete canonical structure for a grant or investment that predates RADAR and ' +
+      'never had a Pipeline folder to move. Refused if the object already has a folder anywhere ' +
+      'else — that one must be moved instead.',
+    objectNameLabel: 'Organization name',
+    fields: ['objectName', 'theme', 'owner', 'country', 'strategicFocus', 'meetingLogYear'],
+    themeArea: OBJECT_AREAS.PORTFOLIO,
+    themeHint: 'Education and Democracy are the only themes in Portfolio.',
+    confirmNote:
+      'RADAR checked Pipeline, Venture Building, Exploration and the archives and found no other ' +
+      'folder for this organization. If one exists under a different spelling, move that folder ' +
+      'instead of continuing — an object must have exactly one official home.',
+    /**
+     * A Registry record DOES apply: unlike the approval transition, this object may have no row
+     * at all. The conflict check that protects against a second official home is deliberately
+     * type-blind (see conflictIdentity in planStructure.js) — a legacy object's existing row is
+     * likely to say Pipeline or Exploration, and a Portfolio-typed lookup would miss it and
+     * append a duplicate.
+     */
+    registry: { applicable: true, objectType: REGISTRY_OBJECT_TYPES.PORTFOLIO },
+    /**
+     * The declaration the destination guard requires before permitting a Portfolio object
+     * folder, and the precondition the preview enforces.
+     *
+     * The preview answers it with ONE Shared-Drive-wide search for the name, which beats
+     * enumerating lifecycle areas on every axis: it catches homes nobody thought to list
+     * (`07_Legacy_Structure`, a subportfolio folder, an area added to the tree later), it costs
+     * one call rather than roughly seventy, and Drive's `name =` operator is case-insensitive
+     * so `aprendo+` is caught for free. It cannot fold accents — the residual gap in ADR 0005.
+     */
+    requireNoOtherHome: true,
+    destination: ({ theme, objectName }) => ({
+      parentSegments: themedContainerSegments(OBJECT_AREAS.PORTFOLIO, theme),
+      createdSegments: [objectName],
+    }),
+    nodes: ({ objectName, meetingLogYear }) => [
+      ...investmentHistoryNodes(objectName, meetingLogYear),
+      ...portfolioOperatingNodes(),
     ],
   },
 
@@ -358,17 +458,7 @@ const TEMPLATES = {
       requireExistingSegments: [objectName],
       createdSegments: [],
     }),
-    nodes: () => [
-      { name: '05_Onboarding' },
-      { name: '06_Investment_Docs' },
-      { name: '07_Execution' },
-      { name: '08_Disbursements' },
-      { name: '09_Reports' },
-      { name: '10_MEL_Evidence' },
-      // v06 AUDIOVISUAL RULE: Portfolio uses 11_, unlike Venture Building and In-house (09_).
-      { name: '11_Photos_and_Videos' },
-      { name: '12_Decisions_and_Transitions' },
-    ],
+    nodes: () => portfolioOperatingNodes(),
   },
 };
 
@@ -381,6 +471,8 @@ export const SUPPORTED_STRUCTURES = Object.freeze(
     // Immediately after Pipeline: the picker then reads in lifecycle order and teaches that
     // approval moves the folder rather than building a second one.
     STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS,
+    // Beside the additive type: the two Portfolio options must be compared, not stumbled upon.
+    STRUCTURE_TYPES.EXISTING_PORTFOLIO_INVESTMENT,
     STRUCTURE_TYPES.VENTURE_BUILDING_INITIATIVE,
     STRUCTURE_TYPES.IN_HOUSE_PROGRAM,
     STRUCTURE_TYPES.POLICY,
@@ -399,6 +491,8 @@ export const SUPPORTED_STRUCTURES = Object.freeze(
       themeHint: t.themeHint || null,
       registryApplicable: t.registry.applicable,
       requiresExistingObject: Boolean(t.requiresExistingObject),
+      // The opposite precondition, surfaced so the wizard can route between the two.
+      requireNoOtherHome: Boolean(t.requireNoOtherHome),
       confirmNote: t.confirmNote || null,
     });
   })
@@ -442,6 +536,13 @@ export function resolveDestination(type, inputs) {
     parentSegments: Object.freeze([...parentSegments]),
     requireExistingSegments: Object.freeze([...requireExistingSegments]),
     createdSegments: Object.freeze([...createdSegments]),
+    /**
+     * Whether the object must be shown to have no other home anywhere in the Shared Drive
+     * before its folder may be created. Carried on the destination so the preview enforces it
+     * from plan data alone, never from the structure type — and so the guard below can require
+     * the declaration before permitting a Portfolio object folder.
+     */
+    requireNoOtherHome: Boolean(template.requireNoOtherHome),
     anchorSegments: Object.freeze([...anchorSegments]),
     segments: Object.freeze(segments),
     parentPath: joinSegments(anchorSegments),
@@ -521,30 +622,67 @@ const PORTFOLIO_OBJECT_DEPTH = 4;
  */
 export function forbiddenDestinationReason(destination, items = []) {
   // A. The archive is reachable only by a decline/closure MOVE, which does not exist. No
-  //    exceptions: unlike Portfolio, there is no additive archive structure.
+  //    exceptions and no declaration can earn one: unlike Portfolio there is no legitimate
+  //    from-scratch archive case, because an archived object by definition already had a home.
   if (destination.path.startsWith(CANONICAL_ROOTS.ARCHIVE)) {
     return `${CANONICAL_ROOTS.ARCHIVE} is reachable only through a decline or closure move`;
   }
 
-  // B. Under Portfolio a plan may ADD to a folder that already exists and may create no root
-  //    of its own (v06 PORTFOLIO CREATION RULE: "do not create/copy a new object folder").
-  if (destination.path.startsWith(PORTFOLIO_PREFIX) && destination.createdSegments.length > 0) {
+  /**
+   * Whether this plan has earned the right to create a Portfolio object folder.
+   *
+   * The v06 PORTFOLIO CREATION RULE forbids creating an object folder instead of MOVING one,
+   * and the harm it names is losing history that exists. A plan may therefore create one only
+   * by declaring `requireNoOtherHome`, which the preview enforces against live Drive before
+   * anything is written.
+   *
+   * The declaration alone is not enough, because it says nothing about SHAPE. Without the two
+   * pins below, a template could set the flag and then create the canonical theme container
+   * (`createdSegments: [theme, objectName]`) — architecture the creator must never bootstrap —
+   * or bury the object folder deeper. So the permission is: exactly one created segment,
+   * anchored directly on a themed Portfolio container, having promised the absence check.
+   */
+  const underPortfolio = destination.path.startsWith(PORTFOLIO_PREFIX);
+  const parent = destination.parentSegments || [];
+  const anchoredOnThemeContainer =
+    parent.length === PORTFOLIO_OBJECT_DEPTH - 1 &&
+    parent[1] === SEGMENTS.PORTFOLIO &&
+    themesForArea(OBJECT_AREAS.PORTFOLIO).includes(parent[2]);
+  const mayCreatePortfolioObject =
+    Boolean(destination.requireNoOtherHome) &&
+    destination.createdSegments.length === 1 &&
+    anchoredOnThemeContainer;
+
+  // B. Under Portfolio a plan may ADD to a folder that already exists. It may create a root of
+  //    its own only with the declaration above (v06 PORTFOLIO CREATION RULE: "do not
+  //    create/copy a new object folder" — enforced as a check, per ADR 0005).
+  if (
+    destination.path.startsWith(PORTFOLIO_PREFIX) &&
+    destination.createdSegments.length > 0 &&
+    !mayCreatePortfolioObject
+  ) {
     return (
       `${PORTFOLIO_PREFIX} may only receive folders added inside an object folder that already ` +
-      'exists; a Portfolio object folder is created only by moving an approved Pipeline folder'
+      'exists, unless the structure declares requireNoOtherHome and creates exactly one folder ' +
+      'directly inside a themed Portfolio container'
     );
   }
 
   // C. Belt and braces over the actual write targets. Rule B reads a summary path; this reads
   //    every item that would be created, so a template cannot smuggle an object folder through
   //    by hiding the organization name somewhere other than createdSegments.
-  const objectFolder = items.find(
-    (item) =>
-      item.fullPath.startsWith(PORTFOLIO_PREFIX) &&
-      item.fullPath.split('/').length === PORTFOLIO_OBJECT_DEPTH
-  );
-  if (objectFolder) {
-    return `${objectFolder.fullPath} is a Portfolio object folder, which only a lifecycle move may create`;
+  {
+    const objectFolder = items.find(
+      (item) =>
+        item.fullPath.startsWith(PORTFOLIO_PREFIX) &&
+        item.fullPath.split('/').length === PORTFOLIO_OBJECT_DEPTH &&
+        // Permitted only when it IS this structure's own declared root. A node that merely
+        // happens to sit at object depth is the smuggling case rule C exists for.
+        !(mayCreatePortfolioObject && item.isStructureRoot)
+    );
+    if (objectFolder) {
+      return `${objectFolder.fullPath} is a Portfolio object folder, which only a lifecycle move may create`;
+    }
   }
 
   return null;

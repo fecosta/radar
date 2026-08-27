@@ -519,3 +519,137 @@ describe('Portfolio operating folders', () => {
     expect(result.acknowledgements.some((a) => a.code === 'NO_RETAINED_HISTORY')).toBe(false);
   });
 });
+
+describe('Existing Portfolio investment', () => {
+  const INPUTS = {
+    objectName: 'Aprendo+',
+    theme: 'Education',
+    owner: 'A. Ruiz',
+    country: 'Mexico',
+    strategicFocus: 'Early Childhood',
+    meetingLogYear: '2026',
+  };
+  const DESTINATION = '02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education/Aprendo+';
+
+  const legacyPlan = () =>
+    planStructureFromRaw(STRUCTURE_TYPES.EXISTING_PORTFOLIO_INVESTMENT, INPUTS).plan;
+
+  const legacyPreview = (drive, registry = createFakeRegistry({ configured: false })) =>
+    previewStructure({ drive, registry, plan: legacyPlan() });
+
+  it('builds the complete canonical object when it has no home anywhere', async () => {
+    const result = await legacyPreview(createFakeDrive());
+
+    expect(result.status).toBe(PREVIEW_STATUS.READY);
+    expect(result.blocking).toEqual([]);
+    // 24 folders plus the yearly Meeting Log document.
+    expect(result.counts.create).toBe(25);
+    const names = result.items.map((i) => i.name);
+    expect(names).toContain('00_Overview_and_Contacts');
+    expect(names).toContain('02_Sourcing');
+    expect(names).toContain('12_Decisions_and_Transitions');
+    expect(result.items.filter((i) => i.kind === 'google_doc')).toHaveLength(1);
+  });
+
+  /**
+   * The control that replaces the structural guarantee ADR 0004 gave up. If it were deleted,
+   * every static guard test would still pass and this one would not — which is the point.
+   */
+  it.each([
+    ['Pipeline', '02_INVESTMENTS_AND_PROGRAMS/01_PIPELINE/Education/Aprendo+'],
+    ['Pipeline, other theme', '02_INVESTMENTS_AND_PROGRAMS/01_PIPELINE/Democracy/Aprendo+'],
+    ['Venture Building', '02_INVESTMENTS_AND_PROGRAMS/03_VENTURE_BUILDING/Education/Aprendo+'],
+    ['In-house Programs', '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/Aprendo+'],
+    ['Exploration', '02_INVESTMENTS_AND_PROGRAMS/0A_EXPLORATION/Cross_Thematic/Aprendo+'],
+    ['the declined archive', '99_ARCHIVE/01_Declined_Pipeline/Aprendo+'],
+    ['the legacy structure', '99_ARCHIVE/07_Legacy_Structure/Aprendo+'],
+  ])('refuses to build a second home when the object is already in %s', async (_label, path) => {
+    const drive = createFakeDrive();
+    drive._seedPath(path);
+    const before = drive._items.size;
+
+    const result = await legacyPreview(drive);
+
+    expect(result.status).toBe(PREVIEW_STATUS.BLOCKED);
+    expect(result.blocking[0].code).toBe(CONFLICT_CODE.OBJECT_HAS_ANOTHER_HOME);
+    expect(result.blocking[0].message).toContain(path);
+    expect(result.blocking[0].message).toMatch(/exactly one official folder/);
+    expect(drive._items.size).toBe(before);
+  });
+
+  /**
+   * A wrong-theme guess used to be the silent failure: the object sits under Democracy, the
+   * operator picks Education, a theme-scoped scan finds nothing and a duplicate is born. The
+   * drive-wide search has no theme to get wrong.
+   */
+  it('finds a home in a theme the operator did not select', async () => {
+    const drive = createFakeDrive();
+    drive._seedPath('02_INVESTMENTS_AND_PROGRAMS/01_PIPELINE/Democracy/Aprendo+');
+
+    const result = await legacyPreview(drive);
+
+    expect(result.status).toBe(PREVIEW_STATUS.BLOCKED);
+    expect(result.blocking[0].message).toContain('01_PIPELINE/Democracy');
+  });
+
+  it('finds a home that differs only by capitalisation', async () => {
+    // Free, because Drive's name operator is case-insensitive before RADAR's strict filter.
+    const drive = createFakeDrive();
+    drive._seedPath('02_INVESTMENTS_AND_PROGRAMS/01_PIPELINE/Education/aprendo+');
+
+    const result = await legacyPreview(drive);
+
+    expect(result.status).toBe(PREVIEW_STATUS.BLOCKED);
+    expect(result.blocking[0].code).toBe(CONFLICT_CODE.OBJECT_HAS_ANOTHER_HOME);
+  });
+
+  /**
+   * The bypass this design would otherwise have. Pointed at an object that arrived by a move,
+   * this structure would scaffold 00-04 INTO it — fabricating an empty
+   * 03_Screening/02_Concept_Review that asserts a gate which never happened, indistinguishable
+   * to any later reader from a real one.
+   */
+  it('refuses an object that is already in Portfolio, routing to the additive structure', async () => {
+    const drive = createFakeDrive();
+    drive._seedPath(`${DESTINATION}/02_Sourcing`);
+    const before = drive._items.size;
+
+    const result = await legacyPreview(drive);
+
+    expect(result.status).toBe(PREVIEW_STATUS.BLOCKED);
+    expect(result.blocking[0].code).toBe(CONFLICT_CODE.OBJECT_ALREADY_IN_PORTFOLIO);
+    expect(result.blocking[0].message).toMatch(/Portfolio operating folders/);
+    expect(result.blocking[0].message).toMatch(/history untouched/);
+    expect(drive._items.size).toBe(before);
+  });
+
+  it('blocks when the Master Registry records the object under any other type', async () => {
+    // A legacy grant's row is likely to say Pipeline or Exploration. A Portfolio-typed lookup
+    // would miss it and append a duplicate, so the conflict check must be type-blind.
+    const registry = createFakeRegistry({
+      rows: [
+        {
+          Object_Name: 'Aprendo+',
+          Theme: 'Education',
+          Object_Type: 'Pipeline',
+          Official_Folder_Link: 'https://drive.google.com/drive/folders/somewhere-else',
+        },
+      ],
+    });
+
+    const result = await legacyPreview(createFakeDrive(), registry);
+
+    expect(result.status).toBe(PREVIEW_STATUS.BLOCKED);
+    expect(result.blocking.some((b) => b.code === CONFLICT_CODE.REGISTRY_OFFICIAL_FOLDER_CONFLICT)).toBe(true);
+    // Naming the recorded type is what makes the message actionable.
+    expect(result.blocking.find((b) => b.code === CONFLICT_CODE.REGISTRY_OFFICIAL_FOLDER_CONFLICT).message)
+      .toMatch(/as Pipeline/);
+  });
+
+  it('still warns about a conflicting lifecycle home rather than silently skipping Portfolio', async () => {
+    // The lifecycle skip is only sound for a structure that creates nothing at its destination.
+    const plan = legacyPlan();
+    expect(plan.destination.createdSegments).toEqual(['Aprendo+']);
+    expect(plan.destination.requireNoOtherHome).toBe(true);
+  });
+});

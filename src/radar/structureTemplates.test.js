@@ -292,11 +292,13 @@ describe('guard rails', () => {
     expect(labels.some((l) => l.includes('concept') || l.includes('committee'))).toBe(false);
   });
 
-  it('exposes exactly the seven approved structures, and no from-scratch Portfolio object', () => {
+  it('exposes exactly the eight approved structures, and no unguarded Portfolio object', () => {
     expect(SUPPORTED_STRUCTURES.map((s) => s.id)).toEqual([
       'pipeline_organization',
-      // Second, so the picker reads in lifecycle order.
+      // Second and third, so the picker reads in lifecycle order and the two Portfolio
+      // options sit together where they must be compared.
       'portfolio_operating_folders',
+      'existing_portfolio_investment',
       'venture_building_initiative',
       'in_house_program',
       'policy',
@@ -305,10 +307,11 @@ describe('guard rails', () => {
     ]);
 
     /**
-     * The additive Portfolio structure ships; a Portfolio ORGANIZATION structure still must
-     * not. These bans stay exactly as they were: 'portfolio organization' names the
-     * object-creating structure the PORTFOLIO CREATION RULE forbids, so any copy that drifts
-     * into that phrasing is a real regression, not a false alarm.
+     * Two Portfolio structures now ship, and an UNGUARDED from-scratch one still must not.
+     * These bans stay exactly as they were and are deliberately not relaxed: 'portfolio
+     * organization' names the structure that would build an object folder without first
+     * proving the object has no other home, so any copy drifting into that phrasing is a real
+     * regression. The guarded structure is 'existing_portfolio_investment'.
      */
     const haystack = JSON.stringify(SUPPORTED_STRUCTURES).toLowerCase();
     for (const banned of ['portfolio organization', 'createradar', 'bootstrap', 'seed', 'example_pipeline']) {
@@ -369,31 +372,71 @@ describe('guard rails', () => {
   });
 
   /**
-   * The load-bearing invariant of the additive Portfolio structure.
+   * The load-bearing invariant of both Portfolio structures, in its stronger form.
    *
    * A structure may ADD folders inside a Portfolio object folder that already exists. It may
-   * never CREATE one — spec PORTFOLIO CREATION RULE: "do not create/copy a new object folder".
-   * Asserted over every supported structure, so a seventh or eighth type is covered without
-   * anyone remembering to extend this test.
+   * CREATE one only by declaring, in full, every lifecycle area the object must be absent from
+   * — which the preview then verifies against live Drive before anything is written. A partial
+   * or empty declaration must not earn the permission.
+   *
+   * Asserted over every supported structure, so a ninth type is covered without anyone
+   * remembering to extend this test.
    */
-  it('creates no folder of its own anywhere under Portfolio', () => {
+  it('creates a folder of its own under Portfolio only with the no-other-home declaration', () => {
     for (const { id } of SUPPORTED_STRUCTURES) {
       const destination = resolveDestination(id, inputsFor(id));
       if (!destination.path.startsWith('02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO')) continue;
-      expect(destination.createdSegments).toEqual([]);
+      if (destination.createdSegments.length === 0) continue; // additive: nothing to justify
+      expect(destination.requireNoOtherHome).toBe(true);
+      // Exactly the object folder — never the canonical theme container above it.
+      expect(destination.createdSegments).toHaveLength(1);
+      expect(destination.parentSegments).toHaveLength(3);
     }
   });
 
-  it('never plans an item that would be a Portfolio object folder', () => {
+  it('plans an item at Portfolio object depth only as its own declared root', () => {
     for (const { id } of SUPPORTED_STRUCTURES) {
+      const destination = resolveDestination(id, inputsFor(id));
       const { items } = expandTemplate(id, inputsFor(id));
-      for (const item of items) {
-        const isPortfolioObjectFolder =
+      const objectFolders = items.filter(
+        (item) =>
           item.fullPath.startsWith('02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO') &&
-          item.fullPath.split('/').length === 4;
-        expect(isPortfolioObjectFolder).toBe(false);
-      }
+          item.fullPath.split('/').length === 4
+      );
+      if (objectFolders.length === 0) continue;
+      expect(destination.requireNoOtherHome).toBe(true);
+      expect(objectFolders.every((i) => i.isStructureRoot)).toBe(true);
     }
+  });
+
+  /**
+   * The declaration is not a password. It permits exactly one shape, so a template cannot set
+   * the flag and then bootstrap canonical architecture or bury the object folder deeper.
+   */
+  it('refuses a declared Portfolio structure that would create the theme container', () => {
+    expect(
+      forbiddenDestinationReason({
+        path: '02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education/Org',
+        parentSegments: ['02_INVESTMENTS_AND_PROGRAMS', '02_PORTFOLIO'],
+        createdSegments: ['Education', 'Org'],
+        requireNoOtherHome: true,
+      })
+    ).toMatch(/exactly one folder directly inside a themed Portfolio container/);
+  });
+
+  it('refuses an object-depth item smuggled in as a node rather than the root', () => {
+    const OBJECT = '02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education/Org';
+    expect(
+      forbiddenDestinationReason(
+        {
+          path: OBJECT,
+          parentSegments: ['02_INVESTMENTS_AND_PROGRAMS', '02_PORTFOLIO', 'Education'],
+          createdSegments: ['Org'],
+          requireNoOtherHome: true,
+        },
+        [{ fullPath: OBJECT, isStructureRoot: false }]
+      )
+    ).toMatch(/only a lifecycle move may create/);
   });
 
   describe('the destination guard itself', () => {
@@ -407,8 +450,25 @@ describe('guard rails', () => {
       createdSegments: [],
     };
 
-    it('refuses a hypothetical template that would build a Portfolio object folder', () => {
-      expect(forbiddenDestinationReason(PORTFOLIO_OBJECT)).toMatch(/only by moving an approved/);
+    it('refuses a template that would build a Portfolio object folder without declaring', () => {
+      expect(forbiddenDestinationReason(PORTFOLIO_OBJECT)).toMatch(/unless the structure declares/);
+    });
+
+    it('permits one that declares it and has the right shape', () => {
+      expect(
+        forbiddenDestinationReason({
+          ...PORTFOLIO_OBJECT,
+          parentSegments: ['02_INVESTMENTS_AND_PROGRAMS', '02_PORTFOLIO', 'Education'],
+          requireNoOtherHome: true,
+        })
+      ).toBeNull();
+    });
+
+    it('refuses the archive even with the declaration', () => {
+      // Rule A has no escape hatch: an archived object by definition already had a home.
+      expect(forbiddenDestinationReason({ ...ARCHIVE, requireNoOtherHome: true })).toMatch(
+        /decline or closure move/
+      );
     });
 
     it('permits adding folders inside a Portfolio object folder that already exists', () => {

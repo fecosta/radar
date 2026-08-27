@@ -1,6 +1,8 @@
 # ADR 0004 — Portfolio operating folders are additive; the lifecycle move stays human
 
-- **Status:** Proposed
+- **Status:** Proposed. Decisions 2, 3 and 4 are partly superseded by
+  [ADR 0005](0005-legacy-portfolio-objects-only-on-proven-absence.md) for the from-scratch case;
+  the additive structure described here is unchanged.
 - **Date:** 2026-08-27
 - **Deciders:** RADAR owner. **Approval is not yet recorded.** This ADR must not be marked
   Accepted, and the feature must not be deployed to the production Shared Drive, until the
@@ -189,6 +191,16 @@ What makes the additive half safe, and is asserted by tests rather than by this 
   `classifierEquivalence.test.js`.
 
 ## Outstanding, and deliberately not done here
+
+> **Superseded by ADR 0005 (2026-08-27).** The request below asked the Owner to keep the
+> from-scratch Portfolio object prohibited. That is no longer what is being requested: ADR 0005
+> permits one for an object proven to have no folder anywhere, to serve grants and investments
+> that predate RADAR and so never had a Pipeline folder to move. **Do not send this version.**
+> The current, combined request is in ADR 0005's *Outstanding* section, and the two ADRs must be
+> decided as one package — this one is still Proposed, and ADR 0005 reverses part of it.
+>
+> The original text is kept below unaltered, because a governance record that quietly rewrites
+> what it once asked for is worth less than one that shows the change.
 
 The specification's EMPTY STRUCTURE CREATION RULE (L385-392) enumerates "Current structure
 types shown in the tool" as exactly six, and L394's Portfolio note reads as though the tool has

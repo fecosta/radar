@@ -157,14 +157,16 @@ describe('Portfolio operating folders', () => {
     expect(plan().destination.path).toBe('02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education/Aprendo+');
   });
 
-  it('still refuses a destination that would create a Portfolio object folder', () => {
-    // Rule B, exercised through the guard's own predicate: same path, but with a root to create.
+  it('still refuses a Portfolio object folder from a structure that has not declared', () => {
+    // Rule B, exercised through the guard's own predicate: same path, but with a root to
+    // create and no promise that the object's absence will be verified.
     expect(
       forbiddenDestinationReason({
         path: '02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education/Aprendo+',
+        parentSegments: ['02_INVESTMENTS_AND_PROGRAMS', '02_PORTFOLIO', 'Education'],
         createdSegments: ['Aprendo+'],
       })
-    ).toMatch(/only by moving an approved Pipeline folder/);
+    ).toMatch(/unless the structure declares requireNoOtherHome/);
   });
 
   it('creates nothing of its own, so no item can be the object folder', () => {

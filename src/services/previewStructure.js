@@ -38,6 +38,10 @@ export const CONFLICT_CODE = Object.freeze({
    */
   OBJECT_FOLDER_NOT_FOUND: 'OBJECT_FOLDER_NOT_FOUND',
   AMBIGUOUS_OBJECT_FOLDER: 'AMBIGUOUS_OBJECT_FOLDER',
+  /** The object already has an official home somewhere, so it must be MOVED, not rebuilt. */
+  OBJECT_HAS_ANOTHER_HOME: 'OBJECT_HAS_ANOTHER_HOME',
+  /** Its home is already the destination — the additive structure is the right tool. */
+  OBJECT_ALREADY_IN_PORTFOLIO: 'OBJECT_ALREADY_IN_PORTFOLIO',
   WRONG_MIME_TYPE: 'WRONG_MIME_TYPE',
   DUPLICATE_EXACT_MATCH: 'DUPLICATE_EXACT_MATCH',
   NOT_AUTHORIZED: 'NOT_AUTHORIZED',
@@ -181,6 +185,66 @@ export async function previewStructure({ drive, registry, plan }) {
     };
   }
 
+  /* 2b. "No other home": the precondition for building an object folder from scratch.
+
+         The v06 PORTFOLIO CREATION RULE forbids creating an object folder INSTEAD OF moving
+         one, and the harm it names is losing history that exists. Enforced here as a question
+         about live Drive rather than as a blanket ban: an object that already lives somewhere
+         must be moved, and only an object that lives nowhere may be built.
+
+         One Shared-Drive-wide, case-insensitive search rather than a walk of each lifecycle
+         area. It is cheaper, and it finds homes an enumeration would miss — a subportfolio
+         folder, 07_Legacy_Structure, an area added to the tree after this code was written.
+
+         Placed after the authorization probe deliberately: otherwise someone who may read the
+         Drive but not write to it could use the block message as an oracle for whether ver+
+         declined a given organization. */
+  if (plan.destination.requireNoOtherHome && plan.inputs.objectName) {
+    const elsewhere = await drive.findFoldersNamedAnywhere(plan.inputs.objectName);
+    const destinationPath = plan.destination.path;
+
+    for (const hit of elsewhere) {
+      const path = await drive.pathOf(hit.id);
+
+      /**
+       * Its home is the destination itself. Not a second home — but this structure is still
+       * the wrong tool, and saying so is what keeps the two Portfolio options from being used
+       * interchangeably. Building 00-04 into a folder that arrived by a move would fabricate
+       * Pipeline history: an empty 03_Screening/02_Concept_Review asserts a gate that never
+       * happened, and no later reader could tell it from a real one.
+       */
+      if (path === destinationPath) {
+        return {
+          ...base,
+          blocking: [
+            blocked(
+              CONFLICT_CODE.OBJECT_ALREADY_IN_PORTFOLIO,
+              `"${hit.name}" already exists at ${path}. This structure builds a complete object ` +
+                'from scratch and is only for an organization that has no folder anywhere. Use ' +
+                '"Portfolio operating folders" to add the operating folders 05-12 to the existing ' +
+                'folder, which leaves its Sourcing, Screening and Diligence history untouched.',
+              { path, webViewLink: hit.webViewLink }
+            ),
+          ],
+        };
+      }
+
+      return {
+        ...base,
+        blocking: [
+          blocked(
+            CONFLICT_CODE.OBJECT_HAS_ANOTHER_HOME,
+            `"${hit.name}" already exists at ${path}. An object has exactly one official folder, ` +
+              'so RADAR will not build a second one. If this is the same organization, move that ' +
+              'folder into Portfolio and then use "Portfolio operating folders" — approval moves ' +
+              'the complete folder and keeps its history, and rebuilding it here would lose that.',
+            { path, webViewLink: hit.webViewLink }
+          ),
+        ],
+      };
+    }
+  }
+
   /* 3. Resolve every planned item against live Drive. */
   const resolved = new Map(); // item key -> { id, status, webViewLink }
   const items = [];
@@ -278,14 +342,23 @@ export async function previewStructure({ drive, registry, plan }) {
   let registryState = { applicable: plan.registry.applicable, status: null };
   if (plan.registry.applicable && registry?.isConfigured?.()) {
     const rootEntry = resolved.get(plan.items.find((i) => i.isStructureRoot)?.key);
-    const lookup = await registry.lookup(plan.registry.identity);
+    /**
+     * Type-blind on purpose. "Does this object already have an official folder?" must not be
+     * asked under one Object_Type: an object being onboarded into Portfolio may already have a
+     * row saying Pipeline or Exploration, and a typed lookup would miss it and let a second row
+     * be appended. Falls back to the typed lookup for a port that predates lookupAnyType.
+     */
+    const lookup = plan.registry.conflictIdentity && registry.lookupAnyType
+      ? await registry.lookupAnyType(plan.registry.conflictIdentity)
+      : await registry.lookup(plan.registry.identity);
     const existingLink = String(lookup.officialFolderLink || '').trim();
 
     if (lookup.found && existingLink && existingLink !== (rootEntry?.webViewLink || '')) {
+      const recordedAs = lookup.objectType ? ` as ${lookup.objectType}` : '';
       const message =
-        `The Master Registry already records "${plan.registry.identity.objectName}" with a different ` +
-        'official folder. One object has exactly one official home, so RADAR will not create a second ' +
-        'one. Resolve the Registry record first.';
+        `The Master Registry already records "${plan.registry.identity.objectName}"${recordedAs} with a ` +
+        'different official folder. One object has exactly one official home, so RADAR will not create ' +
+        'a second one. Resolve the Registry record first.';
       blocking.push(
         blocked(CONFLICT_CODE.REGISTRY_OFFICIAL_FOLDER_CONFLICT, message, { existingOfficialFolderLink: existingLink })
       );
@@ -305,18 +378,26 @@ export async function previewStructure({ drive, registry, plan }) {
     for (const scope of LIFECYCLE_CONFLICT_SCOPES) {
       const segments = scope.segments(plan.inputs.theme);
       /**
-       * A scope that IS this structure's own destination is not a conflicting home: finding
-       * the object there is the entire point (Portfolio operating folders) or an idempotent
-       * re-run. Derived from the plan rather than keyed on structure type, so it stays correct
-       * for any future structure — and it changes nothing for the original six, none of whose
-       * destinations equal a lifecycle scope.
+       * A scope that IS this structure's own destination is not a conflicting home — but only
+       * when the structure CREATES NOTHING there. For the additive Portfolio structure, finding
+       * the object at the destination is the entire point. For a structure that builds an
+       * object folder, the same finding is a duplicate and must not be silenced; that case is
+       * blocked outright in step 2b, and this guard must not quietly pre-empt it.
+       *
+       * The `createdSegments.length === 0` clause is load-bearing: without it this skip was
+       * sound only by accident of no Portfolio-rooted structure being able to create anything.
        *
        * Without this, the Portfolio scope would fire on every run of an additive Portfolio
        * structure and force the administrator to tick an acknowledgement stating the opposite
        * of what they are doing — which corrodes the one mechanism whose value is that ticking
        * it means something.
        */
-      if (joinSegments(segments) === joinSegments(plan.destination.parentSegments)) continue;
+      if (
+        plan.destination.createdSegments.length === 0 &&
+        joinSegments(segments) === joinSegments(plan.destination.parentSegments)
+      ) {
+        continue;
+      }
       const location = await drive.resolvePath(segments);
       if (!location.ok) continue; // that area may legitimately not exist yet
       const container = location.items[location.items.length - 1];

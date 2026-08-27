@@ -110,7 +110,7 @@ describe('configuration and permission gates', () => {
 });
 
 describe('structure type step', () => {
-  it('offers exactly the seven approved structures', async () => {
+  it('offers exactly the eight approved structures', async () => {
     const { user } = setup();
     await user.click(screen.getByRole('button', { name: /grant permission/i }));
 
@@ -119,6 +119,7 @@ describe('structure type step', () => {
     expect(options.map((o) => o.firstChild.textContent)).toEqual([
       'Pipeline organization',
       'Portfolio operating folders',
+      'Existing Portfolio investment',
       'Venture Building initiative',
       'In-house program',
       'Policy',
@@ -755,5 +756,58 @@ describe('Portfolio operating folders end to end', () => {
     await user.click(screen.getByRole('button', { name: /continue to confirmation/i }));
 
     expect(screen.getByText(/not read, moved or changed/i)).toBeInTheDocument();
+  });
+});
+
+describe('Existing Portfolio investment end to end', () => {
+  async function openLegacyDetails(user) {
+    await user.click(screen.getByRole('button', { name: /grant permission/i }));
+    await user.click(screen.getByRole('radio', { name: /Existing Portfolio investment/i }));
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+  }
+
+  async function fillLegacy(user) {
+    await user.type(screen.getByLabelText(/Organization name/i), 'Aprendo+');
+    await user.selectOptions(screen.getByLabelText(/^Theme/i), 'Education');
+  }
+
+  it('routes the operator away from the wrong Portfolio option', async () => {
+    const { user } = setup();
+    await openLegacyDetails(user);
+
+    // The two Portfolio structures have opposite preconditions; the details step must say which.
+    expect(screen.getByText(/no folder anywhere in the Shared Drive/i)).toBeInTheDocument();
+    expect(screen.getByText(/Portfolio operating folders/i)).toBeInTheDocument();
+  });
+
+  it('builds the complete structure for a grant with no existing folder', async () => {
+    const { user, services } = setup();
+    await openLegacyDetails(user);
+    await fillLegacy(user);
+    await user.click(screen.getByRole('button', { name: /validate and preview/i }));
+    await screen.findByRole('tree');
+    await user.click(screen.getByRole('button', { name: /continue to confirmation/i }));
+    await user.click(screen.getByRole('checkbox', { name: /I confirm creating/i }));
+    await user.click(screen.getByRole('button', { name: /create structure/i }));
+
+    expect(await screen.findByText(/25 items created/i)).toBeInTheDocument();
+    expect(services.drive._calls.createFolder).toBe(24);
+    expect(services.drive._calls.createGoogleDoc).toBe(1);
+  });
+
+  it('blocks and names the existing folder when the object already has a home', async () => {
+    const drive = createFakeDrive();
+    drive._seedPath('02_INVESTMENTS_AND_PROGRAMS/01_PIPELINE/Education/Aprendo+');
+    const { user, services } = setup({ drive });
+
+    await openLegacyDetails(user);
+    await fillLegacy(user);
+    await user.click(screen.getByRole('button', { name: /validate and preview/i }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/01_PIPELINE\/Education\/Aprendo\+/);
+    expect(alert).toHaveTextContent(/exactly one official folder/i);
+    expect(screen.getByRole('button', { name: /continue to confirmation/i })).toBeDisabled();
+    expect(services.drive._calls.createFolder).toBe(0);
   });
 });
