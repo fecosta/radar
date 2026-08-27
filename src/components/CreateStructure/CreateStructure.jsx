@@ -191,6 +191,7 @@ export default function CreateStructure({ user, servicesFactory, config }) {
         {stepId === 'confirm' ? (
           <ConfirmStep
             preview={wizard.preview}
+            template={wizard.template}
             acknowledged={wizard.acknowledged}
             onToggleAcknowledgement={wizard.toggleAcknowledgement}
             confirmed={wizard.confirmed}

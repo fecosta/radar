@@ -1,16 +1,34 @@
 /**
- * The six canonical structures RADAR can create.
+ * The seven canonical structures RADAR can create.
  *
  * Every template is a pure data definition plus a pure destination resolver. Nothing here
  * knows about Google Drive, React, or the network — which is what lets the whole rule set
  * be tested without credentials.
  *
+ * A template's destination has three parts, and the split is the safety boundary:
+ *
+ *   parentSegments          canonical path that must already exist. Missing => architecture
+ *                           drift, reported and never repaired.
+ *   requireExistingSegments further segments that must ALSO already exist, but which are not
+ *                           canonical architecture — today, an organization folder a human
+ *                           moved into Portfolio. Missing => a type-specific block.
+ *   createdSegments         what the plan itself creates, ending at the structure root.
+ *
  * Structures deliberately NOT offered, each guarded by a test in structureTemplates.test.js:
  *
- *   Portfolio organization — approval MOVES the complete Pipeline folder to Portfolio and
- *     preserves its history (spec design rule 7 / PORTFOLIO CREATION RULE). Offering a
- *     "new Portfolio object" button would produce exactly the rebuilt-instead-of-moved
- *     folder the policy forbids. The transition workflow is a separate, out-of-scope feature.
+ *   A Portfolio object from scratch — approval MOVES the complete Pipeline folder to
+ *     Portfolio and preserves its history (spec design rule 7 / PORTFOLIO CREATION RULE,
+ *     restated for this tool at spec L394). Building a new object folder there would produce
+ *     exactly the rebuilt-instead-of-moved folder the policy forbids.
+ *
+ *     PORTFOLIO_OPERATING_FOLDERS serves the rule's third clause — "Add subfolders 05-12
+ *     after approval" — and only that clause. It creates NO object folder: its
+ *     createdSegments is empty and the organization folder sits in
+ *     requireExistingSegments, so `createFolder(parent, objectName)` is not merely blocked,
+ *     it is never a plan item. See forbiddenDestinationReason, rules B and C.
+ *
+ *   The Pipeline -> Portfolio MOVE itself — RADAR has no move verb and is not getting one on
+ *     this architecture (ADR 0001). A human moves the folder; RADAR then adds 05-12.
  *
  *   Root-tree bootstrap and launch seed examples — creating canonical roots or sample
  *     organizations is not normal product use. Missing roots are architecture drift and are
@@ -45,6 +63,11 @@ export const STRUCTURE_TYPES = Object.freeze({
   POLICY: 'policy',
   GOVERNANCE_MEETING: 'governance_meeting',
   OKR_CYCLE: 'okr_cycle',
+  /**
+   * Deliberately not `portfolio_organization`: that id names an object-creating structure
+   * this tool must never offer, and structureInputs.test.js asserts it stays unsupported.
+   */
+  PORTFOLIO_OPERATING_FOLDERS: 'portfolio_operating_folders',
 });
 
 /* ─── Naming helpers ──────────────────────────────────────── */
@@ -91,8 +114,9 @@ function meetingsNode(objectName, year) {
  *   themeArea       for themed structures, which canonical area decides the permitted themes
  *   themeHint       the guidance shown under the wizard's theme selector
  *   registry        whether a Master Registry record applies, and its Object_Type
- *   destination()   { parentSegments, createdSegments } — parentSegments MUST already exist
- *   nodes()         the nested tree created beneath the structure root
+ *   destination()   { parentSegments, requireExistingSegments?, createdSegments } — both
+ *                   parentSegments and requireExistingSegments MUST already exist
+ *   nodes()         the nested tree created beneath the anchor folder
  *
  * Any template collecting the `theme` field MUST declare `themeArea`: theme validity is
  * per-location in v06, never a global enum.
@@ -275,6 +299,77 @@ const TEMPLATES = {
       { name: '99_Drafts' },
     ],
   },
+
+  /**
+   * Spec PORTFOLIO CREATION RULE, third clause: "Add subfolders 05-12 after approval."
+   *
+   * This template adds those eight folders to an organization folder a human has ALREADY
+   * moved into Portfolio. It deliberately does not model 00-04: those are the retained
+   * Pipeline history the first two clauses protect, and listing them would both suggest
+   * RADAR rebuilds them and risk creating them in a folder that legitimately lacks one.
+   *
+   * `createdSegments` is empty by design — see the file header.
+   */
+  [STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS]: {
+    id: STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS,
+    label: 'Portfolio operating folders',
+    description:
+      'Adds the post-approval operating folders 05-12 to an organization already moved into Portfolio. ' +
+      'RADAR does not perform the move and never builds the object folder itself.',
+    objectNameLabel: 'Organization already in Portfolio',
+    fields: ['objectName', 'theme'],
+    themeArea: OBJECT_AREAS.PORTFOLIO,
+    themeHint:
+      'Education and Democracy are the only themes in Portfolio. Pick the theme folder the ' +
+      'organization was actually moved into.',
+    /**
+     * Drives explanatory copy only. The actual guarantee is structural: createdSegments is
+     * empty, so no plan item can ever be the object folder.
+     */
+    requiresExistingObject: true,
+    /**
+     * Shown on the confirmation step. This is the only structure that writes inside a folder
+     * holding irreplaceable history, so the guarantee is stated where the decision is made.
+     */
+    confirmNote:
+      'The Sourcing, Screening and Diligence history already in this folder is not read, ' +
+      'moved or changed. RADAR only adds the eight folders listed above.',
+    /**
+     * No Registry record. The object already has one from its Pipeline (or Venture Building)
+     * life, and registrySheet matches a row on Object_Name + Theme + Object_Type — so an
+     * upsert under a Portfolio type would not find that row and would APPEND a duplicate, in
+     * the register the specification requires to be singular. The spec is also explicit that
+     * "Human action determines status/type", so RADAR reports the change instead of making it.
+     */
+    registry: {
+      applicable: false,
+      manualTransition: {
+        message:
+          'The Master Registry row for this organization still records its pre-approval ' +
+          'Object_Type. RADAR does not change it: a row is matched on Object_Name + Theme + ' +
+          'Object_Type, so an automatic write would append a second row rather than update the ' +
+          'existing one — and the specification is explicit that a human determines type and ' +
+          'status. After this runs, set Object_Type to "Portfolio" and update the stage by hand. ' +
+          'Confirm as well that the folder was moved here, not copied.',
+      },
+    },
+    destination: ({ theme, objectName }) => ({
+      parentSegments: themedContainerSegments(OBJECT_AREAS.PORTFOLIO, theme),
+      requireExistingSegments: [objectName],
+      createdSegments: [],
+    }),
+    nodes: () => [
+      { name: '05_Onboarding' },
+      { name: '06_Investment_Docs' },
+      { name: '07_Execution' },
+      { name: '08_Disbursements' },
+      { name: '09_Reports' },
+      { name: '10_MEL_Evidence' },
+      // v06 AUDIOVISUAL RULE: Portfolio uses 11_, unlike Venture Building and In-house (09_).
+      { name: '11_Photos_and_Videos' },
+      { name: '12_Decisions_and_Transitions' },
+    ],
+  },
 };
 
 /* ─── Public accessors ────────────────────────────────────── */
@@ -283,6 +378,9 @@ const TEMPLATES = {
 export const SUPPORTED_STRUCTURES = Object.freeze(
   [
     STRUCTURE_TYPES.PIPELINE_ORGANIZATION,
+    // Immediately after Pipeline: the picker then reads in lifecycle order and teaches that
+    // approval moves the folder rather than building a second one.
+    STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS,
     STRUCTURE_TYPES.VENTURE_BUILDING_INITIATIVE,
     STRUCTURE_TYPES.IN_HOUSE_PROGRAM,
     STRUCTURE_TYPES.POLICY,
@@ -300,6 +398,8 @@ export const SUPPORTED_STRUCTURES = Object.freeze(
       themes: t.themeArea ? themesForArea(t.themeArea) : null,
       themeHint: t.themeHint || null,
       registryApplicable: t.registry.applicable,
+      requiresExistingObject: Boolean(t.requiresExistingObject),
+      confirmNote: t.confirmNote || null,
     });
   })
 );
@@ -320,19 +420,31 @@ export function getTemplate(type) {
 /**
  * Resolve the destination for validated inputs.
  *
- * `parentSegments` is the canonical path that must already exist — a missing segment is
- * architecture drift and blocks the operation. `createdSegments` is what the plan itself
- * creates, ending at the structure root.
+ * Three-part split, because the two "must already exist" cases fail for different reasons and
+ * need different messages:
+ *
+ *   parentSegments           canonical architecture. Missing => drift; RADAR never repairs it.
+ *   requireExistingSegments  an object folder a human must have moved. Missing => that move
+ *                            has not happened yet, which is a workflow step, not drift.
+ *   createdSegments          what the plan creates, ending at the structure root. May be empty,
+ *                            in which case the plan creates no root and `anchorSegments` is the
+ *                            existing folder the nodes are added to.
+ *
+ * `parentPath` is the anchor — the folder plan items attach to — so it spans parentSegments
+ * AND requireExistingSegments. Preview resolves and authorizes against that folder.
  */
 export function resolveDestination(type, inputs) {
   const template = getTemplate(type);
-  const { parentSegments, createdSegments } = template.destination(inputs);
-  const segments = [...parentSegments, ...createdSegments];
+  const { parentSegments, requireExistingSegments = [], createdSegments } = template.destination(inputs);
+  const anchorSegments = [...parentSegments, ...requireExistingSegments];
+  const segments = [...anchorSegments, ...createdSegments];
   return Object.freeze({
     parentSegments: Object.freeze([...parentSegments]),
+    requireExistingSegments: Object.freeze([...requireExistingSegments]),
     createdSegments: Object.freeze([...createdSegments]),
+    anchorSegments: Object.freeze([...anchorSegments]),
     segments: Object.freeze(segments),
-    parentPath: joinSegments(parentSegments),
+    parentPath: joinSegments(anchorSegments),
     path: joinSegments(segments),
   });
 }
@@ -385,12 +497,55 @@ export function expandTemplate(type, inputs) {
 
 /* ─── Guard rails ─────────────────────────────────────────── */
 
+export const PORTFOLIO_PREFIX = `${CANONICAL_ROOTS.INVESTMENTS_AND_PROGRAMS}/${SEGMENTS.PORTFOLIO}`;
+
 /**
- * Paths the creator must never target, asserted by tests. Portfolio is reachable only by
- * moving an approved Pipeline folder; the archive only by a decline/closure transition.
- * Neither transition exists yet, so neither destination may be produced.
+ * Depth of a Portfolio object folder: 02_INVESTMENTS_AND_PROGRAMS / 02_PORTFOLIO / Theme / Org.
+ * A created item at exactly this depth would BE an object folder, which only a move may produce.
  */
-export const FORBIDDEN_DESTINATION_SEGMENTS = Object.freeze([
-  `${CANONICAL_ROOTS.INVESTMENTS_AND_PROGRAMS}/${SEGMENTS.PORTFOLIO}`,
-  CANONICAL_ROOTS.ARCHIVE,
-]);
+const PORTFOLIO_OBJECT_DEPTH = 4;
+
+/**
+ * Destinations the creator must never produce, expressed as rules over the plan's own data
+ * rather than as a list of exempt structure types.
+ *
+ * A type-keyed allowlist was the obvious alternative and is deliberately rejected: it is
+ * exactly the hole the guard exists to close, since a new type only has to add itself. These
+ * rules instead describe the forbidden OUTCOME, so a future template is judged by what it
+ * would write, not by its name. They are strictly stricter than the flat prefix list they
+ * replace — the six original structures satisfy all three trivially.
+ *
+ * @param {{ path: string, createdSegments: readonly string[] }} destination
+ * @param {Array<{ fullPath: string }>} items  the expanded plan items
+ * @returns {string|null} the violated rule's explanation, or null when permitted
+ */
+export function forbiddenDestinationReason(destination, items = []) {
+  // A. The archive is reachable only by a decline/closure MOVE, which does not exist. No
+  //    exceptions: unlike Portfolio, there is no additive archive structure.
+  if (destination.path.startsWith(CANONICAL_ROOTS.ARCHIVE)) {
+    return `${CANONICAL_ROOTS.ARCHIVE} is reachable only through a decline or closure move`;
+  }
+
+  // B. Under Portfolio a plan may ADD to a folder that already exists and may create no root
+  //    of its own (v06 PORTFOLIO CREATION RULE: "do not create/copy a new object folder").
+  if (destination.path.startsWith(PORTFOLIO_PREFIX) && destination.createdSegments.length > 0) {
+    return (
+      `${PORTFOLIO_PREFIX} may only receive folders added inside an object folder that already ` +
+      'exists; a Portfolio object folder is created only by moving an approved Pipeline folder'
+    );
+  }
+
+  // C. Belt and braces over the actual write targets. Rule B reads a summary path; this reads
+  //    every item that would be created, so a template cannot smuggle an object folder through
+  //    by hiding the organization name somewhere other than createdSegments.
+  const objectFolder = items.find(
+    (item) =>
+      item.fullPath.startsWith(PORTFOLIO_PREFIX) &&
+      item.fullPath.split('/').length === PORTFOLIO_OBJECT_DEPTH
+  );
+  if (objectFolder) {
+    return `${objectFolder.fullPath} is a Portfolio object folder, which only a lifecycle move may create`;
+  }
+
+  return null;
+}

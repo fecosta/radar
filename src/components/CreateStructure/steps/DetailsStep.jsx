@@ -1,6 +1,6 @@
 import { GOVERNANCE_FORUMS, themesForArea } from '../../../radar/canonicalTree.js';
 import { SUPPORTED_YEAR_RANGE } from '../../../radar/structureInputs.js';
-import { Field, inputStyle, MonoPath, SectionLabel } from '../ui.jsx';
+import { Callout, Field, inputStyle, MonoPath, SectionLabel } from '../ui.jsx';
 
 /**
  * Step 2 — the details a template needs.
@@ -59,11 +59,25 @@ export default function DetailsStep({ template, inputs, fieldErrors, onChange, p
 
   return (
     <div style={{ display: 'grid', gap: 18 }}>
+      {/* A structure that adds to an existing folder needs its precondition stated before the
+          administrator fills the form, not after a blocked preview explains it. */}
+      {template.requiresExistingObject ? (
+        <Callout tone="info" title="This adds to a folder that must already exist">
+          RADAR does not move folders. Move the approved organization folder into Portfolio
+          yourself first, then use this to add the operating folders 05–12. The existing
+          Sourcing, Screening and Diligence history is left untouched.
+        </Callout>
+      ) : null}
+
       {has('objectName') ? (
         <TextField
           field="objectName"
           label={template.objectNameLabel || 'Name'}
-          hint="Used exactly as typed. Accents, spaces, +, &amp;, hyphens and apostrophes are kept."
+          hint={
+            template.requiresExistingObject
+              ? 'Type the folder name exactly as it appears in Portfolio — matching is exact, including accents and capitalisation.'
+              : 'Used exactly as typed. Accents, spaces, +, &amp;, hyphens and apostrophes are kept.'
+          }
           value={inputs.objectName}
           error={err('objectName')}
           onChange={onChange}

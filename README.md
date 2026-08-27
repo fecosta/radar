@@ -43,10 +43,10 @@ Why the model is shaped this way, and its limitation: **[docs/decisions/0002-mul
 
 ### Create structure
 
-The one workflow that writes to Drive. An administrator picks one of six approved structures
-(Pipeline organization, Venture Building initiative, In-house program, Policy, formal
-governance meeting, annual OKR cycle), previews it against the live Shared Drive, confirms
-explicitly, and RADAR creates only the missing folders.
+The one workflow that writes to Drive. An administrator picks one of seven approved structures
+(Pipeline organization, Portfolio operating folders, Venture Building initiative, In-house
+program, Policy, formal governance meeting, annual OKR cycle), previews it against the live
+Shared Drive, confirms explicitly, and RADAR creates only the missing folders.
 
 - Requires **Content Manager or higher on the RADAR Shared Drive**. RADAR keeps no admin list
   of its own — your Drive role is the authorization and Google enforces it.
@@ -55,6 +55,10 @@ explicitly, and RADAR creates only the missing folders.
 - Preview is read-only; creation is idempotent, so retrying is always safe.
 - Nothing is ever deleted, moved, renamed, or has its permissions changed.
 - Missing canonical roots are reported as architecture drift, never auto-created.
+- **Portfolio operating folders** only *adds* subfolders 05–12 to an organization folder a human
+  has already moved into Portfolio, and blocks if that folder is not there — approval moves the
+  complete folder and preserves its history, so RADAR never builds a Portfolio object. See
+  [ADR 0004](docs/decisions/0004-portfolio-operating-folders-are-additive.md).
 
 Full details, configuration and known limitations: **[docs/operations/create-structure.md](docs/operations/create-structure.md)**.
 Why writes are client-side: **[docs/decisions/0001-client-side-controlled-drive-writes.md](docs/decisions/0001-client-side-controlled-drive-writes.md)**.

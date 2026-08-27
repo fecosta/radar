@@ -106,6 +106,14 @@ Move to option B or C when any of these becomes true:
   existing content and are materially more dangerous than creating empty folders, and should
   not ship on this architecture.
 
+> **Note (ADR 0004, 2026-08-27).** This trigger has been examined once and judged not to have
+> fired. The *additive* half of the Portfolio transition — adding the operating folders 05-12 to
+> an organization folder a human has already moved — now ships, and it moves no content: RADAR
+> still has no `files.update` and no `addParents`. The **move itself remains unimplemented and
+> human**, and this trigger stays in force for it and for decline/archive. See
+> [ADR 0004](0004-portfolio-operating-folders-are-additive.md), which also records the
+> properties of this architecture that the additive case does change.
+
 The domain layer (`src/radar/`) and the port interfaces (`registryPort`, `auditPort`, the
 Drive adapter) were kept free of React and of network concerns specifically so that a server
 implementation can reuse them unchanged.

@@ -568,3 +568,165 @@ describe('audit trail', () => {
     expect(result.warnings.some((w) => w.code === EXECUTION_WARNING.AUDIT_NOT_DURABLE)).toBe(true);
   });
 });
+
+describe('Portfolio operating folders', () => {
+  const PORTFOLIO_INPUTS = { objectName: 'Aprendo+', theme: 'Education' };
+  const OBJECT_PATH = '02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education/Aprendo+';
+  const TYPE = STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS;
+  const ACK = ['REGISTRY_TRANSITION_REQUIRED'];
+
+  const OPERATING_FOLDERS = [
+    '05_Onboarding',
+    '06_Investment_Docs',
+    '07_Execution',
+    '08_Disbursements',
+    '09_Reports',
+    '10_MEL_Evidence',
+    '11_Photos_and_Videos',
+    '12_Decisions_and_Transitions',
+  ];
+
+  /** An organization folder that arrived by a move, so it carries its Pipeline history. */
+  function seedMovedObject(drive) {
+    for (const name of ['00_Overview_and_Contacts', '01_Meetings', '02_Sourcing', '03_Screening', '04_Diligence']) {
+      drive._seedPath(`${OBJECT_PATH}/${name}`);
+    }
+  }
+
+  const runPortfolio = (drive, extra = {}) =>
+    run({ drive, type: TYPE, inputs: PORTFOLIO_INPUTS, acknowledged: ACK, ...extra });
+
+  /**
+   * THE test for this feature.
+   *
+   * The browser's `canCreate` gate is documented as a courtesy, so the rule that RADAR must
+   * never fabricate a Portfolio object folder has to hold in executeStructure — which
+   * re-plans from raw inputs and re-previews against live Drive before writing. A caller who
+   * submits a perfectly valid, non-stale plan hash while the folder is absent must still get
+   * nothing written.
+   */
+  it('writes nothing when the organization has not been moved into Portfolio', async () => {
+    const drive = createFakeDrive();
+
+    const result = await runPortfolio(drive);
+
+    expect(result.outcome).toBe(OUTCOME.BLOCKED);
+    expect(result.failureStage).toBe(FAILURE_STAGE.REVALIDATION);
+    expect(result.errors[0].code).toBe('OBJECT_FOLDER_NOT_FOUND');
+    expect(result.created).toEqual([]);
+    // Not one create call reached Drive.
+    expect(drive._calls.createFolder).toBe(0);
+    expect(drive._calls.createGoogleDoc).toBe(0);
+  });
+
+  it('creates only the eight operating folders and leaves the history untouched', async () => {
+    const drive = createFakeDrive();
+    seedMovedObject(drive);
+    const historyBefore = drive._childrenOf(drive._seedPath(OBJECT_PATH).id).map((c) => `${c.id}:${c.name}`);
+
+    const result = await runPortfolio(drive);
+
+    expect(result.outcome).toBe(OUTCOME.SUCCESS);
+    expect(result.created.map((i) => i.name)).toEqual(OPERATING_FOLDERS);
+    expect(drive._calls.createFolder).toBe(8);
+    // No Meeting Log: 01_Meetings came with the move and already has one.
+    expect(drive._calls.createGoogleDoc).toBe(0);
+
+    // Every retained-history folder still has the same id, so none was replaced or rebuilt.
+    const after = drive._childrenOf(drive._seedPath(OBJECT_PATH).id).map((c) => `${c.id}:${c.name}`);
+    for (const entry of historyBefore) expect(after).toContain(entry);
+  });
+
+  it('creates the operating folders inside the existing object folder', async () => {
+    const drive = createFakeDrive();
+    seedMovedObject(drive);
+
+    const result = await runPortfolio(drive);
+
+    const objectFolder = drive._seedPath(OBJECT_PATH);
+    for (const item of result.created) {
+      // Inside the existing folder, not beside it in the theme container.
+      expect(drive._items.get(item.id).parentId).toBe(objectFolder.id);
+      expect(item.path).toBe(`${OBJECT_PATH}/${item.name}`);
+    }
+  });
+
+  it('refuses to write until the Master Registry transition is acknowledged', async () => {
+    const drive = createFakeDrive();
+    seedMovedObject(drive);
+
+    const result = await runPortfolio(drive, { acknowledged: [] });
+
+    expect(result.outcome).toBe(OUTCOME.BLOCKED);
+    expect(result.failureStage).toBe(FAILURE_STAGE.ACKNOWLEDGEMENT);
+    expect(drive._calls.createFolder).toBe(0);
+  });
+
+  it('writes no Master Registry row', async () => {
+    const drive = createFakeDrive();
+    seedMovedObject(drive);
+    const registry = createFakeRegistry();
+
+    const result = await runPortfolio(drive, { registry });
+
+    expect(result.registry.status).toBe(REGISTRY_STATUS.NOT_APPLICABLE);
+    // The advisory route exists precisely because an upsert would append a duplicate row.
+    expect(registry._rows).toHaveLength(0);
+  });
+
+  it('restates the Registry transition on the result and in the audit row', async () => {
+    const drive = createFakeDrive();
+    seedMovedObject(drive);
+    const audit = createFakeAudit();
+
+    const result = await runPortfolio(drive, { audit });
+
+    const advisory = result.warnings.find((w) => w.code === 'REGISTRY_TRANSITION_REQUIRED');
+    expect(advisory).toBeDefined();
+    expect(advisory.message).toMatch(/Object_Type/);
+    // "Not applicable" and "a human must change it" must not read as the same thing.
+    expect(result.registry.manualTransitionRequired).toBe(true);
+    expect(audit._events[0].warnings).toContain('REGISTRY_TRANSITION_REQUIRED');
+  });
+
+  it('links the result at the existing organization folder', async () => {
+    const drive = createFakeDrive();
+    seedMovedObject(drive);
+
+    const result = await runPortfolio(drive);
+
+    // The structure creates no root of its own, so the link must fall back to the anchor.
+    expect(result.rootFolderLink).toBe(drive._seedPath(OBJECT_PATH).webViewLink);
+  });
+
+  it('is idempotent: a second run creates nothing and reuses the eight', async () => {
+    const drive = createFakeDrive();
+    seedMovedObject(drive);
+
+    await runPortfolio(drive);
+    const second = await runPortfolio(drive);
+
+    expect(second.outcome).toBe(OUTCOME.SUCCESS);
+    expect(second.created).toEqual([]);
+    expect(second.existing.map((i) => i.name)).toEqual(OPERATING_FOLDERS);
+    expect(drive._calls.createFolder).toBe(8);
+  });
+
+  /**
+   * The window between preview and write is real. If the folder is moved or trashed after the
+   * administrator confirms, execution must notice on its re-preview rather than recreate it.
+   */
+  it('writes nothing if the organization folder disappears after confirmation', async () => {
+    const drive = createFakeDrive();
+    seedMovedObject(drive);
+    const hash = planFor(TYPE, PORTFOLIO_INPUTS).hash;
+    const objectFolder = drive._seedPath(OBJECT_PATH);
+    drive._items.delete(objectFolder.id);
+
+    const result = await runPortfolio(drive, { hash });
+
+    expect(result.outcome).toBe(OUTCOME.BLOCKED);
+    expect(result.errors[0].code).toBe('OBJECT_FOLDER_NOT_FOUND');
+    expect(drive._calls.createFolder).toBe(0);
+  });
+});

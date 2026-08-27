@@ -7,6 +7,8 @@ import {
   meetingLogName,
   documentNameToken,
   isSupportedStructureType,
+  getTemplate,
+  forbiddenDestinationReason,
 } from './structureTemplates.js';
 import { MIME_FOLDER, MIME_GOOGLE_DOC, GOVERNANCE_FORUMS, SEGMENTS } from './canonicalTree.js';
 import { planStructureFromRaw } from './planStructure.js';
@@ -26,20 +28,36 @@ const OBJECT_INPUTS = {
   meetingLogYear: '2026',
 };
 
-/** Child names directly under the structure root, in plan order. */
+/**
+ * Child names directly under the structure root, in plan order.
+ *
+ * A structure that creates no root of its own — Portfolio operating folders, which adds to a
+ * folder a human already moved — has no root item, and its top-level children are the items
+ * with no parent.
+ */
 function topLevelChildren(type, inputs) {
   const { items } = expandTemplate(type, inputs);
   const root = items.find((i) => i.isStructureRoot);
-  return items.filter((i) => i.parentKey === root.key).map((i) => i.name);
+  const rootKey = root ? root.key : null;
+  return items.filter((i) => i.parentKey === rootKey).map((i) => i.name);
 }
 
 function relativePaths(type, inputs) {
   const { items, destination } = expandTemplate(type, inputs);
   const rootName = destination.createdSegments[destination.createdSegments.length - 1];
+  if (!rootName) return items.map((i) => i.relativePath);
   return items.map((i) => i.relativePath.replace(new RegExp(`^${escapeRe(rootName)}/?`), ''));
 }
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Valid sample inputs for any supported structure, so invariants can iterate all of them. */
+function inputsFor(id) {
+  if (id === 'policy') return { objectName: 'X' };
+  if (id === 'governance_meeting') return { forum: 'board', meetingDate: '2026-01-01' };
+  if (id === 'okr_cycle') return { okrYear: '2026' };
+  return OBJECT_INPUTS;
+}
 
 describe('destinations', () => {
   it('routes a Pipeline organization to the themed PIPELINE container', () => {
@@ -274,9 +292,11 @@ describe('guard rails', () => {
     expect(labels.some((l) => l.includes('concept') || l.includes('committee'))).toBe(false);
   });
 
-  it('exposes exactly the six MVP structures and no Portfolio, bootstrap or seed option', () => {
+  it('exposes exactly the seven approved structures, and no from-scratch Portfolio object', () => {
     expect(SUPPORTED_STRUCTURES.map((s) => s.id)).toEqual([
       'pipeline_organization',
+      // Second, so the picker reads in lifecycle order.
+      'portfolio_operating_folders',
       'venture_building_initiative',
       'in_house_program',
       'policy',
@@ -284,6 +304,12 @@ describe('guard rails', () => {
       'okr_cycle',
     ]);
 
+    /**
+     * The additive Portfolio structure ships; a Portfolio ORGANIZATION structure still must
+     * not. These bans stay exactly as they were: 'portfolio organization' names the
+     * object-creating structure the PORTFOLIO CREATION RULE forbids, so any copy that drifts
+     * into that phrasing is a real regression, not a false alarm.
+     */
     const haystack = JSON.stringify(SUPPORTED_STRUCTURES).toLowerCase();
     for (const banned of ['portfolio organization', 'createradar', 'bootstrap', 'seed', 'example_pipeline']) {
       expect(haystack).not.toContain(banned);
@@ -300,6 +326,7 @@ describe('guard rails', () => {
   it('offers Cross_Thematic only where the canonical tree defines it', () => {
     const themesById = Object.fromEntries(SUPPORTED_STRUCTURES.map((s) => [s.id, s.themes]));
     expect(themesById.pipeline_organization).toEqual(['Education', 'Democracy']);
+    expect(themesById.portfolio_operating_folders).toEqual(['Education', 'Democracy']);
     expect(themesById.venture_building_initiative).toEqual(['Education', 'Democracy']);
     expect(themesById.in_house_program).toEqual(['Education', 'Democracy', 'Cross_Thematic']);
     // Unthemed structures must not acquire a theme selector.
@@ -334,22 +361,163 @@ describe('guard rails', () => {
     expect(restricted.map((i) => i.name)).toEqual(['05_Participants_and_Beneficiary_Data']);
   });
 
-  it('refuses to plan into Portfolio or the archive even if a template tried to', () => {
-    // The templates cannot produce these, so this asserts the defence-in-depth guard by
-    // driving resolveDestination through a type that legitimately exists and checking the
-    // guard's own predicate on the forbidden prefixes.
-    const paths = SUPPORTED_STRUCTURES.map((s) => s.id).map((id) => {
-      const inputs =
-        id === 'policy'
-          ? { objectName: 'X' }
-          : id === 'governance_meeting'
-            ? { forum: 'board', meetingDate: '2026-01-01' }
-            : id === 'okr_cycle'
-              ? { okrYear: '2026' }
-              : OBJECT_INPUTS;
-      return resolveDestination(id, inputs).path;
-    });
-    expect(paths.some((p) => p.startsWith('02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO'))).toBe(false);
+  it('never resolves a destination inside the archive', () => {
+    // 99_ARCHIVE is reachable only by a decline/closure MOVE, which does not exist. Unlike
+    // Portfolio there is no additive archive structure, so this has no exceptions.
+    const paths = SUPPORTED_STRUCTURES.map((s) => resolveDestination(s.id, inputsFor(s.id)).path);
     expect(paths.some((p) => p.startsWith('99_ARCHIVE'))).toBe(false);
+  });
+
+  /**
+   * The load-bearing invariant of the additive Portfolio structure.
+   *
+   * A structure may ADD folders inside a Portfolio object folder that already exists. It may
+   * never CREATE one — spec PORTFOLIO CREATION RULE: "do not create/copy a new object folder".
+   * Asserted over every supported structure, so a seventh or eighth type is covered without
+   * anyone remembering to extend this test.
+   */
+  it('creates no folder of its own anywhere under Portfolio', () => {
+    for (const { id } of SUPPORTED_STRUCTURES) {
+      const destination = resolveDestination(id, inputsFor(id));
+      if (!destination.path.startsWith('02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO')) continue;
+      expect(destination.createdSegments).toEqual([]);
+    }
+  });
+
+  it('never plans an item that would be a Portfolio object folder', () => {
+    for (const { id } of SUPPORTED_STRUCTURES) {
+      const { items } = expandTemplate(id, inputsFor(id));
+      for (const item of items) {
+        const isPortfolioObjectFolder =
+          item.fullPath.startsWith('02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO') &&
+          item.fullPath.split('/').length === 4;
+        expect(isPortfolioObjectFolder).toBe(false);
+      }
+    }
+  });
+
+  describe('the destination guard itself', () => {
+    const ARCHIVE = { path: '99_ARCHIVE/01_Declined_Pipeline/Org', createdSegments: ['Org'] };
+    const PORTFOLIO_OBJECT = {
+      path: '02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education/Org',
+      createdSegments: ['Org'],
+    };
+    const PORTFOLIO_ADDITIVE = {
+      path: '02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education/Org',
+      createdSegments: [],
+    };
+
+    it('refuses a hypothetical template that would build a Portfolio object folder', () => {
+      expect(forbiddenDestinationReason(PORTFOLIO_OBJECT)).toMatch(/only by moving an approved/);
+    });
+
+    it('permits adding folders inside a Portfolio object folder that already exists', () => {
+      expect(forbiddenDestinationReason(PORTFOLIO_ADDITIVE)).toBeNull();
+    });
+
+    it('refuses the archive even for an additive template', () => {
+      expect(forbiddenDestinationReason({ ...ARCHIVE, createdSegments: [] })).toMatch(/decline or closure move/);
+    });
+
+    /**
+     * Rule C. Rule B reads a summary path; this catches a template that smuggles the object
+     * name into parentSegments so its createdSegments looks innocent.
+     */
+    it('refuses a smuggled object folder found among the plan items', () => {
+      const items = [{ fullPath: '02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education/Org' }];
+      expect(forbiddenDestinationReason(PORTFOLIO_ADDITIVE, items)).toMatch(/only a lifecycle move may create/);
+    });
+
+    it('permits an ordinary destination', () => {
+      expect(
+        forbiddenDestinationReason({
+          path: '02_INVESTMENTS_AND_PROGRAMS/01_PIPELINE/Education/Org',
+          createdSegments: ['Org'],
+        })
+      ).toBeNull();
+    });
+  });
+});
+
+describe('Portfolio operating folders', () => {
+  const PORTFOLIO_INPUTS = { objectName: 'Aprendo+', theme: 'Education' };
+
+  it('targets an organization folder that must already exist, and creates no root', () => {
+    const destination = resolveDestination(STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS, PORTFOLIO_INPUTS);
+
+    expect(destination.parentSegments).toEqual([
+      '02_INVESTMENTS_AND_PROGRAMS',
+      '02_PORTFOLIO',
+      'Education',
+    ]);
+    expect(destination.requireExistingSegments).toEqual(['Aprendo+']);
+    // The whole safety argument: nothing to create means nothing that CAN create the object.
+    expect(destination.createdSegments).toEqual([]);
+    expect(destination.path).toBe('02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education/Aprendo+');
+    expect(destination.parentPath).toBe('02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education/Aprendo+');
+  });
+
+  it('builds exactly the eight operating folders from the specification', () => {
+    // Spec DYNAMIC TEMPLATE - PORTFOLIO ORGANIZATION, subfolders 05-12.
+    expect(topLevelChildren(STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS, PORTFOLIO_INPUTS)).toEqual([
+      '05_Onboarding',
+      '06_Investment_Docs',
+      '07_Execution',
+      '08_Disbursements',
+      '09_Reports',
+      '10_MEL_Evidence',
+      '11_Photos_and_Videos',
+      '12_Decisions_and_Transitions',
+    ]);
+
+    const { items } = expandTemplate(STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS, PORTFOLIO_INPUTS);
+    expect(items).toHaveLength(8);
+    // No Meeting Log document: 01_Meetings came with the move and already has one.
+    expect(items.every((i) => i.kind === 'folder')).toBe(true);
+    expect(items.some((i) => i.isStructureRoot)).toBe(false);
+  });
+
+  /**
+   * Spec clause 2: the approval preserves Sourcing, Screening/Concept Review and Diligence.
+   * Those folders must be absent from the PLAN entirely — not merely reused — so that RADAR
+   * never probes, resolves or touches the retained history.
+   */
+  it('never plans the retained Pipeline history', () => {
+    const { items } = expandTemplate(STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS, PORTFOLIO_INPUTS);
+    const retained = [
+      '00_Overview_and_Contacts',
+      '01_Meetings',
+      '02_Sourcing',
+      '03_Screening',
+      '04_Diligence',
+    ];
+    for (const name of retained) {
+      expect(items.some((i) => i.name === name)).toBe(false);
+      expect(items.some((i) => i.relativePath.includes(name))).toBe(false);
+    }
+  });
+
+  it('includes Photos_and_Videos as 11_, per the audiovisual rule', () => {
+    // v06 AUDIOVISUAL RULE: Portfolio is 11_, Venture Building and In-house are 09_.
+    const names = topLevelChildren(STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS, PORTFOLIO_INPUTS);
+    expect(names).toContain('11_Photos_and_Videos');
+    expect(names).not.toContain('09_Photos_and_Videos');
+  });
+
+  it('plans no Master Registry record, but carries the manual transition advisory', () => {
+    const template = getTemplate(STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS);
+    expect(template.registry.applicable).toBe(false);
+    expect(template.registry.manualTransition.message).toMatch(/Object_Type/);
+    expect(template.registry.manualTransition.message).toMatch(/by hand/);
+  });
+
+  it('declares the pre-existing-object requirement for the wizard to explain', () => {
+    const entry = SUPPORTED_STRUCTURES.find((s) => s.id === STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS);
+    expect(entry.requiresExistingObject).toBe(true);
+    expect(entry.confirmNote).toMatch(/not read, moved or changed/);
+    // Every other structure creates its own root and must not claim otherwise.
+    for (const other of SUPPORTED_STRUCTURES.filter((s) => s.id !== entry.id)) {
+      expect(other.requiresExistingObject).toBe(false);
+    }
   });
 });

@@ -255,3 +255,121 @@ describe('invariants both sides must honour', () => {
     );
   });
 });
+
+/**
+ * The Portfolio subtree existed in two independent representations that could never be
+ * compared: the classifier routed files into 05-12 (radarClassify.js) while the creator
+ * refused to build them at all. Now that the additive structure exists, the two can finally be
+ * held to each other — which is exactly what this harness is for.
+ */
+describe('Portfolio operating folders agree with the classifier', () => {
+  const OPERATING_FOLDERS = [
+    ['05_Onboarding', 'onboarding kickoff materials'],
+    ['06_Investment_Docs', 'signed investment agreement'],
+    ['07_Execution', 'execution plan and workplan'],
+    ['08_Disbursements', 'disbursement request for the investment'],
+    ['09_Reports', 'quarterly progress report from the grantee'],
+    ['10_MEL_Evidence', 'evaluation report and MEL evidence'],
+    ['11_Photos_and_Videos', 'photos from the site visit'],
+    ['12_Decisions_and_Transitions', 'renewal decision record'],
+  ];
+
+  /**
+   * A KNOWN, pre-existing divergence, recorded here so it is tracked rather than rediscovered.
+   *
+   * The classifier slugs object names for its suggested paths (`slug(object)`,
+   * radarClassify.js:153) while the creator uses the administrator's text verbatim
+   * (structureInputs.js naming policy). So Classify tells a user to file under
+   * `.../Sample_Org/...` while the folder the creator built is `.../Sample Org/...`.
+   *
+   * This affects all five object types, not only Portfolio, and predates the additive
+   * Portfolio structure — which is why every equivalence test above compares containers
+   * rather than full object paths. Fixing it means changing Classify's output and belongs in
+   * its own change; see docs/operations/create-structure.md, known limitations.
+   */
+  it('still differs from the creator on how an object name with spaces is rendered', () => {
+    const created = resolveDestination(STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS, {
+      theme: 'Education',
+      objectName: 'Sample Org',
+    });
+    const { path } = classifyRadar({
+      description: 'disbursement request for the investment',
+      objectName: 'Sample Org',
+      context: 'portfolio',
+      theme: 'Education',
+    });
+
+    expect(created.path).toContain('Sample Org');
+    expect(path).toContain('Sample_Org');
+  });
+
+  it.each(THEMES)('routes a %s Portfolio object into the same container as the creator', (theme) => {
+    const created = resolveDestination(STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS, {
+      theme,
+      objectName: 'Sample Org',
+    });
+    expect(created.parentPath).toBe(
+      joinSegments([
+        CANONICAL_ROOTS.INVESTMENTS_AND_PROGRAMS,
+        SEGMENTS.PORTFOLIO,
+        theme,
+        'Sample Org',
+      ])
+    );
+  });
+
+  it('builds every operating folder the classifier routes files into', () => {
+    /**
+     * A single-token name on purpose. The classifier slugs object names (radarClassify.js:153)
+     * while the creator keeps them verbatim, so a name containing a space would fail on that
+     * pre-existing divergence and mask the drift this test exists to catch — whether the two
+     * agree on the eight FOLDER names. The divergence itself is asserted separately below.
+     */
+    const { items } = expandTemplate(STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS, {
+      theme: 'Education',
+      objectName: 'SampleOrg',
+    });
+    const built = items.map((i) => i.name);
+
+    for (const [folder, description] of OPERATING_FOLDERS) {
+      const { path } = classifyRadar({
+        description,
+        objectName: 'SampleOrg',
+        context: 'portfolio',
+        theme: 'Education',
+      });
+      // The classifier's destination is a folder the creator actually produces.
+      expect(path).toBe(
+        joinSegments([
+          CANONICAL_ROOTS.INVESTMENTS_AND_PROGRAMS,
+          SEGMENTS.PORTFOLIO,
+          'Education',
+          'SampleOrg',
+          folder,
+        ])
+      );
+      expect(built).toContain(folder);
+    }
+  });
+
+  /**
+   * The deliberate asymmetry, asserted so nobody "fixes" it: the classifier can still route
+   * into 00-04 because the move preserved them, but the creator must never plan them.
+   */
+  it('does not build the retained history the classifier can still route into', () => {
+    const { items } = expandTemplate(STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS, {
+      theme: 'Education',
+      objectName: 'SampleOrg',
+    });
+    const built = items.map((i) => i.name);
+
+    const { path } = classifyRadar({
+      description: 'overview and key contacts for the organization',
+      objectName: 'SampleOrg',
+      context: 'portfolio',
+      theme: 'Education',
+    });
+    expect(path).toContain('00_Overview_and_Contacts');
+    expect(built).not.toContain('00_Overview_and_Contacts');
+  });
+});

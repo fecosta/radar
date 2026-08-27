@@ -27,6 +27,7 @@ and no auto-creation of missing canonical roots.
 | Policy | `03_INSTITUTIONAL/00_POLICIES/{name}` | — |
 | Formal governance meeting | `03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/{forum}/{YYYY}/{YYYY-MM-DD_Forum}` | — |
 | Annual OKR cycle | `01_STRATEGY/03_OKRs/{YYYY}` | — |
+| Portfolio operating folders | `02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/{theme}/{name}` — **must already exist** | — (change `Object_Type` by hand) |
 
 Themes are **per structure type**, not one global list (v06 design rule 2):
 
@@ -35,14 +36,14 @@ Themes are **per structure type**, not one global list (v06 design rule 2):
 | Pipeline organization | `Education`, `Democracy` |
 | Venture Building initiative | `Education`, `Democracy` |
 | In-house program | `Education`, `Democracy`, `Cross_Thematic` |
+| Portfolio operating folders | `Education`, `Democracy` |
 
 `Cross_Thematic` is used only where the canonical tree defines it and is not a general
 "other" category, so the creator rejects it for Pipeline and Venture Building outright.
 **Emergency Response** needs no structure type of its own: it is an In-house program with
 theme `Cross_Thematic` and object name `Emergency_Response`, using the standard template.
 
-`0A_EXPLORATION` is not creatable here. v06 lists exactly six structure types, and an
-exploration folder has no template — it is a plain folder under
+`0A_EXPLORATION` is not creatable here. An exploration folder has no template — it is a plain folder under
 `0A_EXPLORATION/{theme}`. Preview does read those three theme folders, to warn when an
 object being promoted to Pipeline still has an exploration home (design rule 19).
 
@@ -59,9 +60,16 @@ The yearly Meeting Log is a **Google document**; everything else is a folder.
 
 Each of these is enforced by a test, not just by convention.
 
-- **No Portfolio creation.** Approval *moves* the complete Pipeline folder to Portfolio and
-  preserves its history. A "new Portfolio object" button would produce exactly the
-  rebuilt-instead-of-moved folder the policy forbids. The transition workflow is out of scope.
+- **No Portfolio *object* creation, and no lifecycle move.** Approval *moves* the complete
+  Pipeline folder to Portfolio and preserves its history. A "new Portfolio object" button would
+  produce exactly the rebuilt-instead-of-moved folder the policy forbids, so there is none —
+  and RADAR has no move verb at all, so it cannot perform the move either. What it does offer
+  is **Portfolio operating folders**, which *adds* subfolders 05–12 to a folder a human has
+  already moved, and blocks if that folder is not there. See
+  [ADR 0004](../decisions/0004-portfolio-operating-folders-are-additive.md).
+- **No Master Registry lifecycle change.** A Registry row is matched on Object_Name + Theme +
+  Object_Type, so writing a Portfolio row would append a duplicate rather than update the
+  existing Pipeline one. RADAR reports the change and never makes it.
 - **No root-tree bootstrap and no launch seeds.** A missing canonical root is architecture
   drift: it is reported to the administrator and never repaired automatically. No sample
   organizations are ever created.
@@ -233,7 +241,7 @@ purpose.
 cp .env.example .env      # then fill in real values — point at a TEST Shared Drive
 npm install
 npm run dev               # http://localhost:5173
-npm run test              # 332 tests; no Google credentials required
+npm run test              # 588 tests; no Google credentials required
 npm run build
 ```
 
@@ -281,9 +289,16 @@ Creation is refused, and nothing is written, when:
 | two or more items match a planned name exactly | RADAR will not guess which is official |
 | the user cannot add children to the destination | not authorized |
 | the Registry records a different official folder | would create a second official home |
+| a folder the structure must be added *inside* does not exist | the approved folder has not been moved there yet; RADAR will not build it |
+| two folders share that organization's name | RADAR will not guess which is the official home |
 
 Warnings requiring explicit acknowledgement (not blocking): the restricted beneficiary-data
-folder, and an object name that already exists in Portfolio or the declined-pipeline archive.
+folder; an object name that already exists in Portfolio or the declined-pipeline archive; the
+Master Registry `Object_Type` change a Portfolio transition needs; and a Portfolio object folder
+that shows no evidence of retained history.
+
+A lifecycle location is *not* warned about when it is the structure's own destination — finding
+the organization in Portfolio is the entire point of the Portfolio operating folders type.
 
 ## Sensitive folders
 
@@ -292,9 +307,56 @@ folder, and an object name that already exists in Portfolio or the declined-pipe
 
 **RADAR creates the folder but does not configure its access.** No permissions API is called
 and no user or group is invented. The result reports that permission configuration is still
-required. Nothing in the UI ever claims that access has been restricted.
+required, under "Still to do by hand" — plan advisories are restated on the result screen, so
+this promise is now kept rather than merely documented. Nothing in the UI ever claims that
+access has been restricted.
 
 Apply the access policy by hand, before any participant or beneficiary data is stored.
+
+## Portfolio operating folders
+
+The only structure that **adds to a folder RADAR did not create**, so it works differently from
+the other six and the differences are the point.
+
+**Preconditions.** The organization folder must already sit at
+`02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/{theme}/{name}`, because a human moved it there after
+approval. RADAR does not move folders and never creates the object folder.
+
+**What it creates.** Exactly eight folders, inside that existing folder (spec DYNAMIC TEMPLATE
+— PORTFOLIO ORGANIZATION, subfolders 05-12):
+
+```
+05_Onboarding   06_Investment_Docs   07_Execution   08_Disbursements
+09_Reports      10_MEL_Evidence      11_Photos_and_Videos   12_Decisions_and_Transitions
+```
+
+**What it never touches.** `00_Overview_and_Contacts`, `01_Meetings`, `02_Sourcing`,
+`03_Screening` and `04_Diligence` are the retained history the approval preserves. They are
+**absent from the plan entirely** — not "reused", not resolved — so RADAR has no write target
+there at all.
+
+**Why it cannot fabricate an object folder.** The organization name is part of the path that
+must already exist, not part of what the plan creates. Since plan items derive from what is
+created, the object folder is never a plan item, so creating it is not a call that exists to be
+blocked. Verified on the write path too: execution re-plans and re-previews before writing.
+
+**The two manual steps around it.** RADAR owns only the middle one:
+
+1. Move the approved Pipeline folder into Portfolio, by hand, in Drive.
+2. Run Create structure → Portfolio operating folders.
+3. In the Master Registry, set `Object_Type` to `Portfolio` and update the stage, by hand.
+
+Step 3 is deliberate: a Registry row is matched on Object_Name + Theme + Object_Type, so an
+automatic write would append a duplicate row instead of updating the existing one — and the
+specification reserves type and status decisions for a human. The preview requires the
+administrator to acknowledge this before writing, and the result screen restates it.
+
+**Two acknowledgements are specific to this type.** The Registry change above, and — when the
+folder contains none of the folders a moved object would carry — a warning that it may be an
+empty shell created by hand. The second is a warning rather than a block because a legacy
+organization may hold its record under non-canonical names.
+
+See [ADR 0004](../decisions/0004-portfolio-operating-folders-are-additive.md).
 
 ## Recovery after partial failure
 
@@ -310,6 +372,25 @@ button re-previews against live Drive first.
 
 If Drive creation succeeded but the Registry write failed, the outcome is partial success and
 retrying completes the Registry record without touching the folders.
+
+### Recovering Portfolio operating folders added to the wrong organization
+
+Worth stating separately, because this is the one structure that writes *inside* a folder
+holding real history, and "retry is safe" is true but not sufficient advice.
+
+If the operating folders were added to the wrong organization folder — the wrong name typed, or
+the right name matching a stray folder — RADAR cannot undo it: there is no delete, move or
+rename verb. Recovery is manual:
+
+1. Open the folder from the audit row's `Created_Items` paths, or from the result screen's link.
+2. Confirm each of the eight folders is empty. RADAR only ever created empty folders, so any
+   content means someone has since filed into them — stop and ask the RADAR owner.
+3. Delete the eight empty folders by hand.
+4. Re-run against the correct organization, using the preview's Drive link to verify the folder
+   before confirming.
+
+Nothing in the retained history (`00`–`04`) can be affected: those folders are never in the
+plan, so RADAR neither writes to them nor resolves them as write targets.
 
 ## Known limitations
 
@@ -332,12 +413,27 @@ retrying completes the Registry record without touching the folders.
    apostrophes but not backslashes in Drive queries. Left untouched to preserve Search
    behavior. New code uses `escapeDriveQueryValue`, which escapes both.
 5. **`Current_Stage_or_Status` is never populated** by automation, by design.
+6. **A moved Portfolio folder cannot be told from a copied one.** RADAR verifies the
+   organization folder exists and probes for retained-history folders, but if someone *copied*
+   instead of moving, the Pipeline folder is left behind and RADAR does not detect it. The
+   acknowledgement asks the administrator to confirm. Detecting the leftover is an extension
+   point.
+7. **No check that the Portfolio folder is the right organization.** Because RADAR writes no
+   Registry row for the transition, it also runs no Registry cross-check. Identity rests on an
+   exact folder-name match plus the administrator confirming via the preview's Drive link. A
+   read-only Registry assertion is the natural next control; it is deferred because it would
+   make a configured Registry a hard precondition. See ADR 0004.
+8. **Classify slugs object names; the creator does not.** Classify suggests
+   `.../Sample_Org/...` while the folder built is `.../Sample Org/...`. Pre-existing, affects
+   all object types, and pinned by a test in `classifierEquivalence.test.js`.
 
 ## Extension points
 
 Left clean, with no partial unsafe behavior:
 
-- Pipeline → Portfolio transition (move the folder, then add operating folders 05–12)
+- Pipeline → Portfolio **move**. The operating-folders half now ships; moving the folder stays
+  human and needs the move verb this architecture does not have (ADR 0001, ADR 0004).
+- Detecting a Pipeline folder left behind when someone copied instead of moving
 - Decline/withdrawal → `99_ARCHIVE/01_Declined_Pipeline`, retaining the Registry record
 - Venture graduation
 - Dated Concept Review / Investment Committee gate packages

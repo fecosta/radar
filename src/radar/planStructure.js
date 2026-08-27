@@ -12,7 +12,7 @@ import {
   STRUCTURE_TYPES,
   expandTemplate,
   getTemplate,
-  FORBIDDEN_DESTINATION_SEGMENTS,
+  forbiddenDestinationReason,
 } from './structureTemplates.js';
 import { validateStructureInput } from './structureInputs.js';
 import { stableHash } from './planHash.js';
@@ -22,6 +22,11 @@ export const PLAN_VERSION = 'radar-v06';
 /** Warning codes a plan can carry before any Drive state is known. */
 export const PLAN_WARNING = Object.freeze({
   PERMISSIONS_CONFIGURATION_REQUIRED: 'PERMISSIONS_CONFIGURATION_REQUIRED',
+  /**
+   * A lifecycle change RADAR records but will not make. Raised when a structure moves an
+   * object into a new stage whose Master Registry row a human must retype.
+   */
+  REGISTRY_TRANSITION_REQUIRED: 'REGISTRY_TRANSITION_REQUIRED',
 });
 
 /**
@@ -32,7 +37,17 @@ export const PLAN_WARNING = Object.freeze({
 function registryPlanFor(type, inputs, officialFolderPath) {
   const template = getTemplate(type);
   if (!template.registry.applicable) {
-    return { applicable: false };
+    /**
+     * "Not applicable" and "a human must change it" are different things. A Portfolio
+     * transition has a Registry row — it just belongs to the object's previous stage, and
+     * RADAR must not retype it. Carrying the advisory here keeps the message with the rule.
+     */
+    return {
+      applicable: false,
+      ...(template.registry.manualTransition
+        ? { manualTransition: template.registry.manualTransition }
+        : {}),
+    };
   }
 
   return {
@@ -75,15 +90,15 @@ function registryPlanFor(type, inputs, officialFolderPath) {
 export function planStructure(type, validatedInputs) {
   const { destination, items } = expandTemplate(type, validatedInputs);
 
-  // Defence in depth: the templates cannot produce these destinations, but a future edit
-  // could. Portfolio is reachable only by moving an approved Pipeline folder, and the
-  // archive only by a decline/closure transition — neither of which exists yet.
-  const forbidden = FORBIDDEN_DESTINATION_SEGMENTS.find((prefix) => destination.path.startsWith(prefix));
+  // Defence in depth: the templates cannot produce a forbidden destination, but a future edit
+  // could. The rules are keyed on what the plan would WRITE rather than on which type asked,
+  // so a new template cannot exempt itself. See forbiddenDestinationReason.
+  const forbidden = forbiddenDestinationReason(destination, items);
   if (forbidden) {
-    throw new Error(
-      `Refusing to plan a structure under ${forbidden}: that location is only reachable through a lifecycle move.`
-    );
+    throw new Error(`Refusing to plan this structure: ${forbidden}.`);
   }
+
+  const registry = registryPlanFor(type, validatedInputs, destination.path);
 
   const warnings = [];
   const sensitiveItems = items.filter((item) => item.sensitive?.restricted);
@@ -97,7 +112,13 @@ export function planStructure(type, validatedInputs) {
     });
   }
 
-  const registry = registryPlanFor(type, validatedInputs, destination.path);
+  if (registry.manualTransition) {
+    warnings.push({
+      code: PLAN_WARNING.REGISTRY_TRANSITION_REQUIRED,
+      items: [],
+      message: registry.manualTransition.message,
+    });
+  }
 
   const plan = {
     planVersion: PLAN_VERSION,

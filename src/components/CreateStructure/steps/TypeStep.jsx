@@ -4,10 +4,14 @@ import { SUPPORTED_STRUCTURES } from '../../../radar/structureTemplates.js';
 /**
  * Step 1 — pick a structure type.
  *
- * Only the six approved MVP structures appear. There is deliberately no "Portfolio
- * organization" option: approval MOVES an existing Pipeline folder to Portfolio and keeps
- * its history, so offering a new-object button here would produce the rebuilt-instead-of-
- * moved folder the policy forbids. There is likewise no root bootstrap and no seed example.
+ * Only the seven approved structures appear, in lifecycle order.
+ *
+ * "Portfolio operating folders" is deliberately NOT a "Portfolio organization" option.
+ * Approval MOVES an existing Pipeline folder to Portfolio and keeps its history, so offering a
+ * new-object button here would produce the rebuilt-instead-of-moved folder the policy forbids.
+ * That option adds only the post-approval folders 05-12, to a folder a human has already
+ * moved, and its preview blocks if that folder is not there. There is likewise no root
+ * bootstrap and no seed example.
  *
  * Implemented as a radiogroup with a roving tabindex, matching the chip groups in Classify.
  */

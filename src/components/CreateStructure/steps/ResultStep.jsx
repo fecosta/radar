@@ -1,5 +1,6 @@
 import { Button, Callout, MonoPath, SectionLabel } from '../ui.jsx';
 import { OUTCOME } from '../../../services/executeStructure.js';
+import { PLAN_WARNING } from '../../../radar/planStructure.js';
 import { REGISTRY_STATUS } from '../../../services/registryPort.js';
 import { AUDIT_STATUS } from '../../../services/auditPort.js';
 
@@ -29,6 +30,16 @@ const REGISTRY_MESSAGE = {
   [REGISTRY_STATUS.NOT_APPLICABLE]: 'This structure type does not have a Master Registry record.',
 };
 
+/**
+ * Advisories: things that are still TRUE and still need a human, as opposed to things that
+ * went wrong. They are rendered apart from the warnings, because presenting a required
+ * follow-up on a successful run in the red "Warnings" block misreports what happened.
+ */
+const ADVISORY_CODES = new Set([
+  PLAN_WARNING.PERMISSIONS_CONFIGURATION_REQUIRED,
+  PLAN_WARNING.REGISTRY_TRANSITION_REQUIRED,
+]);
+
 function ItemList({ label, items }) {
   if (items.length === 0) return null;
   return (
@@ -53,7 +64,10 @@ export default function ResultStep({ result, onRetry, onStartOver }) {
   const meta = OUTCOME_META[result.outcome] || OUTCOME_META[OUTCOME.FAILED];
   const isPartial = result.outcome === OUTCOME.PARTIAL_SUCCESS;
   const nothingCreated = result.created.length === 0;
-  const generalWarnings = result.warnings.filter((w) => !w.code.startsWith('AUDIT_'));
+  const generalWarnings = result.warnings.filter(
+    (w) => !w.code.startsWith('AUDIT_') && !ADVISORY_CODES.has(w.code)
+  );
+  const advisories = result.warnings.filter((w) => ADVISORY_CODES.has(w.code));
 
   return (
     <div style={{ display: 'grid', gap: 16 }}>
@@ -134,6 +148,17 @@ export default function ResultStep({ result, onRetry, onStartOver }) {
         <ItemList label="Reused (already existed)" items={result.existing} />
       </div>
 
+      {/* Work RADAR deliberately did not do, restated where the administrator ends up. */}
+      {advisories.length > 0 ? (
+        <Callout tone="info" title="Still to do by hand">
+          <ul style={{ listStyle: 'disc', paddingLeft: 18, display: 'grid', gap: 6 }}>
+            {advisories.map((w) => (
+              <li key={w.code}>{w.message}</li>
+            ))}
+          </ul>
+        </Callout>
+      ) : null}
+
       {result.registry?.status ? (
         <Callout
           tone={
@@ -145,7 +170,10 @@ export default function ResultStep({ result, onRetry, onStartOver }) {
           }
           title="Master Registry"
         >
-          {REGISTRY_MESSAGE[result.registry.status] || 'Registry status unknown.'}
+          {result.registry.manualTransitionRequired
+            ? 'RADAR wrote nothing to the Master Registry. This object already has a record from ' +
+              'its previous stage — see "Still to do by hand" above for the change it needs.'
+            : REGISTRY_MESSAGE[result.registry.status] || 'Registry status unknown.'}
         </Callout>
       ) : null}
 

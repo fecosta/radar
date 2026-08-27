@@ -150,7 +150,12 @@ async function runExecution({
       existing: reused,
       warnings,
       errors,
-      registry: { status: registryResult },
+      registry: {
+        status: registryResult,
+        // Distinguishes "no Registry record applies" from "a record applies and a human must
+        // change it", which the result screen would otherwise report as the same thing.
+        manualTransitionRequired: Boolean(plan?.registry?.manualTransition),
+      },
       audit: {
         status: auditStatus,
         code: auditError?.code ?? null,
@@ -211,9 +216,24 @@ async function runExecution({
     return finish();
   }
 
+  /* 4b. Restate the plan's advisories in the result.
+         These describe work RADAR cannot do and the administrator still must — so they belong
+         on the screen the administrator ends on, not only on the one they have already left.
+         Placed after the acknowledgement gate so a run blocked for a missing tick does not
+         restate them as though something happened, and before the creation loop so a partial
+         failure still carries them. Also lands in the audit row's Warnings column. */
+  for (const w of plan.warnings) warnings.push({ code: w.code, message: w.message });
+
   /* 5. Create the missing items, parents before children. */
   const parentIds = new Map(); // item key -> Drive id
   const rootKey = plan.items.find((i) => i.isStructureRoot)?.key ?? null;
+
+  /**
+   * A structure that creates no root of its own (Portfolio operating folders) has no root
+   * item to take the link from, so the result links the existing folder the items were added
+   * to. Without this the result screen would silently lose its "Open folder in Drive" button.
+   */
+  if (!rootKey) rootLink = preview.parent.webViewLink ?? null;
 
   for (const item of preview.items) {
     const parentId = item.parentKey ? parentIds.get(item.parentKey) : preview.parent.id;
