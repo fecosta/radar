@@ -8,6 +8,7 @@ import { Callout, CheckboxRow, MonoPath, SectionLabel } from '../ui.jsx';
  */
 export default function ConfirmStep({
   preview,
+  template,
   acknowledged,
   onToggleAcknowledgement,
   confirmed,
@@ -37,6 +38,14 @@ export default function ConfirmStep({
         operation fails, the items already created are left in place and reported — there is no
         automatic rollback.
       </Callout>
+
+      {/* The one structure that writes inside a folder holding irreplaceable history states
+          that guarantee on the screen where the decision is actually made. */}
+      {template?.confirmNote ? (
+        <Callout tone="neutral" title="The existing history">
+          {template.confirmNote}
+        </Callout>
+      ) : null}
 
       {acknowledgements.length > 0 ? (
         <div style={{ display: 'grid', gap: 12 }}>

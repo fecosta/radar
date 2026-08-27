@@ -226,6 +226,11 @@ describe('injection and override attempts', () => {
     expect(Object.keys(result.value)).toEqual(['objectName']);
   });
 
+  /**
+   * Still unsupported, deliberately. The additive structure is `portfolio_operating_folders`;
+   * `portfolio_organization` names the object-creating structure the PORTFOLIO CREATION RULE
+   * forbids, so a hand-crafted request for it must keep failing.
+   */
   it('rejects an unsupported structure type', () => {
     const result = validateStructureInput('portfolio_organization', { objectName: 'X' });
     expect(result.ok).toBe(false);
@@ -286,5 +291,40 @@ describe('defaults', () => {
       'strategicFocus',
       'theme',
     ]);
+  });
+});
+
+describe('Portfolio operating folders inputs', () => {
+  const TYPE = 'portfolio_operating_folders';
+
+  it('collects only the organization name and theme', () => {
+    const result = validateStructureInput(TYPE, {
+      objectName: 'Aprendo+',
+      theme: 'Education',
+      // Registry metadata belongs to the object's Pipeline life and is not re-collected.
+      owner: 'A. Ruiz',
+      meetingLogYear: '2026',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(Object.keys(result.value).sort()).toEqual(['objectName', 'theme']);
+  });
+
+  it('rejects Cross_Thematic, which Portfolio does not permit', () => {
+    const result = validateStructureInput(TYPE, { objectName: 'Aprendo+', theme: 'Cross_Thematic' });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors[0].code).toBe('INVALID_THEME');
+    expect(result.errors[0].message).toBe('Theme must be one of: Education, Democracy.');
+  });
+
+  it('keeps the organization name verbatim so it can match the moved folder', () => {
+    // Exact matching against Drive is the mechanism, so any rewriting here would break it.
+    const result = validateStructureInput(TYPE, { objectName: 'Fundación Luminar', theme: 'Democracy' });
+    expect(result.value.objectName).toBe('Fundación Luminar');
+  });
+
+  it('offers empty defaults for both fields', () => {
+    expect(defaultInputsFor(TYPE)).toEqual({ objectName: '', theme: '' });
   });
 });

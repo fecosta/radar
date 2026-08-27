@@ -376,22 +376,24 @@ keep working and you can press it again.
 from it, so it never holds write permission in a tab nobody is looking at. Coming back asks
 again. That is the design, not a bug.
 
-### The six structure types
+### The seven structure types
 
 | Type | Creates it under | Themes offered |
 |---|---|---|
 | **Pipeline organization** | `02_INVESTMENTS_AND_PROGRAMS/01_PIPELINE/{theme}/` | Education, Democracy |
+| **Portfolio operating folders** | *inside* an organization folder already in `02_PORTFOLIO/{theme}/` | Education, Democracy |
 | **Venture Building initiative** | `02_INVESTMENTS_AND_PROGRAMS/03_VENTURE_BUILDING/{theme}/` | Education, Democracy |
 | **In-house program** | `02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/{theme}/` | Education, Democracy, **Cross_Thematic** |
 | **Policy** | `03_INSTITUTIONAL/00_POLICIES/` | — |
 | **Formal governance meeting** | `03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/{forum}/{year}/` | — |
 | **Annual OKR cycle** | `01_STRATEGY/03_OKRs/` | — |
 
-Two deliberate absences:
+Two things worth understanding:
 
-- **There is no Portfolio option.** When a Pipeline organization is approved you *move* its
-  existing folder to Portfolio and add the operating subfolders — you never build a new one, or
-  you lose its history.
+- **The Portfolio option adds folders; it never builds the organization.** When a Pipeline
+  organization is approved you *move* its existing folder to Portfolio yourself — never build a
+  new one, or you lose its history. RADAR then adds the operating folders 05–12 to the folder
+  you moved. If the folder is not there yet, the preview stops and tells you to move it first.
 - **Emergency Response is not a type.** It is an **In-house program** with theme
   `Cross_Thematic` and the name `Emergency_Response`.
 
@@ -400,7 +402,7 @@ Investment Committee are project gates and belong with the project, never here.
 
 ### The five steps
 
-**1 · Structure type** — pick one of the six cards; the chosen one shows a "Selected" pill.
+**1 · Structure type** — pick one of the seven cards; the chosen one shows a "Selected" pill.
 Arrow keys move the selection. Press **Continue**.
 
 **2 · Details** — the fields depend on the type. Required fields are marked `*`; everything else
@@ -436,11 +438,37 @@ duplicates at the destination, a name already taken by something that is not a f
 Master Registry record already pointing that object somewhere else. Each says what to
 de-duplicate or resolve in Drive first.
 
+For **Portfolio operating folders** there is one more, and it is the common one:
+
+> **Object folder not found** — No folder named "…" exists in `02_PORTFOLIO/{theme}`. RADAR
+> adds the operating folders to an organization whose folder has already been moved here after
+> approval — it never creates that folder.
+
+Two things cause it: the folder has not been moved into Portfolio yet, or it has, but into the
+*other* theme. Names are matched exactly, including accents and capitalisation, so
+`Fundacion Luminar` will not match `Fundación Luminar`.
+
 **Warnings** are different — they do not block, but each must be ticked before you can create.
-One flags a **restricted folder** (see below); another notices that a folder with the same name
-already exists in Portfolio, the Declined Pipeline archive or Exploration, which usually means
-the object should be *moved* rather than rebuilt. RADAR only reports that; it never moves
-anything.
+One flags a **restricted folder** (see below). Another notices that a folder with the same name
+already exists in the Declined Pipeline archive or Exploration, which usually means the object
+should be *moved* rather than rebuilt — RADAR only reports that; it never moves anything. For a
+Portfolio transition you will also be asked to confirm the **Master Registry** change you still
+owe (below), and — if the folder looks empty of history — that you did not create it by hand.
+
+#### After approval: moving a Pipeline organization to Portfolio
+
+RADAR owns exactly one of these three steps. Doing them out of order is the usual mistake.
+
+1. **Move the folder yourself, in Drive.** Drag the whole organization folder from
+   `01_PIPELINE/{theme}/` to `02_PORTFOLIO/{theme}/`. Move it — do not copy it, or the history
+   ends up in two places and RADAR cannot tell which is official.
+2. **Run Create structure → Portfolio operating folders.** Type the organization name exactly as
+   it now appears in Portfolio, pick the same theme, and RADAR adds folders 05–12 inside it.
+   Sourcing, Screening and Diligence are left exactly as they are.
+3. **Update the Master Registry by hand.** Set `Object_Type` to `Portfolio` and update the
+   stage. RADAR will not do this: a Registry row is identified partly *by* its Object_Type, so
+   an automatic write would add a second row for the same organization instead of updating the
+   first — and deciding that an investment is approved is a human's call, not a tool's.
 
 **4 · Confirm** — the last screen before anything is written:
 

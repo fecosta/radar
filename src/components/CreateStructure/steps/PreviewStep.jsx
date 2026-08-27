@@ -66,6 +66,22 @@ export default function PreviewStep({ preview, loading, error }) {
           padding: '11px 14px',
         }}>
           <MonoPath>{destination.path}</MonoPath>
+          {/*
+            When the structure adds to a folder that already exists, the administrator is about
+            to write inside a live organization folder identified only by a name they typed.
+            A path is readable; a link is verifiable. This is the check against adding the
+            operating folders to the wrong organization.
+          */}
+          {destination.requireExistingSegments?.length && preview.parent?.webViewLink ? (
+            <a
+              href={preview.parent.webViewLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700, marginTop: 6, display: 'inline-block' }}
+            >
+              Open this folder in Drive to confirm it is the right organization
+            </a>
+          ) : null}
         </div>
         <span style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>
           {isBlocked

@@ -13,7 +13,10 @@
  *   - the full root-tree bootstrap; missing canonical roots are reported
  *     as architecture drift, never created;
  *   - launch seed / example objects;
- *   - lifecycle transitions (Pipeline → Portfolio, decline, graduation).
+ *   - the lifecycle MOVES themselves (Pipeline → Portfolio, decline, graduation). RADAR has
+ *     no move verb and is not getting one on this architecture (ADR 0001). The additive half
+ *     of the Portfolio transition — adding the operating folders 05-12 to a folder a human
+ *     already moved — does ship; see ADR 0004 and structureTemplates.js.
  * See docs/operations/create-structure.md for why, and where the extension points are.
  */
 

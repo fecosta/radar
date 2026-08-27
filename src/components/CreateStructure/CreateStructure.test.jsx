@@ -110,7 +110,7 @@ describe('configuration and permission gates', () => {
 });
 
 describe('structure type step', () => {
-  it('offers exactly the six approved structures', async () => {
+  it('offers exactly the seven approved structures', async () => {
     const { user } = setup();
     await user.click(screen.getByRole('button', { name: /grant permission/i }));
 
@@ -118,6 +118,7 @@ describe('structure type step', () => {
     // The first child div is the option's title; the second is its description.
     expect(options.map((o) => o.firstChild.textContent)).toEqual([
       'Pipeline organization',
+      'Portfolio operating folders',
       'Venture Building initiative',
       'In-house program',
       'Policy',
@@ -126,11 +127,24 @@ describe('structure type step', () => {
     ]);
   });
 
-  it('never offers Portfolio creation or a root bootstrap', async () => {
+  /**
+   * The additive Portfolio option ships; a new-Portfolio-object option must not. This test
+   * changed meaning rather than numbers, so it asserts both halves: the additive option is
+   * present AND states its precondition, and nothing offers to build the object folder.
+   */
+  it('offers the additive Portfolio option and never a new-Portfolio-object option', async () => {
     const { user } = setup();
     await user.click(screen.getByRole('button', { name: /grant permission/i }));
 
-    expect(screen.queryByRole('radio', { name: /portfolio/i })).not.toBeInTheDocument();
+    const portfolio = screen.getByRole('radio', { name: /Portfolio operating folders/i });
+    expect(portfolio).toBeInTheDocument();
+    // The precondition has to be legible before the administrator picks the card.
+    expect(portfolio).toHaveTextContent(/already moved into Portfolio/i);
+    expect(portfolio).toHaveTextContent(/never builds the object folder/i);
+
+    expect(
+      screen.queryByRole('radio', { name: /portfolio organization|new portfolio object/i })
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole('radio', { name: /bootstrap|seed|example/i })).not.toBeInTheDocument();
   });
 
@@ -142,7 +156,7 @@ describe('structure type step', () => {
     first.focus();
     await user.keyboard('{ArrowDown}');
 
-    expect(screen.getByRole('radio', { name: /Venture Building/i })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: /Portfolio operating folders/i })).toHaveAttribute('aria-checked', 'true');
   });
 });
 
@@ -656,5 +670,90 @@ describe('accessibility', () => {
       expect(control).toHaveAccessibleName();
     }
     expect(screen.getByRole('combobox')).toHaveAccessibleName();
+  });
+});
+
+describe('Portfolio operating folders end to end', () => {
+  const OBJECT_PATH = '02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education/Aprendo+';
+
+  function driveWithMovedObject() {
+    const drive = createFakeDrive();
+    for (const name of ['00_Overview_and_Contacts', '01_Meetings', '02_Sourcing', '03_Screening', '04_Diligence']) {
+      drive._seedPath(`${OBJECT_PATH}/${name}`);
+    }
+    return drive;
+  }
+
+  async function openPortfolioDetails(user) {
+    await user.click(screen.getByRole('button', { name: /grant permission/i }));
+    await user.click(screen.getByRole('radio', { name: /Portfolio operating folders/i }));
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+  }
+
+  async function fillPortfolio(user) {
+    await user.type(screen.getByLabelText(/Organization already in Portfolio/i), 'Aprendo+');
+    await user.selectOptions(screen.getByLabelText(/^Theme/i), 'Education');
+  }
+
+  it('states the pre-existing-folder requirement on the details step', async () => {
+    const { user } = setup();
+    await openPortfolioDetails(user);
+
+    // The precondition must be visible before the form is filled, not only after a block.
+    expect(screen.getByText(/RADAR does not move folders/i)).toBeInTheDocument();
+    expect(screen.getByText(/matching is exact, including accents/i)).toBeInTheDocument();
+  });
+
+  it('blocks the preview when the organization is not in Portfolio yet', async () => {
+    const { user, services } = setup();
+    await openPortfolioDetails(user);
+    await fillPortfolio(user);
+    await user.click(screen.getByRole('button', { name: /validate and preview/i }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/already been moved here after approval/i);
+    expect(screen.getByRole('button', { name: /continue to confirmation/i })).toBeDisabled();
+    expect(services.drive._calls.createFolder).toBe(0);
+  });
+
+  it('creates the eight operating folders for an organization already moved there', async () => {
+    const drive = driveWithMovedObject();
+    const { user, services } = setup({ drive });
+
+    await openPortfolioDetails(user);
+    await fillPortfolio(user);
+    await user.click(screen.getByRole('button', { name: /validate and preview/i }));
+    await screen.findByRole('tree');
+    await user.click(screen.getByRole('button', { name: /continue to confirmation/i }));
+
+    // The Registry transition must be acknowledged before Create becomes available.
+    const create = screen.getByRole('button', { name: /create structure/i });
+    await user.click(screen.getByRole('checkbox', { name: /Object_Type/i }));
+    await user.click(screen.getByRole('checkbox', { name: /I confirm creating/i }));
+    expect(create).toBeEnabled();
+
+    await user.click(create);
+
+    expect(await screen.findByText(/8 items created/i)).toBeInTheDocument();
+    expect(services.drive._calls.createFolder).toBe(8);
+    // The follow-up the administrator still owns is restated on the final screen.
+    expect(screen.getAllByText(/Still to do by hand/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/set Object_Type to "Portfolio"/i)).toBeInTheDocument();
+    // And the Registry callout must not claim the object simply has no record.
+    expect(screen.getByText(/already has a record from its previous stage/i)).toBeInTheDocument();
+    expect(services.registry._rows).toHaveLength(0);
+  });
+
+  it('promises on the confirmation screen that the history is untouched', async () => {
+    const drive = driveWithMovedObject();
+    const { user } = setup({ drive });
+
+    await openPortfolioDetails(user);
+    await fillPortfolio(user);
+    await user.click(screen.getByRole('button', { name: /validate and preview/i }));
+    await screen.findByRole('tree');
+    await user.click(screen.getByRole('button', { name: /continue to confirmation/i }));
+
+    expect(screen.getByText(/not read, moved or changed/i)).toBeInTheDocument();
   });
 });

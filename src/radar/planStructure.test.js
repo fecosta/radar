@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { planStructure, planStructureFromRaw, planRootItem, PLAN_WARNING } from './planStructure.js';
-import { STRUCTURE_TYPES } from './structureTemplates.js';
+import { STRUCTURE_TYPES, forbiddenDestinationReason } from './structureTemplates.js';
 import { stableHash, canonicalSerialize } from './planHash.js';
 
 const PIPELINE = {
@@ -140,5 +140,60 @@ describe('planStructureFromRaw', () => {
     const raw = planStructureFromRaw(STRUCTURE_TYPES.OKR_CYCLE, { okrYear: '2026' });
     const direct = planStructure(STRUCTURE_TYPES.OKR_CYCLE, { okrYear: 2026 });
     expect(raw.plan.hash).toBe(direct.hash);
+  });
+});
+
+describe('Portfolio operating folders', () => {
+  const PORTFOLIO_INPUTS = { objectName: 'Aprendo+', theme: 'Education' };
+  const plan = () => planStructure(STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS, PORTFOLIO_INPUTS);
+
+  /**
+   * The regression that matters: this destination used to throw. The guard now judges what a
+   * plan would WRITE rather than where it points, so adding folders inside an existing
+   * Portfolio object folder is permitted while creating one is not.
+   */
+  it('plans an additive Portfolio structure instead of refusing it', () => {
+    expect(() => plan()).not.toThrow();
+    expect(plan().destination.path).toBe('02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education/Aprendo+');
+  });
+
+  it('still refuses a destination that would create a Portfolio object folder', () => {
+    // Rule B, exercised through the guard's own predicate: same path, but with a root to create.
+    expect(
+      forbiddenDestinationReason({
+        path: '02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education/Aprendo+',
+        createdSegments: ['Aprendo+'],
+      })
+    ).toMatch(/only by moving an approved Pipeline folder/);
+  });
+
+  it('creates nothing of its own, so no item can be the object folder', () => {
+    const { destination, items } = plan();
+    expect(destination.createdSegments).toEqual([]);
+    expect(items.some((i) => i.isStructureRoot)).toBe(false);
+    expect(items).toHaveLength(8);
+  });
+
+  it('records that the organization folder must already exist', () => {
+    expect(plan().destination.requireExistingSegments).toEqual(['Aprendo+']);
+  });
+
+  it('plans no Master Registry write and carries the transition advisory instead', () => {
+    const result = plan();
+    expect(result.registry.applicable).toBe(false);
+    expect(result.registry.identity).toBeUndefined();
+    expect(result.registry.record).toBeUndefined();
+
+    const advisory = result.warnings.find((w) => w.code === PLAN_WARNING.REGISTRY_TRANSITION_REQUIRED);
+    expect(advisory).toBeDefined();
+    expect(advisory.message).toMatch(/Object_Type/);
+    expect(advisory.message).toMatch(/append a second row/);
+    // It must never imply RADAR will make the change.
+    expect(advisory.message).toMatch(/RADAR does not change it/);
+  });
+
+  it('raises no advisory for structures that do have a Registry record', () => {
+    const pipeline = planStructure(STRUCTURE_TYPES.PIPELINE_ORGANIZATION, PIPELINE);
+    expect(pipeline.warnings.some((w) => w.code === PLAN_WARNING.REGISTRY_TRANSITION_REQUIRED)).toBe(false);
   });
 });

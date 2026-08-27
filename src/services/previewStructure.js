@@ -6,7 +6,7 @@
  * immediately before writing, because Drive may have changed in between.
  */
 
-import { LIFECYCLE_CONFLICT_SCOPES } from '../radar/canonicalTree.js';
+import { LIFECYCLE_CONFLICT_SCOPES, MIME_FOLDER, joinSegments } from '../radar/canonicalTree.js';
 import { PLAN_WARNING } from '../radar/planStructure.js';
 import { REGISTRY_STATUS } from './registryPort.js';
 
@@ -30,6 +30,14 @@ export const PREVIEW_STATUS = Object.freeze({
 export const CONFLICT_CODE = Object.freeze({
   MISSING_CANONICAL_PARENT: 'MISSING_CANONICAL_PARENT',
   DUPLICATE_PARENT_MATCH: 'DUPLICATE_PARENT_MATCH',
+  /**
+   * A folder the structure must be added INSIDE does not exist yet. Distinct from
+   * MISSING_CANONICAL_PARENT: that one means the approved architecture has drifted, this one
+   * means a workflow step (moving an approved folder) has not happened. The advice differs,
+   * so the code and the message do too.
+   */
+  OBJECT_FOLDER_NOT_FOUND: 'OBJECT_FOLDER_NOT_FOUND',
+  AMBIGUOUS_OBJECT_FOLDER: 'AMBIGUOUS_OBJECT_FOLDER',
   WRONG_MIME_TYPE: 'WRONG_MIME_TYPE',
   DUPLICATE_EXACT_MATCH: 'DUPLICATE_EXACT_MATCH',
   NOT_AUTHORIZED: 'NOT_AUTHORIZED',
@@ -38,8 +46,28 @@ export const CONFLICT_CODE = Object.freeze({
 
 export const ACKNOWLEDGEMENT_CODE = Object.freeze({
   SENSITIVE_FOLDER: PLAN_WARNING.PERMISSIONS_CONFIGURATION_REQUIRED,
+  REGISTRY_TRANSITION: PLAN_WARNING.REGISTRY_TRANSITION_REQUIRED,
   LIFECYCLE_LOCATION_CONFLICT: 'LIFECYCLE_LOCATION_CONFLICT',
+  NO_RETAINED_HISTORY: 'NO_RETAINED_HISTORY',
 });
+
+/**
+ * Folders whose presence proves an object folder carries its pre-approval history.
+ *
+ * Spec PORTFOLIO CREATION RULE clause 2 requires that history be preserved. "The folder
+ * exists" cannot distinguish a folder moved with its history from an empty shell a human
+ * created by hand — and helping RADAR fill in an empty shell would produce the
+ * rebuilt-instead-of-moved object the rule forbids. `01_Meetings` appears in all three object
+ * templates; the rest cover a Pipeline object and a graduating Venture Building initiative,
+ * which v06 design rule 9 also moves into Portfolio.
+ */
+const RETAINED_HISTORY_MARKERS = Object.freeze([
+  '01_Meetings',
+  '02_Sourcing',
+  '02_Design_and_Structuring',
+  '00_Overview_and_Contacts',
+  '00_Overview_and_Governance',
+]);
 
 const blocked = (code, message, extra = {}) => ({ code, message, ...extra });
 
@@ -79,7 +107,62 @@ export async function previewStructure({ drive, registry, plan }) {
     return { ...base, blocking: [blocked(parent.code, message, { segment: parent.missingSegment })] };
   }
 
-  const parentFolder = parent.items[parent.items.length - 1];
+  let parentFolder = parent.items[parent.items.length - 1];
+
+  /* 1b. Segments that must already exist but are NOT canonical architecture — today, an
+         organization folder a human moved into Portfolio after approval.
+
+         This is why the structure cannot fabricate a Portfolio object: the object folder is
+         resolved here, never planned. `createdSegments` is empty for such a template, so no
+         plan item is the object folder and `createFolder(parent, objectName)` is not merely
+         blocked, it does not exist as a call. Resolving it here also means the authorization
+         probe below tests the folder RADAR will really write into.
+
+         No explicit assertInSharedDrive is needed on what this resolves, unlike resolvePath:
+         findExactChildren is scoped by the Drive API itself (corpora=drive, driveId), so a
+         match cannot come from another drive, and every item actually created is verified by
+         _create. */
+  const mustExist = plan.destination.requireExistingSegments || [];
+  const requiredHistory = [];
+  for (const segment of mustExist) {
+    const matches = await drive.findExactChildren(parentFolder.id, segment);
+
+    if (matches.length === 0) {
+      const message =
+        `No folder named "${segment}" exists in ${joinSegments(plan.destination.parentSegments)}. ` +
+        'RADAR adds the Portfolio operating folders to an organization whose folder has already ' +
+        'been moved here after approval — it never creates that folder, because a rebuilt folder ' +
+        'loses the Sourcing, Screening and Diligence history the approval is supposed to preserve. ' +
+        'Move the approved folder into Portfolio first, and check you picked the theme it was ' +
+        'moved into. Names are matched exactly, including accents and capitalisation.';
+      return {
+        ...base,
+        blocking: [blocked(CONFLICT_CODE.OBJECT_FOLDER_NOT_FOUND, message, { segment })],
+      };
+    }
+
+    if (matches.length > 1) {
+      const message =
+        `${matches.length} folders named "${segment}" exist in ` +
+        `${joinSegments(plan.destination.parentSegments)}, so RADAR cannot tell which one is the ` +
+        'official home. De-duplicate them in Drive first.';
+      return {
+        ...base,
+        blocking: [blocked(CONFLICT_CODE.AMBIGUOUS_OBJECT_FOLDER, message, { segment })],
+      };
+    }
+
+    if (matches[0].mimeType !== MIME_FOLDER) {
+      const message = `"${segment}" exists in ${joinSegments(plan.destination.parentSegments)} but is not a folder.`;
+      return {
+        ...base,
+        blocking: [blocked(CONFLICT_CODE.WRONG_MIME_TYPE, message, { segment })],
+      };
+    }
+
+    parentFolder = matches[0];
+    requiredHistory.push(parentFolder);
+  }
 
   /* 2. Authorization probe. RADAR keeps no admin list of its own: the user's Shared Drive
         role is the authority and Google enforces it on the write itself. */
@@ -159,8 +242,37 @@ export async function previewStructure({ drive, registry, plan }) {
     });
   }
 
-  /* 4. Warnings the plan already knows about (restricted folders). */
+  /* 4. Warnings the plan already knows about (restricted folders, Registry transitions). */
   const acknowledgements = plan.warnings.map((w) => ({ code: w.code, message: w.message, items: w.items }));
+
+  /* 4b. Does the object folder actually carry the history the approval preserved?
+
+         "The folder exists" alone would rubber-stamp an empty shell somebody created by hand,
+         which is the rebuilt-instead-of-moved object the PORTFOLIO CREATION RULE forbids. This
+         is an acknowledgement rather than a block because the evidence is heuristic: a legacy
+         organization may keep its history under non-canonical names, and blocking it outright
+         would strand a legitimate object with no way forward. Raised only when no marker is
+         found, so it never becomes a checkbox the administrator ticks by reflex. */
+  if (requiredHistory.length > 0) {
+    const objectFolder = requiredHistory[requiredHistory.length - 1];
+    const found = [];
+    for (const marker of RETAINED_HISTORY_MARKERS) {
+      const hits = await drive.findExactChildren(objectFolder.id, marker);
+      if (hits.length > 0) found.push(marker);
+    }
+    if (found.length === 0) {
+      acknowledgements.push({
+        code: ACKNOWLEDGEMENT_CODE.NO_RETAINED_HISTORY,
+        message:
+          `"${objectFolder.name}" contains none of the folders a moved Pipeline or Venture ` +
+          `Building object would carry (${RETAINED_HISTORY_MARKERS.join(', ')}). If you created ` +
+          'this folder by hand, stop and move the approved folder instead — rebuilding an object ' +
+          'loses the history the approval is meant to preserve. Continue only if this folder ' +
+          'already holds the organization\'s record under different names.',
+        items: [objectFolder.name],
+      });
+    }
+  }
 
   /* 5. Registry: refuse to create a second official home for a known object. */
   let registryState = { applicable: plan.registry.applicable, status: null };
@@ -191,7 +303,21 @@ export async function previewStructure({ drive, registry, plan }) {
         only — a conflicting home is reported, never moved. */
   if (plan.inputs.theme && plan.inputs.objectName) {
     for (const scope of LIFECYCLE_CONFLICT_SCOPES) {
-      const location = await drive.resolvePath(scope.segments(plan.inputs.theme));
+      const segments = scope.segments(plan.inputs.theme);
+      /**
+       * A scope that IS this structure's own destination is not a conflicting home: finding
+       * the object there is the entire point (Portfolio operating folders) or an idempotent
+       * re-run. Derived from the plan rather than keyed on structure type, so it stays correct
+       * for any future structure — and it changes nothing for the original six, none of whose
+       * destinations equal a lifecycle scope.
+       *
+       * Without this, the Portfolio scope would fire on every run of an additive Portfolio
+       * structure and force the administrator to tick an acknowledgement stating the opposite
+       * of what they are doing — which corrodes the one mechanism whose value is that ticking
+       * it means something.
+       */
+      if (joinSegments(segments) === joinSegments(plan.destination.parentSegments)) continue;
+      const location = await drive.resolvePath(segments);
       if (!location.ok) continue; // that area may legitimately not exist yet
       const container = location.items[location.items.length - 1];
       const hits = await drive.findExactChildren(container.id, plan.inputs.objectName);
