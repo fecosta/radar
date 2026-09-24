@@ -110,7 +110,7 @@ describe('configuration and permission gates', () => {
 });
 
 describe('structure type step', () => {
-  it('offers exactly the eight approved structures', async () => {
+  it('offers exactly the nine approved structures', async () => {
     const { user } = setup();
     await user.click(screen.getByRole('button', { name: /grant permission/i }));
 
@@ -122,6 +122,7 @@ describe('structure type step', () => {
       'Existing Portfolio investment',
       'Venture Building initiative',
       'In-house program',
+      'BecaTech+ partner or provider',
       'Policy',
       'Formal governance meeting',
       'Annual OKR cycle',
@@ -807,6 +808,84 @@ describe('Existing Portfolio investment end to end', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(/01_PIPELINE\/Education\/Aprendo\+/);
     expect(alert).toHaveTextContent(/exactly one official folder/i);
+    expect(screen.getByRole('button', { name: /continue to confirmation/i })).toBeDisabled();
+    expect(services.drive._calls.createFolder).toBe(0);
+  });
+});
+
+describe('BecaTech+ partner or provider end to end', () => {
+  const BASE = '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+/04_Partners_and_Providers';
+
+  function becaDrive() {
+    const drive = createFakeDrive();
+    drive._seedPath(`${BASE}/Partners`);
+    drive._seedPath(`${BASE}/Providers`);
+    return drive;
+  }
+
+  async function openBecaDetails(user) {
+    await user.click(screen.getByRole('button', { name: /grant permission/i }));
+    await user.click(screen.getByRole('radio', { name: /BecaTech\+ partner or provider/i }));
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+  }
+
+  it('shows only the organization type and name', async () => {
+    const { user } = setup();
+    await openBecaDetails(user);
+
+    const kind = screen.getByLabelText(/Organization type/i);
+    expect(within(kind).getAllByRole('option').map((o) => o.textContent)).toEqual([
+      'Select Partner or Provider',
+      'Partner',
+      'Provider',
+    ]);
+    expect(screen.getByLabelText(/Organization name/i)).toBeInTheDocument();
+    for (const label of [/^Theme/i, /Owner/i, /Country/i, /Strategic focus/i, /Meeting log year/i]) {
+      expect(screen.queryByLabelText(label)).not.toBeInTheDocument();
+    }
+  });
+
+  it('reports a missing organization type on its field', async () => {
+    const { user, services } = setup();
+    await openBecaDetails(user);
+    await user.type(screen.getByLabelText(/Organization name/i), 'Acme');
+    await user.click(screen.getByRole('button', { name: /validate and preview/i }));
+
+    const kind = screen.getByLabelText(/Organization type/i);
+    await waitFor(() => expect(kind).toHaveAttribute('aria-invalid', 'true'));
+    const describedBy = kind.getAttribute('aria-describedby');
+    expect(document.getElementById(describedBy.split(' ').pop())).toHaveTextContent(/Partner, Provider/);
+    expect(services.drive._calls.findExactChildren).toBe(0);
+  });
+
+  it('previews the fixed Beca Tech destination and creates the three folders', async () => {
+    const { user, services } = setup({ drive: becaDrive() });
+    await openBecaDetails(user);
+    await user.selectOptions(screen.getByLabelText(/Organization type/i), 'provider');
+    await user.type(screen.getByLabelText(/Organization name/i), 'Fundación Ejemplo');
+    await user.click(screen.getByRole('button', { name: /validate and preview/i }));
+
+    await screen.findByRole('tree', { name: /planned structure/i });
+    expect(screen.getAllByText(`${BASE}/Providers/Fundación Ejemplo`).length).toBeGreaterThan(0);
+    expect(screen.getByText(/4 items will be created/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /continue to confirmation/i }));
+    await user.click(screen.getByRole('checkbox', { name: /I confirm creating/i }));
+    await user.click(screen.getByRole('button', { name: /create structure/i }));
+
+    expect(await screen.findByText(/4 items created/i)).toBeInTheDocument();
+    expect(services.drive._calls.createFolder).toBe(4);
+    expect(services.registry._rows).toHaveLength(0);
+  });
+
+  it('blocks when the Partners folder does not exist', async () => {
+    const { user, services } = setup();
+    await openBecaDetails(user);
+    await user.selectOptions(screen.getByLabelText(/Organization type/i), 'partner');
+    await user.type(screen.getByLabelText(/Organization name/i), 'Acme');
+    await user.click(screen.getByRole('button', { name: /validate and preview/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/will not create canonical roots/i);
     expect(screen.getByRole('button', { name: /continue to confirmation/i })).toBeDisabled();
     expect(services.drive._calls.createFolder).toBe(0);
   });

@@ -10,7 +10,13 @@ import {
   getTemplate,
   forbiddenDestinationReason,
 } from './structureTemplates.js';
-import { MIME_FOLDER, MIME_GOOGLE_DOC, GOVERNANCE_FORUMS, SEGMENTS } from './canonicalTree.js';
+import {
+  MIME_FOLDER,
+  MIME_GOOGLE_DOC,
+  GOVERNANCE_FORUMS,
+  SEGMENTS,
+  BECA_TECH_PARTNERS_AND_PROVIDERS_SEGMENTS,
+} from './canonicalTree.js';
 import { planStructureFromRaw } from './planStructure.js';
 
 /**
@@ -56,6 +62,7 @@ function inputsFor(id) {
   if (id === 'policy') return { objectName: 'X' };
   if (id === 'governance_meeting') return { forum: 'board', meetingDate: '2026-01-01' };
   if (id === 'okr_cycle') return { okrYear: '2026' };
+  if (id === 'beca_tech_partner_or_provider') return { organizationKind: 'partner', objectName: 'X' };
   return OBJECT_INPUTS;
 }
 
@@ -292,7 +299,7 @@ describe('guard rails', () => {
     expect(labels.some((l) => l.includes('concept') || l.includes('committee'))).toBe(false);
   });
 
-  it('exposes exactly the eight approved structures, and no unguarded Portfolio object', () => {
+  it('exposes exactly the nine approved structures, and no unguarded Portfolio object', () => {
     expect(SUPPORTED_STRUCTURES.map((s) => s.id)).toEqual([
       'pipeline_organization',
       // Second and third, so the picker reads in lifecycle order and the two Portfolio
@@ -301,6 +308,7 @@ describe('guard rails', () => {
       'existing_portfolio_investment',
       'venture_building_initiative',
       'in_house_program',
+      'beca_tech_partner_or_provider',
       'policy',
       'governance_meeting',
       'okr_cycle',
@@ -333,7 +341,7 @@ describe('guard rails', () => {
     expect(themesById.venture_building_initiative).toEqual(['Education', 'Democracy']);
     expect(themesById.in_house_program).toEqual(['Education', 'Democracy', 'Cross_Thematic']);
     // Unthemed structures must not acquire a theme selector.
-    for (const id of ['policy', 'governance_meeting', 'okr_cycle']) {
+    for (const id of ['policy', 'governance_meeting', 'okr_cycle', 'beca_tech_partner_or_provider']) {
       expect(themesById[id]).toBeNull();
     }
   });
@@ -343,17 +351,7 @@ describe('guard rails', () => {
    * structure types). The creator must not be able to target it.
    */
   it('never resolves a destination inside 0A_EXPLORATION or the Weekly email folder', () => {
-    const paths = SUPPORTED_STRUCTURES.map((s) => s.id).map((id) => {
-      const inputs =
-        id === 'policy'
-          ? { objectName: 'X' }
-          : id === 'governance_meeting'
-            ? { forum: 'board', meetingDate: '2026-01-01' }
-            : id === 'okr_cycle'
-              ? { okrYear: '2026' }
-              : OBJECT_INPUTS;
-      return resolveDestination(id, inputs).path;
-    });
+    const paths = SUPPORTED_STRUCTURES.map((s) => resolveDestination(s.id, inputsFor(s.id)).path);
     expect(paths.some((p) => p.includes(SEGMENTS.EXPLORATION))).toBe(false);
     expect(paths.some((p) => p.includes(SEGMENTS.WEEKLY_EMAIL))).toBe(false);
   });
@@ -579,5 +577,97 @@ describe('Portfolio operating folders', () => {
     for (const other of SUPPORTED_STRUCTURES.filter((s) => s.id !== entry.id)) {
       expect(other.requiresExistingObject).toBe(false);
     }
+  });
+});
+
+/**
+ * ADR 0006. BecaTech+-specific: the generic In-house Program template must not
+ * change, and the whole path down to Partners/Providers must already exist.
+ */
+describe('BecaTech+ partner or provider', () => {
+  const TYPE = STRUCTURE_TYPES.BECA_TECH_PARTNER_OR_PROVIDER;
+  const BASE = '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+/04_Partners_and_Providers';
+
+  it('collects only the organization type and name, and writes no Registry record', () => {
+    const entry = SUPPORTED_STRUCTURES.find((s) => s.id === TYPE);
+    expect(entry.label).toBe('BecaTech+ partner or provider');
+    expect(entry.fields).toEqual(['organizationKind', 'objectName']);
+    expect(entry.themes).toBeNull();
+    expect(entry.registryApplicable).toBe(false);
+  });
+
+  it.each([
+    ['partner', 'Partners'],
+    ['provider', 'Providers'],
+  ])('routes a %s into the existing %s folder and creates only the organization', (kind, folder) => {
+    const d = resolveDestination(TYPE, { organizationKind: kind, objectName: 'Fundación Ejemplo' });
+    expect(d.parentPath).toBe(`${BASE}/${folder}`);
+    expect(d.path).toBe(`${BASE}/${folder}/Fundación Ejemplo`);
+    expect(d.createdSegments).toEqual(['Fundación Ejemplo']);
+    expect(d.requireExistingSegments).toEqual([]);
+  });
+
+  it('creates exactly Proposal, Agreement and Reports inside the organization', () => {
+    const { items } = expandTemplate(TYPE, { organizationKind: 'partner', objectName: 'Acme' });
+    expect(items.map((i) => i.relativePath)).toEqual(['Acme', 'Acme/Proposal', 'Acme/Agreement', 'Acme/Reports']);
+    expect(items.every((i) => i.mimeType === MIME_FOLDER)).toBe(true);
+    expect(items.filter((i) => i.isStructureRoot).map((i) => i.name)).toEqual(['Acme']);
+  });
+
+  it('keeps the destination fixed: theme and override keys cannot move it', () => {
+    const themed = planStructureFromRaw(TYPE, { organizationKind: 'partner', objectName: 'Acme', theme: 'Democracy' });
+    expect(themed.ok).toBe(true);
+    expect(themed.plan.destination.path).toBe(`${BASE}/Partners/Acme`);
+    expect(themed.plan.inputs).toEqual({ organizationKind: 'partner', objectName: 'Acme' });
+
+    for (const key of ['destination', 'parentSegments', 'path']) {
+      const r = planStructureFromRaw(TYPE, { organizationKind: 'partner', objectName: 'Acme', [key]: ['99_ARCHIVE'] });
+      expect(r.ok).toBe(false);
+      expect(r.errors[0].code).toBe('OVERRIDE_REJECTED');
+    }
+  });
+
+  it('accepts only Partner or Provider as the organization type', () => {
+    for (const kind of ['', 'Partners', 'Partner', 'vendor', '../Providers', undefined]) {
+      const r = planStructureFromRaw(TYPE, { organizationKind: kind, objectName: 'Acme' });
+      expect(r.ok).toBe(false);
+      expect(r.errors.map((e) => e.code)).toContain('INVALID_ORGANIZATION_KIND');
+    }
+  });
+
+  it('reuses the folder-name rules for the organization name', () => {
+    for (const [name, code] of [
+      ['', 'EMPTY'],
+      ['a/b', 'PATH_SEPARATOR'],
+      ['..', 'RELATIVE_PATH'],
+      ['.hidden', 'HIDDEN_SEGMENT'],
+      ['a​b', 'CONTROL_CHARACTER'],
+      ['x'.repeat(121), 'TOO_LONG'],
+    ]) {
+      const r = planStructureFromRaw(TYPE, { organizationKind: 'provider', objectName: name });
+      expect(r.ok).toBe(false);
+      expect(r.errors.map((e) => e.code)).toContain(code);
+    }
+  });
+
+  it('resolves through the live Drive spelling BecaTech+, never Beca_Tech', () => {
+    expect(BECA_TECH_PARTNERS_AND_PROVIDERS_SEGMENTS).toEqual([
+      '02_INVESTMENTS_AND_PROGRAMS',
+      '04_IN_HOUSE_PROGRAMS',
+      'Education',
+      'BecaTech+',
+      '04_Partners_and_Providers',
+    ]);
+    for (const kind of ['partner', 'provider']) {
+      const { path } = resolveDestination(TYPE, { organizationKind: kind, objectName: 'Acme' });
+      expect(path).toContain('/Education/BecaTech+/04_Partners_and_Providers/');
+      expect(path).not.toContain('Beca_Tech');
+    }
+  });
+
+  it('leaves the generic In-house Program template unchanged', () => {
+    const { items } = expandTemplate(STRUCTURE_TYPES.IN_HOUSE_PROGRAM, OBJECT_INPUTS);
+    const partners = items.filter((i) => i.relativePath.includes('04_Partners_and_Providers'));
+    expect(partners.map((i) => i.relativePath)).toEqual(['Fundación Luminar/04_Partners_and_Providers']);
   });
 });

@@ -7,7 +7,12 @@ import { REGISTRY_STATUS } from './registryPort.js';
 import { AUDIT_STATUS } from './auditPort.js';
 import { DriveError, ERROR_CODE } from './driveErrors.js';
 import { MIME_FOLDER } from '../radar/canonicalTree.js';
-import { createFakeDrive, createFakeRegistry, createFakeAudit } from './__fixtures__/fakeDrive.js';
+import {
+  createFakeDrive,
+  createFakeRegistry,
+  createFakeAudit,
+  CANONICAL_PARENT_PATHS,
+} from './__fixtures__/fakeDrive.js';
 
 const PIPELINE_INPUTS = {
   objectName: 'Fundación Luminar',
@@ -831,5 +836,64 @@ describe('Existing Portfolio investment', () => {
     expect(result.outcome).toBe(OUTCOME.BLOCKED);
     expect(registry._rows).toHaveLength(1);
     expect(drive._calls.createFolder).toBe(0);
+  });
+});
+
+describe('BecaTech+ partner or provider', () => {
+  const TYPE = STRUCTURE_TYPES.BECA_TECH_PARTNER_OR_PROVIDER;
+  const BASE = '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+/04_Partners_and_Providers';
+  const INPUTS = { organizationKind: 'provider', objectName: 'Acme Foundation' };
+  const becaDrive = () => createFakeDrive({ paths: [...CANONICAL_PARENT_PATHS, `${BASE}/Partners`, `${BASE}/Providers`] });
+
+  it('creates only the organization and its three folders, audited, with no Registry write', async () => {
+    const drive = becaDrive();
+    const registry = createFakeRegistry();
+    const upsert = vi.spyOn(registry, 'upsert');
+    const audit = createFakeAudit();
+
+    const result = await run({ drive, registry, audit, type: TYPE, inputs: INPUTS });
+
+    expect(result.outcome).toBe(OUTCOME.SUCCESS);
+    expect(result.created.map((c) => c.path)).toEqual([
+      `${BASE}/Providers/Acme Foundation`,
+      `${BASE}/Providers/Acme Foundation/Proposal`,
+      `${BASE}/Providers/Acme Foundation/Agreement`,
+      `${BASE}/Providers/Acme Foundation/Reports`,
+    ]);
+    expect(drive._calls.createFolder).toBe(4);
+    expect(drive._calls.createGoogleDoc).toBe(0);
+    expect(result.registry.status).toBe(REGISTRY_STATUS.NOT_APPLICABLE);
+    expect(upsert).not.toHaveBeenCalled();
+    expect(audit._events[0]).toMatchObject({ structureType: TYPE, destinationPath: `${BASE}/Providers/Acme Foundation` });
+  });
+
+  it('is idempotent on a second identical run', async () => {
+    const drive = becaDrive();
+    await run({ drive, type: TYPE, inputs: INPUTS });
+    const second = await run({ drive, type: TYPE, inputs: INPUTS });
+    expect(second.outcome).toBe(OUTCOME.SUCCESS);
+    expect(second.created).toHaveLength(0);
+    expect(second.existing).toHaveLength(4);
+  });
+
+  it('never creates a missing Providers folder', async () => {
+    const drive = createFakeDrive({ paths: [...CANONICAL_PARENT_PATHS, `${BASE}/Partners`] });
+    const result = await run({ drive, type: TYPE, inputs: INPUTS });
+    expect(result.outcome).not.toBe(OUTCOME.SUCCESS);
+    expect(drive._calls.createFolder).toBe(0);
+  });
+
+  it('reports a partial failure precisely and completes on retry', async () => {
+    const drive = becaDrive();
+    drive._failOnCreate('Agreement', new Error('transient drive failure'));
+
+    const partial = await run({ drive, type: TYPE, inputs: INPUTS });
+    expect(partial.outcome).toBe(OUTCOME.PARTIAL_SUCCESS);
+    expect(partial.created.map((c) => c.path.split('/').pop())).toEqual(['Acme Foundation', 'Proposal']);
+
+    const retry = await run({ drive, type: TYPE, inputs: INPUTS });
+    expect(retry.outcome).toBe(OUTCOME.SUCCESS);
+    expect(retry.existing).toHaveLength(2);
+    expect(retry.created.map((c) => c.path.split('/').pop())).toEqual(['Agreement', 'Reports']);
   });
 });

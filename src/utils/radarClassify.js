@@ -12,7 +12,7 @@
  * only where the canonical tree defines it, so theme validity is resolved per location.
  */
 
-import { THEMES, CROSS_THEMATIC, THEMES_WITH_CROSS_THEMATIC } from '../radar/canonicalTree.js';
+import { THEMES, CROSS_THEMATIC, THEMES_WITH_CROSS_THEMATIC, SEGMENTS } from '../radar/canonicalTree.js';
 
 /* ─── Primitives ──────────────────────────────────────────── */
 
@@ -304,7 +304,7 @@ export function route(text, suppliedObject, selectedContext, selectedTheme){
      */
     const specialEmergency=special==='emergency';
     const base=specialBeca
-      ? `02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/Beca_Tech`
+      ? `02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/${SEGMENTS.BECA_TECH}`
       : specialEmergency
         ? `02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/${CROSS_THEMATIC}/Emergency_Response`
         : `02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/${crossTheme}/${obj}`;

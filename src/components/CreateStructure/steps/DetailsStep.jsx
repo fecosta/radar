@@ -1,4 +1,8 @@
-import { GOVERNANCE_FORUMS, themesForArea } from '../../../radar/canonicalTree.js';
+import {
+  BECA_TECH_ORGANIZATION_KINDS,
+  GOVERNANCE_FORUMS,
+  themesForArea,
+} from '../../../radar/canonicalTree.js';
 import { SUPPORTED_YEAR_RANGE } from '../../../radar/structureInputs.js';
 import { Callout, Field, inputStyle, MonoPath, SectionLabel } from '../ui.jsx';
 
@@ -9,7 +13,15 @@ import { Callout, Field, inputStyle, MonoPath, SectionLabel } from '../ui.jsx';
  * sync with what the planner actually reads.
  */
 
-const REQUIRED_FIELDS = new Set(['objectName', 'theme', 'meetingLogYear', 'forum', 'meetingDate', 'okrYear']);
+const REQUIRED_FIELDS = new Set([
+  'objectName',
+  'theme',
+  'meetingLogYear',
+  'forum',
+  'organizationKind',
+  'meetingDate',
+  'okrYear',
+]);
 
 function TextField({ field, label, hint, value, error, onChange }) {
   return (
@@ -78,6 +90,19 @@ export default function DetailsStep({ template, inputs, fieldErrors, onChange, p
           yourself first, then use this to add the operating folders 05–12. The existing
           Sourcing, Screening and Diligence history is left untouched.
         </Callout>
+      ) : null}
+
+      {has('organizationKind') ? (
+        <SelectField
+          field="organizationKind"
+          label="Organization type"
+          hint="Adds to the existing Partners or Providers folder in BecaTech+. RADAR never creates those folders."
+          placeholder="Select Partner or Provider"
+          options={BECA_TECH_ORGANIZATION_KINDS.map((k) => ({ value: k.id, label: k.label }))}
+          value={inputs.organizationKind}
+          error={err('organizationKind')}
+          onChange={onChange}
+        />
       ) : null}
 
       {has('objectName') ? (

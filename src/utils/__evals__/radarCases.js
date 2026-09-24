@@ -4,9 +4,9 @@
 // expectConfidence is asserted only when present (stable high/low cases).
 export const evalCases = [
   { description: 'Board meeting minutes and decisions from our August board meeting', objectName: '', context: 'auto', theme: 'auto', expectedPath: '03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/01_Board/2026/2026-06-15_Board_Meeting/04_Notes_and_Minutes' },
-  { description: 'Necesito guardar las fotos del evento de Beca Tech de este año', objectName: '', context: 'auto', theme: 'auto', expectedPath: '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/Beca_Tech/09_Photos_and_Videos', expectConfidence: 'high' },
+  { description: 'Necesito guardar las fotos del evento de Beca Tech de este año', objectName: '', context: 'auto', theme: 'auto', expectedPath: '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+/09_Photos_and_Videos', expectConfidence: 'high' },
   { description: 'Ata da reunião do conselho (board) deste mês', objectName: '', context: 'auto', theme: 'auto', expectedPath: '03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/01_Board/2026/2026-06-15_Board_Meeting/04_Notes_and_Minutes' },
-  { description: 'Beca Tech applicant selection process for this cohort', objectName: '', context: 'auto', theme: 'auto', expectedPath: '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/Beca_Tech/03_Operations' },
+  { description: 'Beca Tech applicant selection process for this cohort', objectName: '', context: 'auto', theme: 'auto', expectedPath: '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+/03_Operations' },
   { description: 'draft', objectName: '', context: 'auto', theme: 'auto', expectedPath: '[More information needed]', expectConfidence: 'low' },
   { description: 'our five-year plan for the organization', objectName: '', context: 'auto', theme: 'auto', expectedPath: '01_STRATEGY/01_ver+_Strategy/01_5_Year_Plan' },
   { description: 'the North Star and investment thesis document', objectName: '', context: 'auto', theme: 'auto', expectedPath: '01_STRATEGY/01_ver+_Strategy/02_North_Star_and_Investment_Thesis', expectConfidence: 'high' },
@@ -26,7 +26,7 @@ export const evalCases = [
   { description: 'Democracia+ strategy and model document', objectName: '', context: 'auto', theme: 'auto', expectedPath: '02_INVESTMENTS_AND_PROGRAMS/03_VENTURE_BUILDING/Democracy/Democracia+/02_Strategy_and_Model', expectConfidence: 'high' },
   { description: 'photos and videos for Democracia+', objectName: '', context: 'auto', theme: 'auto', expectedPath: '02_INVESTMENTS_AND_PROGRAMS/03_VENTURE_BUILDING/Democracy/Democracia+/09_Photos_and_Videos' },
   { description: 'organization managed through Democracia+ subportfolio', objectName: 'CivicaLab', context: 'auto', theme: 'auto', expectedPath: '02_INVESTMENTS_AND_PROGRAMS/03_VENTURE_BUILDING/Democracy/Democracia+/04_Subportfolio_and_Organizations/CivicaLab' },
-  { description: 'Beca Tech participant beneficiary database', objectName: '', context: 'auto', theme: 'auto', expectedPath: '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/Beca_Tech/05_Participants_and_Beneficiary_Data', expectConfidence: 'high' },
+  { description: 'Beca Tech participant beneficiary database', objectName: '', context: 'auto', theme: 'auto', expectedPath: '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+/05_Participants_and_Beneficiary_Data', expectConfidence: 'high' },
   { description: 'the master registry of all opportunities', objectName: '', context: 'auto', theme: 'auto', expectedPath: '02_INVESTMENTS_AND_PROGRAMS/00_MASTER_INDEXES/00_Master_Registry', expectConfidence: 'high' },
   { description: 'organization-wide comms brand campaign', objectName: '', context: 'auto', theme: 'auto', expectedPath: '03_INSTITUTIONAL/02_TRANSVERSAL_AREAS/Comms' },
   { description: 'institutional accounting and corporate budget financial close', objectName: '', context: 'auto', theme: 'auto', expectedPath: '03_INSTITUTIONAL/02_TRANSVERSAL_AREAS/Finance' },

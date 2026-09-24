@@ -4,7 +4,7 @@ import { planStructureFromRaw } from '../radar/planStructure.js';
 import { STRUCTURE_TYPES } from '../radar/structureTemplates.js';
 import { REGISTRY_STATUS } from './registryPort.js';
 import { MIME_FOLDER, LIFECYCLE_CONFLICT_SCOPES } from '../radar/canonicalTree.js';
-import { createFakeDrive, createFakeRegistry } from './__fixtures__/fakeDrive.js';
+import { createFakeDrive, createFakeRegistry, CANONICAL_PARENT_PATHS } from './__fixtures__/fakeDrive.js';
 
 const PIPELINE_INPUTS = {
   objectName: 'Fundación Luminar',
@@ -651,5 +651,76 @@ describe('Existing Portfolio investment', () => {
     const plan = legacyPlan();
     expect(plan.destination.createdSegments).toEqual(['Aprendo+']);
     expect(plan.destination.requireNoOtherHome).toBe(true);
+  });
+});
+
+describe('BecaTech+ partner or provider', () => {
+  const BASE = '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+/04_Partners_and_Providers';
+  const becaPlan = (organizationKind = 'partner', objectName = 'Acme Foundation') =>
+    planStructureFromRaw(STRUCTURE_TYPES.BECA_TECH_PARTNER_OR_PROVIDER, { organizationKind, objectName }).plan;
+  const driveWith = (...extra) => createFakeDrive({ paths: [...CANONICAL_PARENT_PATHS, ...extra] });
+
+  it('is ready when the chosen container exists, and plans all four folders', async () => {
+    const drive = driveWith(`${BASE}/Partners`, `${BASE}/Providers`);
+    const result = await preview(drive, undefined, becaPlan());
+    expect(result.status).toBe(PREVIEW_STATUS.READY);
+    expect(result.items.map((i) => [i.relativePath, i.status])).toEqual([
+      ['Acme Foundation', ITEM_STATUS.CREATE],
+      ['Acme Foundation/Proposal', ITEM_STATUS.CREATE],
+      ['Acme Foundation/Agreement', ITEM_STATUS.CREATE],
+      ['Acme Foundation/Reports', ITEM_STATUS.CREATE],
+    ]);
+    expect(result.registry.status).toBe(REGISTRY_STATUS.NOT_APPLICABLE);
+    expect(result.acknowledgements).toEqual([]);
+  });
+
+  it.each([
+    ['BecaTech+', []],
+    ['04_Partners_and_Providers', ['02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+']],
+    ['Partners', [`${BASE}/Providers`]],
+  ])('blocks as drift, writing nothing, when %s is missing', async (missing, paths) => {
+    const drive = driveWith(...paths);
+    const before = drive._items.size;
+    const result = await preview(drive, undefined, becaPlan('partner'));
+    expect(result.status).toBe(PREVIEW_STATUS.BLOCKED);
+    expect(result.blocking[0]).toMatchObject({ code: CONFLICT_CODE.MISSING_CANONICAL_PARENT, segment: missing });
+    expect(drive._items.size).toBe(before);
+  });
+
+  it('reuses an existing organization and plans only the missing standard folder', async () => {
+    const drive = driveWith(`${BASE}/Partners/Acme Foundation/Proposal`, `${BASE}/Partners/Acme Foundation/Agreement`);
+    const result = await preview(drive, undefined, becaPlan());
+    expect(result.status).toBe(PREVIEW_STATUS.READY);
+    expect(result.items.map((i) => [i.name, i.status])).toEqual([
+      ['Acme Foundation', ITEM_STATUS.EXISTS],
+      ['Proposal', ITEM_STATUS.EXISTS],
+      ['Agreement', ITEM_STATUS.EXISTS],
+      ['Reports', ITEM_STATUS.CREATE],
+    ]);
+  });
+
+  it('treats the same name under the other container as unrelated', async () => {
+    const drive = driveWith(`${BASE}/Partners/Acme Foundation`, `${BASE}/Providers`);
+    const result = await preview(drive, undefined, becaPlan('provider'));
+    expect(result.status).toBe(PREVIEW_STATUS.READY);
+    expect(result.items[0]).toMatchObject({ name: 'Acme Foundation', status: ITEM_STATUS.CREATE });
+    expect(result.acknowledgements).toEqual([]);
+  });
+
+  it('blocks when a standard folder name is taken by a file', async () => {
+    const drive = driveWith(`${BASE}/Partners/Acme Foundation`);
+    drive._seedPath(`${BASE}/Partners/Acme Foundation/Reports`, 'application/pdf');
+    const result = await preview(drive, undefined, becaPlan());
+    expect(result.status).toBe(PREVIEW_STATUS.BLOCKED);
+    expect(result.blocking.map((b) => b.code)).toEqual([CONFLICT_CODE.WRONG_MIME_TYPE]);
+  });
+
+  it('blocks when the organization folder is duplicated', async () => {
+    const drive = driveWith(`${BASE}/Partners/Acme Foundation`);
+    const container = await parentOf(drive, becaPlan());
+    drive._add(container.id, 'Acme Foundation', MIME_FOLDER);
+    const result = await preview(drive, undefined, becaPlan());
+    expect(result.status).toBe(PREVIEW_STATUS.BLOCKED);
+    expect(result.blocking.map((b) => b.code)).toEqual([CONFLICT_CODE.DUPLICATE_EXACT_MATCH]);
   });
 });

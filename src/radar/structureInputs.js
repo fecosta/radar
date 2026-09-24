@@ -11,7 +11,13 @@
  * module rejects unsafe names rather than silently rewriting them into something lossy.
  */
 
-import { GOVERNANCE_FORUMS, forumById, themesForArea } from './canonicalTree.js';
+import {
+  GOVERNANCE_FORUMS,
+  BECA_TECH_ORGANIZATION_KINDS,
+  becaTechOrganizationKindById,
+  forumById,
+  themesForArea,
+} from './canonicalTree.js';
 import { getTemplate, isSupportedStructureType } from './structureTemplates.js';
 
 /* ─── Documented limits ───────────────────────────────────── */
@@ -163,6 +169,16 @@ function validateForum(raw) {
   return { value: raw };
 }
 
+function validateOrganizationKind(raw) {
+  if (!becaTechOrganizationKindById(raw)) {
+    const labels = BECA_TECH_ORGANIZATION_KINDS.map((k) => k.label).join(', ');
+    return {
+      error: err('organizationKind', 'INVALID_ORGANIZATION_KIND', `Organization type must be one of: ${labels}.`),
+    };
+  }
+  return { value: raw };
+}
+
 function validateYear(raw, field, label) {
   const value = typeof raw === 'string' ? raw.trim() : raw;
   // Reject "2026.5", "26", " 2026abc" and similar before Number() coerces them.
@@ -228,6 +244,7 @@ const FIELD_VALIDATORS = {
   strategicFocus: (raw) => validateMetadata(raw, 'strategicFocus', 'Strategic focus'),
   meetingLogYear: (raw) => validateYear(raw, 'meetingLogYear', 'Meeting log year'),
   forum: (raw) => validateForum(raw),
+  organizationKind: (raw) => validateOrganizationKind(raw),
   meetingDate: (raw) => validateMeetingDate(raw),
   okrYear: (raw) => validateYear(raw, 'okrYear', 'OKR year'),
 };
@@ -299,6 +316,7 @@ export function defaultInputsFor(type, now = new Date()) {
     strategicFocus: '',
     meetingLogYear: String(year),
     forum: '',
+    organizationKind: '',
     meetingDate: iso,
     okrYear: String(year),
   };

@@ -1,5 +1,5 @@
 /**
- * The seven canonical structures RADAR can create.
+ * The canonical structures RADAR can create. SUPPORTED_STRUCTURES is the list.
  *
  * Every template is a pure data definition plus a pure destination resolver. Nothing here
  * knows about Google Drive, React, or the network — which is what lets the whole rule set
@@ -48,6 +48,8 @@ import {
   ITEM_KIND,
   MIME_FOR_KIND,
   REGISTRY_OBJECT_TYPES,
+  BECA_TECH_PARTNERS_AND_PROVIDERS_SEGMENTS,
+  becaTechOrganizationKindById,
   themedContainerSegments,
   themesForArea,
   forumById,
@@ -74,6 +76,8 @@ export const STRUCTURE_TYPES = Object.freeze({
    * guarded by mustNotExistIn and is a different thing.
    */
   EXISTING_PORTFOLIO_INVESTMENT: 'existing_portfolio_investment',
+  /** Not bare `beca_tech`: that id names creating the program itself, which stays unsupported. */
+  BECA_TECH_PARTNER_OR_PROVIDER: 'beca_tech_partner_or_provider',
 });
 
 /* ─── Naming helpers ──────────────────────────────────────── */
@@ -401,6 +405,36 @@ const TEMPLATES = {
   },
 
   /**
+   * One partner or provider organization inside BecaTech+ (ADR 0006).
+   *
+   * BecaTech+-specific on purpose: the generic In-house Program template is unchanged. The
+   * whole path down to `Partners` / `Providers` is parentSegments, so a missing level is
+   * architecture drift and blocks — RADAR creates only the organization folder and its three
+   * children. Identity is scoped to the chosen container: `Partners/Acme` and `Providers/Acme`
+   * are independent, because these are operational folders, not Registry objects with one
+   * official home.
+   */
+  [STRUCTURE_TYPES.BECA_TECH_PARTNER_OR_PROVIDER]: {
+    id: STRUCTURE_TYPES.BECA_TECH_PARTNER_OR_PROVIDER,
+    label: 'BecaTech+ partner or provider',
+    description:
+      'Adds one organization workspace — Proposal, Agreement and Reports — under the existing ' +
+      'Partners or Providers folder of BecaTech+. BecaTech+ only.',
+    objectNameLabel: 'Organization name',
+    fields: ['organizationKind', 'objectName'],
+    // Operational children of Beca Tech, not a Registry lifecycle object.
+    registry: { applicable: false },
+    destination: ({ organizationKind, objectName }) => ({
+      parentSegments: [
+        ...BECA_TECH_PARTNERS_AND_PROVIDERS_SEGMENTS,
+        becaTechOrganizationKindById(organizationKind).folder,
+      ],
+      createdSegments: [objectName],
+    }),
+    nodes: () => [{ name: 'Proposal' }, { name: 'Agreement' }, { name: 'Reports' }],
+  },
+
+  /**
    * Spec PORTFOLIO CREATION RULE, third clause: "Add subfolders 05-12 after approval."
    *
    * This template adds those eight folders to an organization folder a human has ALREADY
@@ -475,6 +509,7 @@ export const SUPPORTED_STRUCTURES = Object.freeze(
     STRUCTURE_TYPES.EXISTING_PORTFOLIO_INVESTMENT,
     STRUCTURE_TYPES.VENTURE_BUILDING_INITIATIVE,
     STRUCTURE_TYPES.IN_HOUSE_PROGRAM,
+    STRUCTURE_TYPES.BECA_TECH_PARTNER_OR_PROVIDER,
     STRUCTURE_TYPES.POLICY,
     STRUCTURE_TYPES.GOVERNANCE_MEETING,
     STRUCTURE_TYPES.OKR_CYCLE,
