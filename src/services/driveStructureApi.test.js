@@ -346,3 +346,12 @@ describe('drive verification', () => {
     await expect(client.verifySharedDrive()).rejects.toMatchObject({ code: ERROR_CODE.CONFIGURATION });
   });
 });
+
+describe('client surface', () => {
+  /** ADR 0003/0006: the absence of these verbs is the control, so a new one must be deliberate. */
+  it('exposes no permission, move, rename or delete verb', () => {
+    const { client } = clientWith([]);
+    const verbs = Object.keys(client).filter((k) => typeof client[k] === 'function');
+    expect(verbs.filter((k) => /permission|move|update|rename|delete|trash|parent/i.test(k))).toEqual([]);
+  });
+});

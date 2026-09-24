@@ -66,6 +66,12 @@ export const SEGMENTS = Object.freeze({
   PORTFOLIO: '02_PORTFOLIO',
   VENTURE_BUILDING: '03_VENTURE_BUILDING',
   IN_HOUSE_PROGRAMS: '04_IN_HOUSE_PROGRAMS',
+  /**
+   * Spelled as the classifier routes it (`…/Education/Beca_Tech`) and its evaluation fixtures
+   * assert. The specification prose says "Beca Tech" and names no folder literal. See ADR 0006.
+   */
+  BECA_TECH: 'Beca_Tech',
+  PARTNERS_AND_PROVIDERS: '04_Partners_and_Providers',
 
   // 03_INSTITUTIONAL
   POLICIES: '00_POLICIES',
@@ -171,6 +177,32 @@ export const WEEKLY_EMAIL_SEGMENTS = Object.freeze([
   SEGMENTS.GOVERNANCE_AND_DECISIONS,
   SEGMENTS.WEEKLY_EMAIL,
 ]);
+
+/**
+ * Beca Tech's partner/provider area (ADR 0006, Proposed). Beca Tech-specific: the generic
+ * In-house Program template creates `04_Partners_and_Providers` empty and nothing more.
+ */
+export const BECA_TECH_PARTNERS_AND_PROVIDERS_SEGMENTS = Object.freeze([
+  INVESTMENTS_AND_PROGRAMS,
+  SEGMENTS.IN_HOUSE_PROGRAMS,
+  'Education',
+  SEGMENTS.BECA_TECH,
+  SEGMENTS.PARTNERS_AND_PROVIDERS,
+]);
+
+/**
+ * The two organization containers under Beca Tech's `04_Partners_and_Providers`. A closed
+ * allowlist, like GOVERNANCE_FORUMS: `structureInputs` validates the id against it, so no
+ * other container can be reached. Both folders must already exist; RADAR never creates them.
+ */
+export const BECA_TECH_ORGANIZATION_KINDS = Object.freeze([
+  { id: 'partner', label: 'Partner', folder: 'Partners' },
+  { id: 'provider', label: 'Provider', folder: 'Providers' },
+]);
+
+export function becaTechOrganizationKindById(id) {
+  return BECA_TECH_ORGANIZATION_KINDS.find((k) => k.id === id) || null;
+}
 
 /** Where annual OKR cycles live. */
 export const OKR_SEGMENTS = Object.freeze([STRATEGY, SEGMENTS.OKRS]);

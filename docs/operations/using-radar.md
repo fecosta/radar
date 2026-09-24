@@ -376,7 +376,7 @@ keep working and you can press it again.
 from it, so it never holds write permission in a tab nobody is looking at. Coming back asks
 again. That is the design, not a bug.
 
-### The eight structure types
+### The structure types
 
 | Type | Creates it under | Themes offered |
 |---|---|---|
@@ -385,6 +385,7 @@ again. That is the design, not a bug.
 | **Existing Portfolio investment** | `02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/{theme}/` — only if the organization has no folder anywhere | Education, Democracy |
 | **Venture Building initiative** | `02_INVESTMENTS_AND_PROGRAMS/03_VENTURE_BUILDING/{theme}/` | Education, Democracy |
 | **In-house program** | `02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/{theme}/` | Education, Democracy, **Cross_Thematic** |
+| **Beca Tech partner or provider** | Beca Tech's existing `04_Partners_and_Providers/Partners/` or `…/Providers/` | — |
 | **Policy** | `03_INSTITUTIONAL/00_POLICIES/` | — |
 | **Formal governance meeting** | `03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/{forum}/{year}/` | — |
 | **Annual OKR cycle** | `01_STRATEGY/03_OKRs/` | — |
@@ -398,6 +399,9 @@ Two things worth understanding:
   predates RADAR and has no folder anywhere, where there is nothing to move and RADAR builds the
   complete structure. You do not have to get this right first time; each one checks the Drive and
   points you at the other.
+- **Beca Tech partner or provider** is for Beca Tech only. Choose Partner or Provider and type
+  the organization name; RADAR adds `Proposal`, `Agreement` and `Reports` inside it. The
+  `Partners` and `Providers` folders must already exist — RADAR never creates them.
 - **Emergency Response is not a type.** It is an **In-house program** with theme
   `Cross_Thematic` and the name `Emergency_Response`.
 
@@ -406,7 +410,7 @@ Investment Committee are project gates and belong with the project, never here.
 
 ### The five steps
 
-**1 · Structure type** — pick one of the eight cards; the chosen one shows a "Selected" pill.
+**1 · Structure type** — pick one of the cards; the chosen one shows a "Selected" pill.
 Arrow keys move the selection. Press **Continue**.
 
 **2 · Details** — the fields depend on the type. Required fields are marked `*`; everything else

@@ -4,7 +4,7 @@ import { SUPPORTED_STRUCTURES } from '../../../radar/structureTemplates.js';
 /**
  * Step 1 — pick a structure type.
  *
- * Only the seven approved structures appear, in lifecycle order.
+ * Only the approved structures (SUPPORTED_STRUCTURES) appear, in lifecycle order.
  *
  * "Portfolio operating folders" is deliberately NOT a "Portfolio organization" option.
  * Approval MOVES an existing Pipeline folder to Portfolio and keeps its history, so offering a

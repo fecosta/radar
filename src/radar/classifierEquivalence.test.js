@@ -418,3 +418,21 @@ describe('the from-scratch Portfolio structure builds what the additive one omit
     for (const path of pipeline.filter(Boolean)) expect(legacy).toContain(path);
   });
 });
+
+/**
+ * ADR 0006. The classifier routes Beca Tech partner/provider material to Beca Tech's
+ * 04_Partners_and_Providers; the creator must build beneath that exact folder.
+ */
+describe('Beca Tech partners and providers agree', () => {
+  it.each(['partner', 'provider'])('the creator builds a %s beneath the classifier path', (kind) => {
+    const created = resolveDestination(STRUCTURE_TYPES.BECA_TECH_PARTNER_OR_PROVIDER, {
+      organizationKind: kind,
+      objectName: 'Sample Org',
+    });
+    const classified = classifyRadar({ description: `Beca Tech ${kind} agreement`, objectName: '', context: 'auto', theme: 'auto' });
+    expect(classified.path).toBe(
+      '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/Beca_Tech/04_Partners_and_Providers'
+    );
+    expect(created.parentPath.startsWith(`${classified.path}/`)).toBe(true);
+  });
+});
