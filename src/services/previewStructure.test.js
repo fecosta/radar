@@ -654,8 +654,8 @@ describe('Existing Portfolio investment', () => {
   });
 });
 
-describe('Beca Tech partner or provider', () => {
-  const BASE = '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/Beca_Tech/04_Partners_and_Providers';
+describe('BecaTech+ partner or provider', () => {
+  const BASE = '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+/04_Partners_and_Providers';
   const becaPlan = (organizationKind = 'partner', objectName = 'Acme Foundation') =>
     planStructureFromRaw(STRUCTURE_TYPES.BECA_TECH_PARTNER_OR_PROVIDER, { organizationKind, objectName }).plan;
   const driveWith = (...extra) => createFakeDrive({ paths: [...CANONICAL_PARENT_PATHS, ...extra] });
@@ -675,8 +675,8 @@ describe('Beca Tech partner or provider', () => {
   });
 
   it.each([
-    ['Beca_Tech', []],
-    ['04_Partners_and_Providers', ['02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/Beca_Tech']],
+    ['BecaTech+', []],
+    ['04_Partners_and_Providers', ['02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+']],
     ['Partners', [`${BASE}/Providers`]],
   ])('blocks as drift, writing nothing, when %s is missing', async (missing, paths) => {
     const drive = driveWith(...paths);

@@ -405,9 +405,9 @@ const TEMPLATES = {
   },
 
   /**
-   * One partner or provider organization inside Beca Tech (ADR 0006, Proposed).
+   * One partner or provider organization inside BecaTech+ (ADR 0006).
    *
-   * Beca Tech-specific on purpose: the generic In-house Program template is unchanged. The
+   * BecaTech+-specific on purpose: the generic In-house Program template is unchanged. The
    * whole path down to `Partners` / `Providers` is parentSegments, so a missing level is
    * architecture drift and blocks — RADAR creates only the organization folder and its three
    * children. Identity is scoped to the chosen container: `Partners/Acme` and `Providers/Acme`
@@ -416,10 +416,10 @@ const TEMPLATES = {
    */
   [STRUCTURE_TYPES.BECA_TECH_PARTNER_OR_PROVIDER]: {
     id: STRUCTURE_TYPES.BECA_TECH_PARTNER_OR_PROVIDER,
-    label: 'Beca Tech partner or provider',
+    label: 'BecaTech+ partner or provider',
     description:
       'Adds one organization workspace — Proposal, Agreement and Reports — under the existing ' +
-      'Partners or Providers folder of Beca Tech. Beca Tech only.',
+      'Partners or Providers folder of BecaTech+. BecaTech+ only.',
     objectNameLabel: 'Organization name',
     fields: ['organizationKind', 'objectName'],
     // Operational children of Beca Tech, not a Registry lifecycle object.

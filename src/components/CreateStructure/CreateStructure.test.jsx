@@ -122,7 +122,7 @@ describe('structure type step', () => {
       'Existing Portfolio investment',
       'Venture Building initiative',
       'In-house program',
-      'Beca Tech partner or provider',
+      'BecaTech+ partner or provider',
       'Policy',
       'Formal governance meeting',
       'Annual OKR cycle',
@@ -813,8 +813,8 @@ describe('Existing Portfolio investment end to end', () => {
   });
 });
 
-describe('Beca Tech partner or provider end to end', () => {
-  const BASE = '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/Beca_Tech/04_Partners_and_Providers';
+describe('BecaTech+ partner or provider end to end', () => {
+  const BASE = '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+/04_Partners_and_Providers';
 
   function becaDrive() {
     const drive = createFakeDrive();
@@ -825,7 +825,7 @@ describe('Beca Tech partner or provider end to end', () => {
 
   async function openBecaDetails(user) {
     await user.click(screen.getByRole('button', { name: /grant permission/i }));
-    await user.click(screen.getByRole('radio', { name: /Beca Tech partner or provider/i }));
+    await user.click(screen.getByRole('radio', { name: /BecaTech\+ partner or provider/i }));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
   }
 

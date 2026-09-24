@@ -96,7 +96,7 @@ export default function DetailsStep({ template, inputs, fieldErrors, onChange, p
         <SelectField
           field="organizationKind"
           label="Organization type"
-          hint="Adds to the existing Partners or Providers folder in Beca Tech. RADAR never creates those folders."
+          hint="Adds to the existing Partners or Providers folder in BecaTech+. RADAR never creates those folders."
           placeholder="Select Partner or Provider"
           options={BECA_TECH_ORGANIZATION_KINDS.map((k) => ({ value: k.id, label: k.label }))}
           value={inputs.organizationKind}

@@ -29,7 +29,7 @@ and no auto-creation of missing canonical roots.
 | Annual OKR cycle | `01_STRATEGY/03_OKRs/{YYYY}` | — |
 | Portfolio operating folders | `02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/{theme}/{name}` — **must already exist** | — (change `Object_Type` by hand) |
 | Existing Portfolio investment | `02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/{theme}/{name}` — **must not exist anywhere** | Portfolio |
-| Beca Tech partner or provider | `02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/Beca_Tech/04_Partners_and_Providers/{Partners\|Providers}/{name}` | — |
+| BecaTech+ partner or provider | `02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+/04_Partners_and_Providers/{Partners\|Providers}/{name}` | — |
 
 Themes are **per structure type**, not one global list (v06 design rule 2):
 
@@ -427,16 +427,19 @@ rename verb. Recovery is manual:
 Nothing in the retained history (`00`–`04`) can be affected: those folders are never in the
 plan, so RADAR neither writes to them nor resolves them as write targets.
 
-## Beca Tech partner or provider
+## BecaTech+ partner or provider
 
-Beca Tech-specific; the generic In-house program template is unchanged. Proposed in
+BecaTech+-specific; the generic In-house program template is unchanged. Recorded in
 [ADR 0006](../decisions/0006-beca-tech-partner-and-provider-folders.md), which also holds the
 specification amendment it depends on.
+
+Workflow: Create structure → **BecaTech+ partner or provider** → Organization type (Partner or
+Provider) → Organization name → Preview → Confirm → Result.
 
 - **Inputs.** Organization type (`Partner` or `Provider`, a closed list) and organization name.
   No theme, owner, country, strategic focus, meeting-log year or Registry fields.
 - **Destination.** Fixed:
-  `02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/Beca_Tech/04_Partners_and_Providers/{Partners|Providers}`.
+  `02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+/04_Partners_and_Providers/{Partners|Providers}`.
   Every one of those folders must already exist. A missing one is a *Missing canonical parent*
   block and nothing is written — RADAR never creates `Partners` or `Providers`.
 - **Creates.** `{name}/Proposal`, `{name}/Agreement`, `{name}/Reports`. Nothing else.

@@ -310,7 +310,7 @@ Mention any of these by name — in the description or in Object — and RADAR t
 Context and Theme chips, **overriding whatever you selected**:
 
 - **Beca Tech** → always an Education In-house Program, at
-  `…/04_IN_HOUSE_PROGRAMS/Education/Beca_Tech`.
+  `…/04_IN_HOUSE_PROGRAMS/Education/BecaTech+`.
 - **Democracia+** → always a Democracy Venture Building initiative, using its own expanded
   structure. An organisation managed *through* Democracia+ goes inside it, under
   `04_Subportfolio_and_Organizations`.
@@ -338,7 +338,7 @@ Real cases from RADAR's own test suite. Dates shown are the test clock; live out
 | You type | RADAR returns |
 |---|---|
 | `Board meeting minutes and decisions from our August board meeting` | `03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/01_Board/2026/2026-06-15_Board_Meeting/04_Notes_and_Minutes` |
-| `Necesito guardar las fotos del evento de Beca Tech de este año` | `02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/Beca_Tech/09_Photos_and_Videos` |
+| `Necesito guardar las fotos del evento de Beca Tech de este año` | `02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+/09_Photos_and_Videos` |
 | `Concept Review deck for Fundacion Luminar` + Object `Fundacion Luminar`, Theme Education | `02_INVESTMENTS_AND_PROGRAMS/01_PIPELINE/Education/Fundacion_Luminar/03_Screening/02_Concept_Review/2026-06-15_Concept_Review/01_PreReads_and_Deck` |
 | `Aprendo+ evaluation report and MEL evidence` + Object `Aprendo+` | `02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education/Aprendo+/10_MEL_Evidence` |
 | `organization managed through Democracia+ subportfolio` + Object `CivicaLab` | `02_INVESTMENTS_AND_PROGRAMS/03_VENTURE_BUILDING/Democracy/Democracia+/04_Subportfolio_and_Organizations/CivicaLab` |
@@ -385,7 +385,7 @@ again. That is the design, not a bug.
 | **Existing Portfolio investment** | `02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/{theme}/` — only if the organization has no folder anywhere | Education, Democracy |
 | **Venture Building initiative** | `02_INVESTMENTS_AND_PROGRAMS/03_VENTURE_BUILDING/{theme}/` | Education, Democracy |
 | **In-house program** | `02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/{theme}/` | Education, Democracy, **Cross_Thematic** |
-| **Beca Tech partner or provider** | Beca Tech's existing `04_Partners_and_Providers/Partners/` or `…/Providers/` | — |
+| **BecaTech+ partner or provider** | BecaTech+'s existing `04_Partners_and_Providers/Partners/` or `…/Providers/` | — |
 | **Policy** | `03_INSTITUTIONAL/00_POLICIES/` | — |
 | **Formal governance meeting** | `03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/{forum}/{year}/` | — |
 | **Annual OKR cycle** | `01_STRATEGY/03_OKRs/` | — |
@@ -399,7 +399,7 @@ Two things worth understanding:
   predates RADAR and has no folder anywhere, where there is nothing to move and RADAR builds the
   complete structure. You do not have to get this right first time; each one checks the Drive and
   points you at the other.
-- **Beca Tech partner or provider** is for Beca Tech only. Choose Partner or Provider and type
+- **BecaTech+ partner or provider** is for BecaTech+ only. Choose Partner or Provider and type
   the organization name; RADAR adds `Proposal`, `Agreement` and `Reports` inside it. The
   `Partners` and `Providers` folders must already exist — RADAR never creates them.
 - **Emergency Response is not a type.** It is an **In-house program** with theme

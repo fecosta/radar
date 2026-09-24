@@ -420,10 +420,10 @@ describe('the from-scratch Portfolio structure builds what the additive one omit
 });
 
 /**
- * ADR 0006. The classifier routes Beca Tech partner/provider material to Beca Tech's
+ * ADR 0006. The classifier routes Beca Tech partner/provider material to BecaTech+'s
  * 04_Partners_and_Providers; the creator must build beneath that exact folder.
  */
-describe('Beca Tech partners and providers agree', () => {
+describe('BecaTech+ partners and providers agree', () => {
   it.each(['partner', 'provider'])('the creator builds a %s beneath the classifier path', (kind) => {
     const created = resolveDestination(STRUCTURE_TYPES.BECA_TECH_PARTNER_OR_PROVIDER, {
       organizationKind: kind,
@@ -431,8 +431,27 @@ describe('Beca Tech partners and providers agree', () => {
     });
     const classified = classifyRadar({ description: `Beca Tech ${kind} agreement`, objectName: '', context: 'auto', theme: 'auto' });
     expect(classified.path).toBe(
-      '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/Beca_Tech/04_Partners_and_Providers'
+      '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+/04_Partners_and_Providers'
     );
     expect(created.parentPath.startsWith(`${classified.path}/`)).toBe(true);
+  });
+
+  /**
+   * The live folder is `BecaTech+`; `Beca_Tech` was the repository's earlier, wrong spelling.
+   * Both sides are pinned to the literal, so reverting either one fails here.
+   */
+  it.each([
+    'Beca Tech partner agreement',
+    'Necesito guardar las fotos del evento de Beca Tech de este año',
+    'Beca Tech applicant selection process for this cohort',
+  ])('routes "%s" through BecaTech+, never Beca_Tech', (description) => {
+    const { path } = classifyRadar({ description, objectName: '', context: 'auto', theme: 'auto' });
+    expect(path.startsWith('02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+/')).toBe(true);
+    expect(path).not.toContain('Beca_Tech/');
+    const created = resolveDestination(STRUCTURE_TYPES.BECA_TECH_PARTNER_OR_PROVIDER, {
+      organizationKind: 'partner',
+      objectName: 'Sample Org',
+    });
+    expect(created.parentSegments[3]).toBe('BecaTech+');
   });
 });

@@ -67,10 +67,11 @@ export const SEGMENTS = Object.freeze({
   VENTURE_BUILDING: '03_VENTURE_BUILDING',
   IN_HOUSE_PROGRAMS: '04_IN_HOUSE_PROGRAMS',
   /**
-   * Spelled as the classifier routes it (`…/Education/Beca_Tech`) and its evaluation fixtures
-   * assert. The specification prose says "Beca Tech" and names no folder literal. See ADR 0006.
+   * Spelled as the live Shared Drive folder is, confirmed by the RADAR Owner (ADR 0006). The
+   * specification prose says "Beca Tech" and names no folder literal. The classifier reads
+   * this constant, so the two cannot disagree on it.
    */
-  BECA_TECH: 'Beca_Tech',
+  BECA_TECH: 'BecaTech+',
   PARTNERS_AND_PROVIDERS: '04_Partners_and_Providers',
 
   // 03_INSTITUTIONAL
@@ -179,7 +180,7 @@ export const WEEKLY_EMAIL_SEGMENTS = Object.freeze([
 ]);
 
 /**
- * Beca Tech's partner/provider area (ADR 0006, Proposed). Beca Tech-specific: the generic
+ * BecaTech+'s partner/provider area (ADR 0006). BecaTech+-specific: the generic
  * In-house Program template creates `04_Partners_and_Providers` empty and nothing more.
  */
 export const BECA_TECH_PARTNERS_AND_PROVIDERS_SEGMENTS = Object.freeze([

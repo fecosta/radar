@@ -45,7 +45,7 @@ Why the model is shaped this way, and its limitation: **[docs/decisions/0002-mul
 
 The one workflow that writes to Drive. An administrator picks an approved structure
 (Pipeline organization, Portfolio operating folders, Existing Portfolio investment, Venture
-Building initiative, In-house program, Beca Tech partner or provider, Policy, formal governance
+Building initiative, In-house program, BecaTech+ partner or provider, Policy, formal governance
 meeting, annual OKR cycle),
 previews it against the live Shared Drive, confirms explicitly, and RADAR creates only the
 missing folders.

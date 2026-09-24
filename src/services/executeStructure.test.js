@@ -839,9 +839,9 @@ describe('Existing Portfolio investment', () => {
   });
 });
 
-describe('Beca Tech partner or provider', () => {
+describe('BecaTech+ partner or provider', () => {
   const TYPE = STRUCTURE_TYPES.BECA_TECH_PARTNER_OR_PROVIDER;
-  const BASE = '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/Beca_Tech/04_Partners_and_Providers';
+  const BASE = '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+/04_Partners_and_Providers';
   const INPUTS = { organizationKind: 'provider', objectName: 'Acme Foundation' };
   const becaDrive = () => createFakeDrive({ paths: [...CANONICAL_PARENT_PATHS, `${BASE}/Partners`, `${BASE}/Providers`] });
 

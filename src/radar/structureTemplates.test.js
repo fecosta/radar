@@ -10,7 +10,13 @@ import {
   getTemplate,
   forbiddenDestinationReason,
 } from './structureTemplates.js';
-import { MIME_FOLDER, MIME_GOOGLE_DOC, GOVERNANCE_FORUMS, SEGMENTS } from './canonicalTree.js';
+import {
+  MIME_FOLDER,
+  MIME_GOOGLE_DOC,
+  GOVERNANCE_FORUMS,
+  SEGMENTS,
+  BECA_TECH_PARTNERS_AND_PROVIDERS_SEGMENTS,
+} from './canonicalTree.js';
 import { planStructureFromRaw } from './planStructure.js';
 
 /**
@@ -575,16 +581,16 @@ describe('Portfolio operating folders', () => {
 });
 
 /**
- * ADR 0006 (Proposed). Beca Tech-specific: the generic In-house Program template must not
+ * ADR 0006. BecaTech+-specific: the generic In-house Program template must not
  * change, and the whole path down to Partners/Providers must already exist.
  */
-describe('Beca Tech partner or provider', () => {
+describe('BecaTech+ partner or provider', () => {
   const TYPE = STRUCTURE_TYPES.BECA_TECH_PARTNER_OR_PROVIDER;
-  const BASE = '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/Beca_Tech/04_Partners_and_Providers';
+  const BASE = '02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+/04_Partners_and_Providers';
 
   it('collects only the organization type and name, and writes no Registry record', () => {
     const entry = SUPPORTED_STRUCTURES.find((s) => s.id === TYPE);
-    expect(entry.label).toBe('Beca Tech partner or provider');
+    expect(entry.label).toBe('BecaTech+ partner or provider');
     expect(entry.fields).toEqual(['organizationKind', 'objectName']);
     expect(entry.themes).toBeNull();
     expect(entry.registryApplicable).toBe(false);
@@ -641,6 +647,21 @@ describe('Beca Tech partner or provider', () => {
       const r = planStructureFromRaw(TYPE, { organizationKind: 'provider', objectName: name });
       expect(r.ok).toBe(false);
       expect(r.errors.map((e) => e.code)).toContain(code);
+    }
+  });
+
+  it('resolves through the live Drive spelling BecaTech+, never Beca_Tech', () => {
+    expect(BECA_TECH_PARTNERS_AND_PROVIDERS_SEGMENTS).toEqual([
+      '02_INVESTMENTS_AND_PROGRAMS',
+      '04_IN_HOUSE_PROGRAMS',
+      'Education',
+      'BecaTech+',
+      '04_Partners_and_Providers',
+    ]);
+    for (const kind of ['partner', 'provider']) {
+      const { path } = resolveDestination(TYPE, { organizationKind: kind, objectName: 'Acme' });
+      expect(path).toContain('/Education/BecaTech+/04_Partners_and_Providers/');
+      expect(path).not.toContain('Beca_Tech');
     }
   });
 
