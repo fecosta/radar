@@ -429,9 +429,9 @@ plan, so RADAR neither writes to them nor resolves them as write targets.
 
 ## BecaTech+ partner or provider
 
-BecaTech+-specific; the generic In-house program template is unchanged. Recorded in
-[ADR 0006](../decisions/0006-beca-tech-partner-and-provider-folders.md), which also holds the
-specification amendment it depends on.
+BecaTech+-specific; the generic In-house program template is unchanged. Governed by the v06
+specification's SPECIAL TEMPLATE - BECATECH+ PARTNERS AND PROVIDERS and
+[ADR 0006](../decisions/0006-beca-tech-partner-and-provider-folders.md) (Accepted).
 
 Workflow: Create structure → **BecaTech+ partner or provider** → Organization type (Partner or
 Provider) → Organization name → Preview → Confirm → Result.

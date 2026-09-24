@@ -1,8 +1,8 @@
 # ADR 0006 — BecaTech+ partner and provider organization folders
 
-- **Status:** Proposed — decision approved by the RADAR Owner on 2026-09-24; stays Proposed only
-  until the specification amendment in *Outstanding* lands, the same condition ADRs 0004 and
-  0005 set for themselves.
+- **Status:** Accepted (2026-09-24). Both acceptance conditions are met: the owner approvals
+  below are recorded, and the specification amendment has been made (see *Resolved
+  2026-09-24*). Until then this ADR was Proposed.
 - **Date:** 2026-09-24
 - **Deciders:** RADAR Owner and the Education functional owner.
   - **Education functional owner:** raised the recurring need and approved it for
@@ -13,9 +13,11 @@
     organization workspace contains exactly `Proposal`, `Agreement`, and `Reports`. This is a
     BecaTech+-specific extension and does not change the generic In-house Program template."
     The RADAR Owner also confirmed that the live Shared Drive folder is named `BecaTech+`.
-  - That satisfies `AGENTS.md` §3 (RADAR Owner and relevant functional owner). What remains is
-    the specification amendment, which is the RADAR Owner's action on the controlled document.
-    Until it lands, the structure should be exercised on a test Shared Drive only.
+  - That satisfies `AGENTS.md` §3 (RADAR Owner and relevant functional owner). The
+    specification amendment was the remaining condition. The RADAR Owner directed it on
+    2026-09-24, and it has been made.
+  - Acceptance approves the canonical rule, not a production release. The feature still has to
+    pass test-Shared-Drive validation (`AGENTS.md` §5, §8) before it is used on production.
 - **Affects:** v06 DYNAMIC TEMPLATE - IN-HOUSE PROGRAM (BecaTech+ only), EMPTY STRUCTURE
   CREATION RULE; `AGENTS.md` §3 invariant 19 (Beca Tech special template), §5 (risk), §8 (Drive
   safety); ADR 0001 (client-side controlled writes).
@@ -127,7 +129,28 @@ existing template model.
   version of `BECA_TECH_PARTNERS_AND_PROVIDERS_SEGMENTS`. Do not change the generic template
   without an organization-wide decision.
 
-## Outstanding, and deliberately not done here
+## Resolved 2026-09-24 — the specification amendment
+
+The RADAR Owner directed the amendment below, and it was applied to
+`docs/specs/2026-08-18_RADAR_Folder_Tree_v06.txt` on 2026-09-24:
+
+- a new **SPECIAL TEMPLATE - BECATECH+ PARTNERS AND PROVIDERS** clause after SPECIAL CASE -
+  EMERGENCY RESPONSE. It uses the text proposed below, plus two points the Owner's approval and
+  decisions 3 and 6 already implied: missing parents are drift and never auto-created, and
+  these organizations are not Master Registry objects;
+- "BecaTech+ partner or provider" added to "Current structure types shown in the tool";
+- an `Amended:` line in the header naming this ADR.
+
+The generic DYNAMIC TEMPLATE - IN-HOUSE PROGRAM is unchanged. The divergence between the
+specification and the code that this ADR recorded is closed.
+
+**Not closed here:** the entries ADR 0005 requests for "Portfolio operating folders" and
+"Existing Portfolio investment" are still missing from the same list. ADRs 0004 and 0005 remain
+Proposed, and their amendments were not part of this approval.
+
+The original request is kept below unaltered.
+
+## Outstanding, and deliberately not done here (as originally proposed)
 
 The specification is precedence authority #2 and is not edited from code (ADR 0003, 0004,
 0005). The RADAR Owner needs to make two amendments to the controlled specification, and then

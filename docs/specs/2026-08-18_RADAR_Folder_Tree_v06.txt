@@ -1,6 +1,7 @@
 RADAR v06 - CANONICAL FOLDER TREE / AUTOMATION SPEC
 Version: 2026-08-18
 Basis: v05 architecture + Leadership Team feedback + implemented Drive changes + structure-creation automation
+Amended: 2026-09-24 - SPECIAL TEMPLATE - BECATECH+ PARTNERS AND PROVIDERS; BecaTech+ partner or provider structure type (ADR 0006; approved by the RADAR Owner and the Education functional owner)
 
 DESIGN RULES
 1. Fixed root: 01_STRATEGY, 02_INVESTMENTS_AND_PROGRAMS, 03_INSTITUTIONAL, 99_ARCHIVE.
@@ -271,6 +272,26 @@ Official path: 02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Cross_Thematic/E
 - It uses the standard In-house Program template above, including restricted participant/beneficiary data, MEL evidence, finance/legal, communications/reports, photos/videos, and decisions/transitions.
 - Cross_Thematic should be used only when an In-house Program cannot reasonably be assigned to Education or Democracy; it is not a general catch-all category.
 
+SPECIAL TEMPLATE - BECATECH+ PARTNERS AND PROVIDERS
+Path: 02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+/04_Partners_and_Providers
+04_Partners_and_Providers
+├── Partners
+│   └── [Organization_Name]
+│       ├── Proposal
+│       ├── Agreement
+│       └── Reports
+└── Providers
+    └── [Organization_Name]
+        ├── Proposal
+        ├── Agreement
+        └── Reports
+- Partners and Providers are BecaTech+-specific organization containers and must already exist.
+- One organization folder is created beneath the selected container, with exactly Proposal, Agreement and Reports. An existing organization folder is reused and only missing standard folders are added.
+- A missing parent (BecaTech+, 04_Partners_and_Providers, Partners or Providers) is architecture drift; it is reported and never auto-created.
+- This does not change the generic In-house Program template and adds no top-level category.
+- Partner and provider organizations are not Master Registry lifecycle objects; no Registry record is created.
+- RADAR does not manage permissions for these folders.
+
 SPECIAL TEMPLATE - DEMOCRACIA+
 Provisional path: 02_INVESTMENTS_AND_PROGRAMS/03_VENTURE_BUILDING/Democracy/Democracia+
 (Use while leadership considers Democracia+ an incubation with potential spin-off. If status changes, move the full folder.)
@@ -388,6 +409,7 @@ Current structure types shown in the tool:
 - Pipeline organization
 - Venture Building initiative
 - In-house program
+- BecaTech+ partner or provider
 - Policy
 - Formal governance meeting
 - Annual OKR cycle
