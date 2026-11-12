@@ -110,7 +110,7 @@ describe('configuration and permission gates', () => {
 });
 
 describe('structure type step', () => {
-  it('offers exactly the nine approved structures', async () => {
+  it('offers exactly the ten approved structures', async () => {
     const { user } = setup();
     await user.click(screen.getByRole('button', { name: /grant permission/i }));
 
@@ -123,6 +123,7 @@ describe('structure type step', () => {
       'Venture Building initiative',
       'In-house program',
       'BecaTech+ partner or provider',
+      'Closed object (archive)',
       'Policy',
       'Formal governance meeting',
       'Annual OKR cycle',
@@ -173,6 +174,26 @@ describe('conditional fields', () => {
     expect(screen.getByLabelText(/Strategic focus/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Meeting log year/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Forum/i)).not.toBeInTheDocument();
+  });
+
+  it('asks a closed object for category, name and an Education or Democracy theme', async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: /grant permission/i }));
+    await user.click(screen.getByRole('radio', { name: /Closed object \(archive\)/i }));
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+
+    expect(screen.getByText(/closed object with no folder yet/i)).toBeInTheDocument();
+    expect(screen.queryByText(/investment with no folder yet/i)).not.toBeInTheDocument();
+    const optionsOf = (label) => within(screen.getByLabelText(label)).getAllByRole('option').map((o) => o.textContent);
+    expect(optionsOf(/Archive category/i)).toEqual([
+      'Select an archive category',
+      'Closed Portfolio',
+      'Closed Ventures',
+      'Closed In-house Programs',
+    ]);
+    expect(optionsOf(/^Theme/i)).toEqual(['Select a theme', 'Education', 'Democracy']);
+    expect(screen.getByLabelText(/Closed object name/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Meeting log year/i)).not.toBeInTheDocument();
   });
 
   it('shows only a name for a policy', async () => {

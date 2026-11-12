@@ -897,3 +897,82 @@ describe('BecaTech+ partner or provider', () => {
     expect(retry.created.map((c) => c.path.split('/').pop())).toEqual(['Agreement', 'Reports']);
   });
 });
+
+describe('Closed object (archive)', () => {
+  const INPUTS = { archiveCategory: 'in_house_program', theme: 'Education', objectName: 'Escuela Viva' };
+  const ROOT = '99_ARCHIVE/04_Closed_In_House_Programs/Education/Escuela Viva';
+  const runClosed = (drive, options = {}) =>
+    run({
+      drive,
+      type: STRUCTURE_TYPES.CLOSED_OBJECT_ARCHIVE,
+      inputs: INPUTS,
+      acknowledged: ['REGISTRY_TRANSITION_REQUIRED'],
+      ...options,
+    });
+
+  it('creates exactly the object folder and its three folders, and nothing else', async () => {
+    const drive = createFakeDrive();
+    const registry = createFakeRegistry();
+    const audit = createFakeAudit();
+    const before = drive._items.size;
+
+    const result = await runClosed(drive, { registry, audit });
+
+    expect(result.outcome).toBe(OUTCOME.SUCCESS);
+    expect(result.created.map((i) => drive._pathOf(i.id))).toEqual([
+      ROOT,
+      `${ROOT}/Investment Documents`,
+      `${ROOT}/Execution Documents`,
+      `${ROOT}/MEL Evidence`,
+    ]);
+    expect(drive._items.size).toBe(before + 4);
+    expect(drive._calls.createGoogleDoc).toBe(0);
+    // No Registry write, and the result says a human must make one.
+    expect(registry._rows).toHaveLength(0);
+    expect(result.registry.status).toBe(REGISTRY_STATUS.NOT_APPLICABLE);
+    expect(result.registry.manualTransitionRequired).toBe(true);
+    expect(audit._events).toHaveLength(1);
+    expect(audit._events[0].warnings).toContain('REGISTRY_TRANSITION_REQUIRED');
+  });
+
+  it('blocks until the Registry advisory is acknowledged', async () => {
+    const drive = createFakeDrive();
+    const result = await runClosed(drive, { acknowledged: [] });
+
+    expect(result.outcome).toBe(OUTCOME.BLOCKED);
+    expect(result.failureStage).toBe(FAILURE_STAGE.ACKNOWLEDGEMENT);
+    expect(drive._calls.createFolder).toBe(0);
+  });
+
+  it('reports a partial failure, then a retry completes it without duplicates', async () => {
+    const drive = createFakeDrive();
+    const audit = createFakeAudit();
+    drive._failOnCreate('Execution Documents', new DriveError(ERROR_CODE.RATE_LIMITED, { status: 429 }));
+
+    const partial = await runClosed(drive, { audit });
+    expect(partial.outcome).toBe(OUTCOME.PARTIAL_SUCCESS);
+    expect(partial.created.map((i) => i.name)).toEqual(['Escuela Viva', 'Investment Documents']);
+    expect(partial.errors[0].path).toContain('Execution Documents');
+
+    const retry = await runClosed(drive, { audit });
+    expect(retry.outcome).toBe(OUTCOME.SUCCESS);
+    expect(retry.existing.map((i) => i.name)).toEqual(['Escuela Viva', 'Investment Documents']);
+    expect(retry.created.map((i) => i.name)).toEqual(['Execution Documents', 'MEL Evidence']);
+
+    const again = await runClosed(drive, { audit });
+    expect(again.outcome).toBe(OUTCOME.SUCCESS);
+    expect(again.created).toHaveLength(0);
+    expect(drive._childrenOf(retry.existing[0].id)).toHaveLength(3);
+    expect(audit._events).toHaveLength(3);
+  });
+
+  it('refuses at execution time once the destination holds something RADAR did not create', async () => {
+    const drive = createFakeDrive();
+    drive._seedPath(`${ROOT}/06_MEL_Evidence`);
+
+    const result = await runClosed(drive);
+
+    expect(result.outcome).toBe(OUTCOME.BLOCKED);
+    expect(drive._calls.createFolder).toBe(0);
+  });
+});

@@ -1,6 +1,8 @@
 # ADR 0005 — A Portfolio object may be created from scratch, only on proven absence
 
-- **Status:** Proposed
+- **Status:** Proposed. Decision 4's absolute `99_ARCHIVE` prohibition is superseded in part by
+  [ADR 0007](0007-closed-object-archive-structure.md) (Proposed) for a closed object with no
+  folder anywhere.
 - **Date:** 2026-08-27
 - **Supersedes:** ADR 0004 decisions 2 (structural unreachability), 3 (guard rules B and C) and
   4 (no Registry write), for this one structure. ADR 0004's additive structure is unchanged and

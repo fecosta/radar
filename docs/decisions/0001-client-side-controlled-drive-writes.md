@@ -114,6 +114,11 @@ Move to option B or C when any of these becomes true:
 > [ADR 0004](0004-portfolio-operating-folders-are-additive.md), which also records the
 > properties of this architecture that the additive case does change.
 
+> **Note (ADR 0007, 2026-11-12, Proposed).** Examined again and judged not to have fired: the
+> closed-object archive structure creates empty folders under `99_ARCHIVE` only for an object
+> with no folder anywhere, and moves nothing. The decline and closure moves remain human. See
+> [ADR 0007](0007-closed-object-archive-structure.md).
+
 The domain layer (`src/radar/`) and the port interfaces (`registryPort`, `auditPort`, the
 Drive adapter) were kept free of React and of network concerns specifically so that a server
 implementation can reuse them unchanged.

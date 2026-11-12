@@ -201,6 +201,24 @@ export function createDriveStructureClient({
     },
 
     /**
+     * Non-trashed children of `parentId`, first page only. Read-only; used to tell RADAR's own
+     * partial closed-object folder from one holding anything else (see previewStructure).
+     */
+    async listChildren(parentId) {
+      const result = await request('/files', {
+        params: {
+          q: `'${escapeDriveQueryValue(parentId)}' in parents and trashed = false`,
+          ...driveScope,
+          fields: `files(${ITEM_FIELDS})`,
+          pageSize: 100,
+        },
+        stage: 'list_children',
+      });
+
+      return result?.files || [];
+    },
+
+    /**
      * Every non-trashed FOLDER anywhere in the Shared Drive whose name matches, case-insensitively.
      *
      * The opposite matching policy to findExactChildren, deliberately. That one is strict

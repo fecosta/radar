@@ -724,3 +724,129 @@ describe('BecaTech+ partner or provider', () => {
     expect(result.blocking.map((b) => b.code)).toEqual([CONFLICT_CODE.DUPLICATE_EXACT_MATCH]);
   });
 });
+
+describe('Closed object (archive)', () => {
+  const INPUTS = { archiveCategory: 'venture', theme: 'Democracy', objectName: 'Aula Abierta' };
+  const PARENT = '99_ARCHIVE/03_Closed_Ventures/Democracy';
+  const DESTINATION = `${PARENT}/Aula Abierta`;
+
+  const closedPreview = (drive, inputs = INPUTS) =>
+    previewStructure({
+      drive,
+      registry: createFakeRegistry(),
+      plan: planStructureFromRaw(STRUCTURE_TYPES.CLOSED_OBJECT_ARCHIVE, inputs).plan,
+    });
+
+  it('builds the object folder and its three folders when it has no home anywhere', async () => {
+    const result = await closedPreview(createFakeDrive());
+
+    expect(result.status).toBe(PREVIEW_STATUS.READY);
+    expect(result.items.map((i) => [i.relativePath, i.status])).toEqual([
+      ['Aula Abierta', ITEM_STATUS.CREATE],
+      ['Aula Abierta/Investment Documents', ITEM_STATUS.CREATE],
+      ['Aula Abierta/Execution Documents', ITEM_STATUS.CREATE],
+      ['Aula Abierta/MEL Evidence', ITEM_STATUS.CREATE],
+    ]);
+    // No Registry read or write; a human is told to update it instead.
+    expect(result.registry.status).toBe(REGISTRY_STATUS.NOT_APPLICABLE);
+    expect(result.acknowledgements.map((a) => a.code)).toEqual(['REGISTRY_TRANSITION_REQUIRED']);
+  });
+
+  it('blocks when the canonical closed-object container is missing, and creates nothing', async () => {
+    const drive = createFakeDrive({ paths: CANONICAL_PARENT_PATHS.filter((p) => !p.startsWith('99_ARCHIVE/03_')) });
+
+    const result = await closedPreview(drive);
+
+    expect(result.status).toBe(PREVIEW_STATUS.BLOCKED);
+    expect(result.blocking[0].code).toBe(CONFLICT_CODE.MISSING_CANONICAL_PARENT);
+    expect(result.blocking[0].segment).toBe('03_Closed_Ventures');
+    expect(drive._calls.createFolder).toBe(0);
+  });
+
+  it('blocks when the user cannot add children', async () => {
+    const result = await closedPreview(createFakeDrive({ canAddChildren: false }));
+    expect(result.blocking[0].code).toBe(CONFLICT_CODE.NOT_AUTHORIZED);
+  });
+
+  it.each([
+    ['active Venture Building', '02_INVESTMENTS_AND_PROGRAMS/03_VENTURE_BUILDING/Democracy/Aula Abierta'],
+    ['another closed category', '99_ARCHIVE/02_Closed_Portfolio/Democracy/Aula Abierta'],
+    ['the other theme', '99_ARCHIVE/03_Closed_Ventures/Education/aula abierta'],
+    ['the legacy structure', '99_ARCHIVE/07_Legacy_Structure/Aula Abierta'],
+  ])('refuses to build a second home when the object is already in %s', async (_label, path) => {
+    const drive = createFakeDrive();
+    drive._seedPath(path);
+    const before = drive._items.size;
+
+    const result = await closedPreview(drive);
+
+    expect(result.status).toBe(PREVIEW_STATUS.BLOCKED);
+    expect(result.blocking[0].code).toBe(CONFLICT_CODE.OBJECT_HAS_ANOTHER_HOME);
+    expect(result.blocking[0].message).toContain(path);
+    expect(result.blocking[0].message).toMatch(/move that complete folder into 99_ARCHIVE\/03_Closed_Ventures\/Democracy/);
+    expect(drive._items.size).toBe(before);
+  });
+
+  it('resumes its own partial run, reusing what exists and creating only the rest', async () => {
+    const drive = createFakeDrive();
+    drive._seedPath(`${DESTINATION}/Investment Documents`);
+
+    const result = await closedPreview(drive);
+
+    expect(result.status).toBe(PREVIEW_STATUS.READY);
+    expect(result.items.map((i) => i.status)).toEqual([
+      ITEM_STATUS.EXISTS,
+      ITEM_STATUS.EXISTS,
+      ITEM_STATUS.CREATE,
+      ITEM_STATUS.CREATE,
+    ]);
+  });
+
+  it('reuses everything when the structure is already complete', async () => {
+    const drive = createFakeDrive();
+    for (const name of ['Investment Documents', 'Execution Documents', 'MEL Evidence']) {
+      drive._seedPath(`${DESTINATION}/${name}`);
+    }
+
+    const result = await closedPreview(drive);
+
+    expect(result.status).toBe(PREVIEW_STATUS.READY);
+    expect(result.counts).toMatchObject({ create: 0, exists: 4 });
+  });
+
+  /** A moved closed object keeps its own structure: RADAR must not add folders beside it. */
+  it.each([
+    ['a moved object\'s own folder', `${DESTINATION}/05_MEL_and_Learning`, MIME_FOLDER],
+    ['a file', `${DESTINATION}/Closure memo`, 'application/vnd.google-apps.document'],
+    ['a planned name held by a file', `${DESTINATION}/MEL Evidence`, 'application/pdf'],
+  ])('refuses a destination folder holding %s', async (_label, path, mimeType) => {
+    const drive = createFakeDrive();
+    drive._seedPath(path, mimeType);
+    const before = drive._items.size;
+
+    const result = await closedPreview(drive);
+
+    expect(result.status).toBe(PREVIEW_STATUS.BLOCKED);
+    expect(result.blocking[0].code).toBe(CONFLICT_CODE.OBJECT_ALREADY_IN_ARCHIVE);
+    expect(result.blocking[0].message).toContain(DESTINATION);
+    expect(drive._items.size).toBe(before);
+  });
+
+  it('leaves the Existing Portfolio investment rule unchanged: its own destination still blocks', async () => {
+    const drive = createFakeDrive();
+    drive._seedPath('02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education/Aprendo+/00_Overview_and_Contacts');
+    const plan = planStructureFromRaw(STRUCTURE_TYPES.EXISTING_PORTFOLIO_INVESTMENT, {
+      objectName: 'Aprendo+',
+      theme: 'Education',
+      owner: '',
+      country: '',
+      strategicFocus: '',
+      meetingLogYear: '2026',
+    }).plan;
+
+    const result = await previewStructure({ drive, registry: createFakeRegistry({ configured: false }), plan });
+
+    expect(result.blocking[0].code).toBe(CONFLICT_CODE.OBJECT_ALREADY_IN_PORTFOLIO);
+    expect(drive._calls.listChildren).toBe(0);
+  });
+});

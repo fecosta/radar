@@ -30,6 +30,7 @@ and no auto-creation of missing canonical roots.
 | Portfolio operating folders | `02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/{theme}/{name}` — **must already exist** | — (change `Object_Type` by hand) |
 | Existing Portfolio investment | `02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/{theme}/{name}` — **must not exist anywhere** | Portfolio |
 | BecaTech+ partner or provider | `02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/Education/BecaTech+/04_Partners_and_Providers/{Partners\|Providers}/{name}` | — |
+| Closed object (archive) | `99_ARCHIVE/{02_Closed_Portfolio\|03_Closed_Ventures\|04_Closed_In_House_Programs}/{theme}/{name}` — **must not exist anywhere** | — (update the row by hand) |
 
 Themes are **per structure type**, not one global list (v06 design rule 2):
 
@@ -40,6 +41,7 @@ Themes are **per structure type**, not one global list (v06 design rule 2):
 | In-house program | `Education`, `Democracy`, `Cross_Thematic` |
 | Portfolio operating folders | `Education`, `Democracy` |
 | Existing Portfolio investment | `Education`, `Democracy` |
+| Closed object (archive) | `Education`, `Democracy` — not `Cross_Thematic`, although `04_Closed_In_House_Programs` has one |
 
 `Cross_Thematic` is used only where the canonical tree defines it and is not a general
 "other" category, so the creator rejects it for Pipeline and Venture Building outright.
@@ -78,6 +80,13 @@ Each of these is enforced by a test, not just by convention.
   finding no folder of that name. If one exists — in Pipeline, Venture Building, Exploration, an
   archive, or Portfolio itself — it blocks and names the path. See
   [ADR 0005](../decisions/0005-legacy-portfolio-objects-only-on-proven-absence.md).
+- **No closure or decline move, and nothing added to a moved object.** Closing an object moves
+  its complete folder into `99_ARCHIVE`; RADAR cannot do that and adds nothing to a folder that
+  arrived that way. *Closed object (archive)* builds a folder only for a closed object with no
+  folder anywhere. Every other archive destination is refused by the destination guard. See
+
+  [ADR 0007](../decisions/0007-closed-object-archive-structure.md) (Proposed).
+
 - **No root-tree bootstrap and no launch seeds.** A missing canonical root is architecture
   drift: it is reported to the administrator and never repaired automatically. No sample
   organizations are ever created.
@@ -301,6 +310,7 @@ Creation is refused, and nothing is written, when:
 | two folders share that organization's name | RADAR will not guess which is the official home |
 | the object already has a folder elsewhere in the Drive | an object has one official folder; move that one instead of building a second |
 | the object is already in Portfolio | *Portfolio operating folders* is the right tool; building 00-04 into it would fabricate history |
+| a closed-object folder is already at the archive destination holding anything other than its three folders | it is a real, moved object; RADAR adds nothing to it |
 
 Warnings requiring explicit acknowledgement (not blocking): the restricted beneficiary-data
 folder; an object name that already exists in Portfolio or the declined-pipeline archive; the
@@ -450,6 +460,38 @@ Provider) → Organization name → Preview → Confirm → Result.
   one official home, so no Drive-wide search runs.
 - **No Registry record, no permissions.** Existing Drive access applies unchanged.
 
+## Closed object (archive)
+
+**Proposed, not approved.** Implemented ahead of approval; governed by
+[ADR 0007](../decisions/0007-closed-object-archive-structure.md). Do not use it on the production
+Shared Drive until the ADR is Accepted and the v06 specification is amended.
+
+Workflow: Create structure → **Closed object (archive)** → Archive category → Closed object name
+→ Theme → Preview → Confirm → Result.
+
+- **Inputs.** Archive category (`Closed Portfolio`, `Closed Ventures`, `Closed In-house
+  Programs`, closed list), object name, and theme (`Education` or `Democracy`).
+- **Destination.** `99_ARCHIVE/{category}/{theme}`, which must already exist. A missing level is a
+  *Missing canonical parent* block — RADAR never creates archive containers.
+- **Creates.** `{name}/Investment Documents`, `{name}/Execution Documents`, `{name}/MEL Evidence`.
+  Nothing else, and no Google document.
+- **Only on proven absence.** Like *Existing Portfolio investment*, the preview searches the whole
+  Shared Drive for a folder of that name (case-insensitive) and blocks if it finds one anywhere —
+  active areas, another closed category, the other theme, `07_Legacy_Structure`. That object must
+  be moved, not rebuilt. Accents are not folded; that gap is inherited from ADR 0005.
+- **Re-running.** If the folder already exists at the destination and holds nothing but some of
+  its three folders, it is RADAR's own earlier run: the preview reuses what exists and creates
+  only what is missing. If it holds anything else — a file, a moved object's `05_MEL_and_Learning`,
+  a planned name taken by a file — it blocks with *Object already in archive*.
+- **No Registry write.** Building the folder is not evidence that the object closed. The preview
+  raises the Registry advisory, which must be acknowledged: add or update the object's single
+  Master Registry row by hand (`Current_Stage_or_Status`, `Decline_or_Closure_Reason`,
+  `Decision_Link`, `Official_Folder_Link`).
+- **No permissions.** The new folders inherit the archive's existing access unchanged.
+- **Recovery.** A partial failure leaves the object folder with some of its three folders; retry
+  completes it. A folder built under the wrong name, category or theme has to be removed by hand
+  — RADAR has no delete, move or rename.
+
 ## Known limitations
 
 1. **Concurrency is narrowed, not eliminated.** The in-flight guard is module state in one
@@ -493,6 +535,8 @@ Left clean, with no partial unsafe behavior:
   human and needs the move verb this architecture does not have (ADR 0001, ADR 0004).
 - Detecting a Pipeline folder left behind when someone copied instead of moving
 - Decline/withdrawal → `99_ARCHIVE/01_Declined_Pipeline`, retaining the Registry record
+- Closure → `99_ARCHIVE/{02|03|04}_Closed_*`, moving the complete object (only the no-folder
+  case ships, ADR 0007)
 - Venture graduation
 - Dated Concept Review / Investment Committee gate packages
 - Server-side locking and a server-enforced authorization boundary

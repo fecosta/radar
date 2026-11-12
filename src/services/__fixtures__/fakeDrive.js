@@ -41,6 +41,14 @@ export const CANONICAL_PARENT_PATHS = [
   // setting applied by hand; no structure type creates or touches it.
   '03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/05_Weekly_Email',
   '99_ARCHIVE/01_Declined_Pipeline',
+  // ADR 0007: the closed-object containers. 04_ also has Cross_Thematic, which no structure targets.
+  '99_ARCHIVE/02_Closed_Portfolio/Education',
+  '99_ARCHIVE/02_Closed_Portfolio/Democracy',
+  '99_ARCHIVE/03_Closed_Ventures/Education',
+  '99_ARCHIVE/03_Closed_Ventures/Democracy',
+  '99_ARCHIVE/04_Closed_In_House_Programs/Education',
+  '99_ARCHIVE/04_Closed_In_House_Programs/Democracy',
+  '99_ARCHIVE/04_Closed_In_House_Programs/Cross_Thematic',
 ];
 
 /**
@@ -58,7 +66,13 @@ export function createFakeDrive({
   /** id -> { id, name, mimeType, parentId, driveId, webViewLink } */
   const items = new Map();
   let nextId = 1;
-  const calls = { findExactChildren: 0, findFoldersNamedAnywhere: 0, createFolder: 0, createGoogleDoc: 0 };
+  const calls = {
+    findExactChildren: 0,
+    findFoldersNamedAnywhere: 0,
+    listChildren: 0,
+    createFolder: 0,
+    createGoogleDoc: 0,
+  };
 
   /** Fault injection: a queue of one-shot behaviours keyed by item name. */
   const failures = new Map();
@@ -110,6 +124,11 @@ export function createFakeDrive({
       calls.findExactChildren += 1;
       // Exact, case-sensitive — mirrors the production client's post-filter.
       return childrenOf(parentId).filter((i) => i.name === name);
+    },
+
+    async listChildren(parentId) {
+      calls.listChildren += 1;
+      return childrenOf(parentId);
     },
 
     /** Case-insensitive, drive-wide folder search. Mirrors the real client's loose policy. */

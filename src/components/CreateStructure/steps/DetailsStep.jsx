@@ -1,9 +1,10 @@
 import {
   BECA_TECH_ORGANIZATION_KINDS,
+  CLOSED_OBJECT_CATEGORIES,
   GOVERNANCE_FORUMS,
-  themesForArea,
 } from '../../../radar/canonicalTree.js';
 import { SUPPORTED_YEAR_RANGE } from '../../../radar/structureInputs.js';
+import { templateThemes } from '../../../radar/structureTemplates.js';
 import { Callout, Field, inputStyle, MonoPath, SectionLabel } from '../ui.jsx';
 
 /**
@@ -19,6 +20,7 @@ const REQUIRED_FIELDS = new Set([
   'meetingLogYear',
   'forum',
   'organizationKind',
+  'archiveCategory',
   'meetingDate',
   'okrYear',
 ]);
@@ -75,12 +77,20 @@ export default function DetailsStep({ template, inputs, fieldErrors, onChange, p
           administrator fills the form, not after a blocked preview explains it. */}
       {/* Two Portfolio structures now exist with opposite preconditions, and picking the wrong
           one is the mistake to prevent. Say which case this is before the form is filled. */}
-      {template.requireNoOtherHome ? (
+      {template.requireNoOtherHome && !has('archiveCategory') ? (
         <Callout tone="info" title="This is for an investment with no folder yet">
           Use this only for a grant or investment that predates RADAR and has no folder anywhere
           in the Shared Drive. RADAR searches the whole Drive and refuses if it finds one — if
           the organization already has a folder, move that folder into Portfolio and use
           <strong> Portfolio operating folders</strong> instead, which keeps its history.
+        </Callout>
+      ) : null}
+
+      {has('archiveCategory') ? (
+        <Callout tone="info" title="This is for a closed object with no folder yet">
+          Closing an object moves its complete folder into the archive, and RADAR does not move
+          folders. Use this only for a closed object that never had a folder. RADAR searches the
+          whole Shared Drive and refuses if it finds one — move that folder instead.
         </Callout>
       ) : null}
 
@@ -101,6 +111,19 @@ export default function DetailsStep({ template, inputs, fieldErrors, onChange, p
           options={BECA_TECH_ORGANIZATION_KINDS.map((k) => ({ value: k.id, label: k.label }))}
           value={inputs.organizationKind}
           error={err('organizationKind')}
+          onChange={onChange}
+        />
+      ) : null}
+
+      {has('archiveCategory') ? (
+        <SelectField
+          field="archiveCategory"
+          label="Archive category"
+          hint="The category and theme folders must already exist in 99_ARCHIVE. RADAR never creates them."
+          placeholder="Select an archive category"
+          options={CLOSED_OBJECT_CATEGORIES.map((c) => ({ value: c.id, label: c.label }))}
+          value={inputs.archiveCategory}
+          error={err('archiveCategory')}
           onChange={onChange}
         />
       ) : null}
@@ -127,7 +150,7 @@ export default function DetailsStep({ template, inputs, fieldErrors, onChange, p
           label="Theme"
           hint={template.themeHint}
           placeholder="Select a theme"
-          options={themesForArea(template.themeArea).map((t) => ({ value: t, label: t }))}
+          options={templateThemes(template).map((t) => ({ value: t, label: t }))}
           value={inputs.theme}
           error={err('theme')}
           onChange={onChange}

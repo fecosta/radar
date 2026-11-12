@@ -36,10 +36,15 @@
  *
  *   Dated Concept Review / Investment Committee packages — these are created when the gate
  *     actually happens, not preemptively for a brand-new pipeline object.
+ *
+ *   The decline and closure MOVES into 99_ARCHIVE — same reason as the Portfolio move. A
+ *     closed object that HAS a folder is moved there by a human and gets nothing from RADAR.
+ *     CLOSED_OBJECT_ARCHIVE serves only a closed object with no folder anywhere (ADR 0007).
  */
 
 import {
   CANONICAL_ROOTS,
+  THEMES,
   SEGMENTS,
   OBJECT_AREAS,
   POLICIES_SEGMENTS,
@@ -50,6 +55,8 @@ import {
   REGISTRY_OBJECT_TYPES,
   BECA_TECH_PARTNERS_AND_PROVIDERS_SEGMENTS,
   becaTechOrganizationKindById,
+  CLOSED_OBJECT_CATEGORIES,
+  closedObjectCategoryById,
   themedContainerSegments,
   themesForArea,
   forumById,
@@ -78,6 +85,7 @@ export const STRUCTURE_TYPES = Object.freeze({
   EXISTING_PORTFOLIO_INVESTMENT: 'existing_portfolio_investment',
   /** Not bare `beca_tech`: that id names creating the program itself, which stays unsupported. */
   BECA_TECH_PARTNER_OR_PROVIDER: 'beca_tech_partner_or_provider',
+  CLOSED_OBJECT_ARCHIVE: 'closed_object_archive',
 });
 
 /* ─── Naming helpers ──────────────────────────────────────── */
@@ -494,6 +502,57 @@ const TEMPLATES = {
     }),
     nodes: () => portfolioOperatingNodes(),
   },
+
+  /**
+   * A closed Portfolio organization, Venture or In-house Program that never had a folder, so
+   * there is nothing to move into the archive (ADR 0007, Proposed).
+   *
+   * Closure MOVES the complete object folder (v06 design rules 4, 8 and 9), so this is the
+   * EXISTING_PORTFOLIO_INVESTMENT pattern applied to the archive: `requireNoOtherHome` makes the
+   * preview search the whole Shared Drive first and refuse if the object has a folder anywhere.
+   * A closed object that does have one is moved by a human and gets nothing from RADAR — which
+   * is also why these three folders never sit beside an object's own investment, execution and
+   * MEL folders.
+   *
+   * Education and Democracy only, in all three categories. `Cross_Thematic` under
+   * 04_Closed_In_House_Programs is canonical but outside what was requested and proposed.
+   */
+  [STRUCTURE_TYPES.CLOSED_OBJECT_ARCHIVE]: {
+    id: STRUCTURE_TYPES.CLOSED_OBJECT_ARCHIVE,
+    label: 'Closed object (archive)',
+    description:
+      'Builds Investment Documents, Execution Documents and MEL Evidence in the archive for a ' +
+      'closed object — Portfolio, Venture or In-house — that never had a folder. Refused if the ' +
+      'object has a folder anywhere; that one must be moved instead.',
+    objectNameLabel: 'Closed object name',
+    fields: ['archiveCategory', 'objectName', 'theme'],
+    themes: THEMES,
+    themeHint: 'Education and Democracy only.',
+    confirmNote:
+      'RADAR searched the whole Shared Drive and found no other folder for this object. It does ' +
+      'not record the object as closed — update its Master Registry row yourself.',
+    /**
+     * No Registry write. Building an archive folder is not evidence that the object was
+     * closed, and the specification is explicit that a human determines status and type.
+     */
+    registry: {
+      applicable: false,
+      manualTransition: {
+        message:
+          'RADAR does not add or change a Master Registry row for a closed object, and building ' +
+          'this folder does not record it as closed. Make sure the object has exactly one ' +
+          'Registry row, then set Current_Stage_or_Status, Decline_or_Closure_Reason, ' +
+          'Decision_Link and Official_Folder_Link (this folder) by hand.',
+      },
+    },
+    requireNoOtherHome: true,
+    destination: ({ archiveCategory, theme, objectName }) => ({
+      parentSegments: [CANONICAL_ROOTS.ARCHIVE, closedObjectCategoryById(archiveCategory).folder, theme],
+      createdSegments: [objectName],
+    }),
+    // Names exactly as requested; they break the numbered snake_case convention (ADR 0007).
+    nodes: () => [{ name: 'Investment Documents' }, { name: 'Execution Documents' }, { name: 'MEL Evidence' }],
+  },
 };
 
 /* ─── Public accessors ────────────────────────────────────── */
@@ -510,6 +569,8 @@ export const SUPPORTED_STRUCTURES = Object.freeze(
     STRUCTURE_TYPES.VENTURE_BUILDING_INITIATIVE,
     STRUCTURE_TYPES.IN_HOUSE_PROGRAM,
     STRUCTURE_TYPES.BECA_TECH_PARTNER_OR_PROVIDER,
+    // Last of the object types: closure ends an object's lifecycle.
+    STRUCTURE_TYPES.CLOSED_OBJECT_ARCHIVE,
     STRUCTURE_TYPES.POLICY,
     STRUCTURE_TYPES.GOVERNANCE_MEETING,
     STRUCTURE_TYPES.OKR_CYCLE,
@@ -522,7 +583,7 @@ export const SUPPORTED_STRUCTURES = Object.freeze(
       objectNameLabel: t.objectNameLabel || null,
       fields: Object.freeze([...t.fields]),
       // Resolved here so the wizard renders the permitted themes without owning a list.
-      themes: t.themeArea ? themesForArea(t.themeArea) : null,
+      themes: t.fields.includes('theme') ? templateThemes(t) : null,
       themeHint: t.themeHint || null,
       registryApplicable: t.registry.applicable,
       requiresExistingObject: Boolean(t.requiresExistingObject),
@@ -532,6 +593,14 @@ export const SUPPORTED_STRUCTURES = Object.freeze(
     });
   })
 );
+
+/**
+ * The themes a template offers: its own narrower list when it declares one, else its area's
+ * canonical rule. Throws for a theme-collecting template that declares neither.
+ */
+export function templateThemes(template) {
+  return template.themes || themesForArea(template.themeArea);
+}
 
 export function isSupportedStructureType(type) {
   return Object.prototype.hasOwnProperty.call(TEMPLATES, type);
@@ -641,6 +710,9 @@ export const PORTFOLIO_PREFIX = `${CANONICAL_ROOTS.INVESTMENTS_AND_PROGRAMS}/${S
  */
 const PORTFOLIO_OBJECT_DEPTH = 4;
 
+/** Depth of a closed-object folder: 99_ARCHIVE / 02_Closed_Portfolio / Theme / Object. */
+const ARCHIVE_OBJECT_DEPTH = 4;
+
 /**
  * Destinations the creator must never produce, expressed as rules over the plan's own data
  * rather than as a list of exempt structure types.
@@ -656,11 +728,30 @@ const PORTFOLIO_OBJECT_DEPTH = 4;
  * @returns {string|null} the violated rule's explanation, or null when permitted
  */
 export function forbiddenDestinationReason(destination, items = []) {
-  // A. The archive is reachable only by a decline/closure MOVE, which does not exist. No
-  //    exceptions and no declaration can earn one: unlike Portfolio there is no legitimate
-  //    from-scratch archive case, because an archived object by definition already had a home.
-  if (destination.path.startsWith(CANONICAL_ROOTS.ARCHIVE)) {
-    return `${CANONICAL_ROOTS.ARCHIVE} is reachable only through a decline or closure move`;
+  const parent = destination.parentSegments || [];
+
+  /**
+   * Whether this plan has earned the one archive exception (ADR 0007, Proposed): a closed
+   * object with no folder anywhere. Pinned like the Portfolio permission below — the
+   * declaration, exactly one created folder directly inside an allowlisted, Education or
+   * Democracy closed-object container, and nothing deeper than that folder's own children.
+   */
+  const mayCreateClosedObject =
+    Boolean(destination.requireNoOtherHome) &&
+    destination.createdSegments.length === 1 &&
+    parent.length === ARCHIVE_OBJECT_DEPTH - 1 &&
+    parent[0] === CANONICAL_ROOTS.ARCHIVE &&
+    CLOSED_OBJECT_CATEGORIES.some((c) => c.folder === parent[1]) &&
+    THEMES.includes(parent[2]) &&
+    items.every((item) => item.fullPath.split('/').length <= ARCHIVE_OBJECT_DEPTH + 1);
+
+  // A. The archive is otherwise reachable only by a decline/closure MOVE, which does not exist.
+  //    An object that ever had a home must be moved; only proven absence earns the exception.
+  if (destination.path.startsWith(CANONICAL_ROOTS.ARCHIVE) && !mayCreateClosedObject) {
+    return (
+      `${CANONICAL_ROOTS.ARCHIVE} is reachable only through a decline or closure move, except a ` +
+      'closed object with no other home, created directly inside a themed closed-object container'
+    );
   }
 
   /**
@@ -678,7 +769,6 @@ export function forbiddenDestinationReason(destination, items = []) {
    * anchored directly on a themed Portfolio container, having promised the absence check.
    */
   const underPortfolio = destination.path.startsWith(PORTFOLIO_PREFIX);
-  const parent = destination.parentSegments || [];
   const anchoredOnThemeContainer =
     parent.length === PORTFOLIO_OBJECT_DEPTH - 1 &&
     parent[1] === SEGMENTS.PORTFOLIO &&

@@ -123,6 +123,18 @@ describe('exact matching', () => {
     const matches = await client.findExactChildren('parent-1', 'Aprendo+');
     expect(matches.map((m) => m.id)).toEqual(['b']);
   });
+
+  it('lists every child of a folder with a scoped, read-only query', async () => {
+    const { client, calls } = clientWith([
+      { body: { files: [folder({ id: 'a', name: 'MEL Evidence' }), folder({ id: 'b', name: 'notes.pdf' })] } },
+    ]);
+
+    const children = await client.listChildren("it's-1");
+    expect(children.map((c) => c.id)).toEqual(['a', 'b']);
+    expect(calls[0].init?.method ?? 'GET').toBe('GET');
+    expect(calls[0].url.searchParams.get('q')).toBe("'it\\'s-1' in parents and trashed = false");
+    expect(calls[0].url.searchParams.get('driveId')).toBe(DRIVE_ID);
+  });
 });
 
 describe('path resolution', () => {

@@ -15,10 +15,11 @@ import {
   GOVERNANCE_FORUMS,
   BECA_TECH_ORGANIZATION_KINDS,
   becaTechOrganizationKindById,
+  CLOSED_OBJECT_CATEGORIES,
+  closedObjectCategoryById,
   forumById,
-  themesForArea,
 } from './canonicalTree.js';
-import { getTemplate, isSupportedStructureType } from './structureTemplates.js';
+import { getTemplate, isSupportedStructureType, templateThemes } from './structureTemplates.js';
 
 /* ─── Documented limits ───────────────────────────────────── */
 
@@ -179,6 +180,16 @@ function validateOrganizationKind(raw) {
   return { value: raw };
 }
 
+function validateArchiveCategory(raw) {
+  if (!closedObjectCategoryById(raw)) {
+    const labels = CLOSED_OBJECT_CATEGORIES.map((c) => c.label).join(', ');
+    return {
+      error: err('archiveCategory', 'INVALID_ARCHIVE_CATEGORY', `Archive category must be one of: ${labels}.`),
+    };
+  }
+  return { value: raw };
+}
+
 function validateYear(raw, field, label) {
   const value = typeof raw === 'string' ? raw.trim() : raw;
   // Reject "2026.5", "26", " 2026abc" and similar before Number() coerces them.
@@ -245,6 +256,7 @@ const FIELD_VALIDATORS = {
   meetingLogYear: (raw) => validateYear(raw, 'meetingLogYear', 'Meeting log year'),
   forum: (raw) => validateForum(raw),
   organizationKind: (raw) => validateOrganizationKind(raw),
+  archiveCategory: (raw) => validateArchiveCategory(raw),
   meetingDate: (raw) => validateMeetingDate(raw),
   okrYear: (raw) => validateYear(raw, 'okrYear', 'OKR year'),
 };
@@ -283,8 +295,8 @@ export function validateStructureInput(type, raw) {
   const template = getTemplate(type);
   const ctx = {
     objectNameLabel: template.objectNameLabel || 'Name',
-    // A template collecting `theme` must declare `themeArea`; themesForArea throws if not.
-    themes: template.fields.includes('theme') ? themesForArea(template.themeArea) : [],
+    // A template collecting `theme` must declare `themes` or `themeArea`; templateThemes throws if not.
+    themes: template.fields.includes('theme') ? templateThemes(template) : [],
   };
   const value = {};
 
@@ -317,6 +329,7 @@ export function defaultInputsFor(type, now = new Date()) {
     meetingLogYear: String(year),
     forum: '',
     organizationKind: '',
+    archiveCategory: '',
     meetingDate: iso,
     okrYear: String(year),
   };

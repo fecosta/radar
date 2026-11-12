@@ -45,8 +45,8 @@ Why the model is shaped this way, and its limitation: **[docs/decisions/0002-mul
 
 The one workflow that writes to Drive. An administrator picks an approved structure
 (Pipeline organization, Portfolio operating folders, Existing Portfolio investment, Venture
-Building initiative, In-house program, BecaTech+ partner or provider, Policy, formal governance
-meeting, annual OKR cycle),
+Building initiative, In-house program, BecaTech+ partner or provider, Closed object (archive),
+Policy, formal governance meeting, annual OKR cycle),
 previews it against the live Shared Drive, confirms explicitly, and RADAR creates only the
 missing folders.
 
@@ -65,6 +65,10 @@ missing folders.
   predates RADAR and has no folder *anywhere* in the Shared Drive — RADAR searches the whole
   Drive and refuses if it finds one, because an object with a folder must be moved, not rebuilt.
   See [ADR 0005](docs/decisions/0005-legacy-portfolio-objects-only-on-proven-absence.md).
+- **Closed object (archive)** builds `Investment Documents`, `Execution Documents` and `MEL
+  Evidence` for a closed portfolio organization, venture or in-house program that never had a
+  folder — same Drive-wide absence check, and no Registry write. **Proposed, not yet approved**:
+  see [ADR 0007](docs/decisions/0007-closed-object-archive-structure.md).
 
 Full details, configuration and known limitations: **[docs/operations/create-structure.md](docs/operations/create-structure.md)**.
 Why writes are client-side: **[docs/decisions/0001-client-side-controlled-drive-writes.md](docs/decisions/0001-client-side-controlled-drive-writes.md)**.
