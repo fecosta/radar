@@ -58,6 +58,23 @@ ever having an organized folder had no home, so there is nothing to move. Refusi
 leaves it permanently in breach of rule 4. The historical projects in the migration are exactly
 this case.
 
+## Scope: historical onboarding, not project closure
+
+- **Included — historical archive onboarding.** Portfolio, Venture and In-house projects that
+  closed before they were ever managed as active objects in RADAR. They are given an archive
+  location for their key historical documentation, as the final stage of the Shared Drive
+  migration. Never having been active in RADAR does not mean having no folder in Drive, so the
+  existence checks in decisions 1, 1a and 3 are mandatory.
+- **Not included — closing an active RADAR project.** That project already has an official
+  folder, so the existence check blocks this structure, and it cannot serve as a closure
+  shortcut. RADAR provides no general-purpose closure workflow. Closing an active project is a
+  separate future capability: see *Extension points* in
+  [create-structure.md](../operations/create-structure.md).
+
+The decisions below are unchanged: eligibility, duplicate prevention, the three names, the
+category allowlist, Education and Democracy only, retry, no document movement, no permission
+changes, and manual Registry responsibility.
+
 ## Decision
 
 ### 1. One new structure, for proven absence only

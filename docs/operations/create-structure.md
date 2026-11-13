@@ -470,9 +470,10 @@ the functional owners' approval is recorded. Do not use it on the production Sha
 then.
 
 **What it is for.** The last stage of the Shared Drive migration: giving Portfolio
-organizations, Ventures and In-house Programs that **closed in the past** an archive folder.
-It is not a closure workflow. It does not close an active project, move its folder into the
-archive, find or move its documents, or change its Registry status.
+organizations, Ventures and In-house Programs that **closed before they were managed in RADAR**
+an archive folder. It is not a closure workflow. It does not close an active project, move its
+folder into the archive, find or move its documents, or change its Registry status. An active
+RADAR project already has a folder, so the existence check blocks it here.
 
 **Eligible** when the project has already closed, belongs to Education or Democracy, and has no
 folder anywhere in the Shared Drive.
@@ -559,8 +560,13 @@ Left clean, with no partial unsafe behavior:
   human and needs the move verb this architecture does not have (ADR 0001, ADR 0004).
 - Detecting a Pipeline folder left behind when someone copied instead of moving
 - Decline/withdrawal → `99_ARCHIVE/01_Declined_Pipeline`, retaining the Registry record
-- Closure of an active project → `99_ARCHIVE/{02|03|04}_Closed_*`, moving the complete object.
-  Only historical closed projects with no folder are served today (ADR 0007).
+- **Deferred: closing an active project.** A Portfolio organization, Venture or In-house Program
+  that is actively managed in RADAR eventually closes. Closing it means preserving its complete
+  existing folder, history and folder identity under `99_ARCHIVE/{02|03|04}_Closed_*`. It must
+  keep one official folder, and record the closure status, reason and decision in the Master
+  Registry. This is a different workflow from *Historical closed project (archive)*, which only
+  onboards projects that closed before RADAR managed them (ADR 0007). It needs product discovery
+  and authorization review before any design.
 - Venture graduation
 - Dated Concept Review / Investment Committee gate packages
 - Server-side locking and a server-enforced authorization boundary
