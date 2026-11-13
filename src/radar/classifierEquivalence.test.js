@@ -455,3 +455,28 @@ describe('BecaTech+ partners and providers agree', () => {
     expect(created.parentSegments[3]).toBe('BecaTech+');
   });
 });
+
+/**
+ * ADR 0007. Classify routes a closure record to the root of the closed object's archive folder;
+ * Create structure builds that folder. They must agree on the container, or Classify would
+ * point at a folder the creator can never build. The classifier slugs object names and the
+ * creator keeps them verbatim, so — as above — only the container is compared.
+ */
+describe('closed-object archive', () => {
+  it.each([
+    ['portfolio', 'investment ended', SEGMENTS.CLOSED_PORTFOLIO],
+    ['venture', 'venture closed', SEGMENTS.CLOSED_VENTURES],
+    ['in_house_program', 'program closed', SEGMENTS.CLOSED_IN_HOUSE_PROGRAMS],
+  ])('routes a closed %s into the same container as the creator', (archiveCategory, description, folder) => {
+    for (const theme of THEMES) {
+      const created = resolveDestination(STRUCTURE_TYPES.CLOSED_OBJECT_ARCHIVE, {
+        archiveCategory,
+        theme,
+        objectName: 'Sample Object',
+      });
+      const classified = classifyRadar({ description, objectName: 'Sample Object', theme });
+      expect(created.parentPath).toBe(joinSegments([CANONICAL_ROOTS.ARCHIVE, folder, theme]));
+      expect(classified.path.startsWith(`${created.parentPath}/`)).toBe(true);
+    }
+  });
+});

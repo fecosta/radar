@@ -63,6 +63,7 @@ function inputsFor(id) {
   if (id === 'governance_meeting') return { forum: 'board', meetingDate: '2026-01-01' };
   if (id === 'okr_cycle') return { okrYear: '2026' };
   if (id === 'beca_tech_partner_or_provider') return { organizationKind: 'partner', objectName: 'X' };
+  if (id === 'closed_object_archive') return { archiveCategory: 'portfolio', theme: 'Education', objectName: 'X' };
   return OBJECT_INPUTS;
 }
 
@@ -299,7 +300,7 @@ describe('guard rails', () => {
     expect(labels.some((l) => l.includes('concept') || l.includes('committee'))).toBe(false);
   });
 
-  it('exposes exactly the nine approved structures, and no unguarded Portfolio object', () => {
+  it('exposes exactly the ten approved structures, and no unguarded Portfolio object', () => {
     expect(SUPPORTED_STRUCTURES.map((s) => s.id)).toEqual([
       'pipeline_organization',
       // Second and third, so the picker reads in lifecycle order and the two Portfolio
@@ -309,6 +310,7 @@ describe('guard rails', () => {
       'venture_building_initiative',
       'in_house_program',
       'beca_tech_partner_or_provider',
+      'closed_object_archive',
       'policy',
       'governance_meeting',
       'okr_cycle',
@@ -340,6 +342,8 @@ describe('guard rails', () => {
     expect(themesById.portfolio_operating_folders).toEqual(['Education', 'Democracy']);
     expect(themesById.venture_building_initiative).toEqual(['Education', 'Democracy']);
     expect(themesById.in_house_program).toEqual(['Education', 'Democracy', 'Cross_Thematic']);
+    // ADR 0007: Education and Democracy only, although 04_Closed_In_House_Programs has Cross_Thematic.
+    expect(themesById.closed_object_archive).toEqual(['Education', 'Democracy']);
     // Unthemed structures must not acquire a theme selector.
     for (const id of ['policy', 'governance_meeting', 'okr_cycle', 'beca_tech_partner_or_provider']) {
       expect(themesById[id]).toBeNull();
@@ -362,11 +366,21 @@ describe('guard rails', () => {
     expect(restricted.map((i) => i.name)).toEqual(['05_Participants_and_Beneficiary_Data']);
   });
 
-  it('never resolves a destination inside the archive', () => {
-    // 99_ARCHIVE is reachable only by a decline/closure MOVE, which does not exist. Unlike
-    // Portfolio there is no additive archive structure, so this has no exceptions.
-    const paths = SUPPORTED_STRUCTURES.map((s) => resolveDestination(s.id, inputsFor(s.id)).path);
-    expect(paths.some((p) => p.startsWith('99_ARCHIVE'))).toBe(false);
+  /**
+   * 99_ARCHIVE is otherwise reachable only by a decline/closure MOVE, which does not exist. The
+   * one exception (ADR 0007) is a closed object with no folder anywhere, and it must carry the
+   * same declaration and shape the guard demands — asserted over every supported structure, so
+   * an eleventh type is covered without anyone remembering to extend this test.
+   */
+  it('reaches the archive only as a declared closed object in a themed closed container', () => {
+    for (const { id } of SUPPORTED_STRUCTURES) {
+      const destination = resolveDestination(id, inputsFor(id));
+      if (!destination.path.startsWith('99_ARCHIVE')) continue;
+      expect(id).toBe(STRUCTURE_TYPES.CLOSED_OBJECT_ARCHIVE);
+      expect(destination.requireNoOtherHome).toBe(true);
+      expect(destination.createdSegments).toHaveLength(1);
+      expect(destination.parentSegments).toHaveLength(3);
+    }
   });
 
   /**
@@ -462,8 +476,8 @@ describe('guard rails', () => {
       ).toBeNull();
     });
 
-    it('refuses the archive even with the declaration', () => {
-      // Rule A has no escape hatch: an archived object by definition already had a home.
+    it('refuses the archive even with the declaration, outside a closed-object container', () => {
+      // Rule A's only exception is pinned to a shape this destination does not have.
       expect(forbiddenDestinationReason({ ...ARCHIVE, requireNoOtherHome: true })).toMatch(
         /decline or closure move/
       );
@@ -484,6 +498,41 @@ describe('guard rails', () => {
     it('refuses a smuggled object folder found among the plan items', () => {
       const items = [{ fullPath: '02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Education/Org' }];
       expect(forbiddenDestinationReason(PORTFOLIO_ADDITIVE, items)).toMatch(/only a lifecycle move may create/);
+    });
+
+    describe('the closed-object exception (ADR 0007)', () => {
+      const CLOSED = {
+        path: '99_ARCHIVE/02_Closed_Portfolio/Education/Org',
+        parentSegments: ['99_ARCHIVE', '02_Closed_Portfolio', 'Education'],
+        createdSegments: ['Org'],
+        requireNoOtherHome: true,
+      };
+      const ROOT = '99_ARCHIVE/02_Closed_Portfolio/Education/Org';
+      const items = [{ fullPath: ROOT }, { fullPath: `${ROOT}/MEL Evidence` }];
+
+      it('permits the declared, pinned shape', () => {
+        expect(forbiddenDestinationReason(CLOSED, items)).toBeNull();
+      });
+
+      it.each([
+        ['without the declaration', { requireNoOtherHome: false }],
+        ['in Declined Pipeline', { parentSegments: ['99_ARCHIVE', '01_Declined_Pipeline', 'Education'] }],
+        ['in Superseded Strategies', { parentSegments: ['99_ARCHIVE', '05_Superseded_Strategies', 'Education'] }],
+        ['in Legacy Structure', { parentSegments: ['99_ARCHIVE', '07_Legacy_Structure', 'Education'] }],
+        ['under Cross_Thematic', { parentSegments: ['99_ARCHIVE', '04_Closed_In_House_Programs', 'Cross_Thematic'] }],
+        ['when it would create the theme container', {
+          parentSegments: ['99_ARCHIVE', '02_Closed_Portfolio'],
+          createdSegments: ['Education', 'Org'],
+        }],
+        ['as an additive structure', { createdSegments: [] }],
+      ])('refuses it %s', (_, override) => {
+        expect(forbiddenDestinationReason({ ...CLOSED, ...override }, items)).toMatch(/decline or closure move/);
+      });
+
+      it('refuses anything deeper than the object folder\'s own children', () => {
+        const deep = [...items, { fullPath: `${ROOT}/MEL Evidence/2026` }];
+        expect(forbiddenDestinationReason(CLOSED, deep)).toMatch(/decline or closure move/);
+      });
     });
 
     it('permits an ordinary destination', () => {
@@ -669,5 +718,82 @@ describe('BecaTech+ partner or provider', () => {
     const { items } = expandTemplate(STRUCTURE_TYPES.IN_HOUSE_PROGRAM, OBJECT_INPUTS);
     const partners = items.filter((i) => i.relativePath.includes('04_Partners_and_Providers'));
     expect(partners.map((i) => i.relativePath)).toEqual(['Fundación Luminar/04_Partners_and_Providers']);
+  });
+});
+
+describe('Historical closed project (archive)', () => {
+  const TYPE = STRUCTURE_TYPES.CLOSED_OBJECT_ARCHIVE;
+  const NAME = 'Fundación Ejemplo';
+
+  it('collects category, name and an Education/Democracy theme, and writes no Registry record', () => {
+    const entry = SUPPORTED_STRUCTURES.find((s) => s.id === TYPE);
+    expect(entry.fields).toEqual(['archiveCategory', 'objectName', 'theme']);
+    expect(entry.themes).toEqual(['Education', 'Democracy']);
+    expect(entry.registryApplicable).toBe(false);
+    expect(entry.requireNoOtherHome).toBe(true);
+  });
+
+  it.each([
+    ['portfolio', 'Education', '02_Closed_Portfolio'],
+    ['portfolio', 'Democracy', '02_Closed_Portfolio'],
+    ['venture', 'Education', '03_Closed_Ventures'],
+    ['venture', 'Democracy', '03_Closed_Ventures'],
+    ['in_house_program', 'Education', '04_Closed_In_House_Programs'],
+    ['in_house_program', 'Democracy', '04_Closed_In_House_Programs'],
+  ])('routes %s / %s into 99_ARCHIVE/%s and creates only the object folder', (category, theme, folder) => {
+    const r = planStructureFromRaw(TYPE, { archiveCategory: category, theme, objectName: NAME });
+    expect(r.ok).toBe(true);
+    const d = r.plan.destination;
+    expect(d.parentSegments).toEqual(['99_ARCHIVE', folder, theme]);
+    expect(d.createdSegments).toEqual([NAME]);
+    expect(d.path).toBe(`99_ARCHIVE/${folder}/${theme}/${NAME}`);
+  });
+
+  it('creates exactly the three requested folders inside the object', () => {
+    const { items } = expandTemplate(TYPE, { archiveCategory: 'venture', theme: 'Democracy', objectName: 'Acme' });
+    expect(items.map((i) => i.relativePath)).toEqual([
+      'Acme',
+      'Acme/Investment Documents',
+      'Acme/Execution Documents',
+      'Acme/MEL Evidence',
+    ]);
+    expect(items.every((i) => i.mimeType === MIME_FOLDER)).toBe(true);
+    expect(items.some((i) => i.sensitive)).toBe(false);
+  });
+
+  it('asks a human to update the Registry instead of inferring closure', () => {
+    const r = planStructureFromRaw(TYPE, { archiveCategory: 'portfolio', theme: 'Education', objectName: 'Acme' });
+    expect(r.plan.registry.applicable).toBe(false);
+    expect(r.plan.warnings.map((w) => w.code)).toEqual(['REGISTRY_TRANSITION_REQUIRED']);
+    expect(r.plan.warnings[0].message).toMatch(/does not record it as closed/);
+  });
+
+  it('rejects any category outside the three closed-object categories', () => {
+    for (const category of ['', 'declined', '01_Declined_Pipeline', '02_Closed_Portfolio', 'legacy', undefined]) {
+      const r = planStructureFromRaw(TYPE, { archiveCategory: category, theme: 'Education', objectName: 'Acme' });
+      expect(r.ok).toBe(false);
+      expect(r.errors.map((e) => e.code)).toContain('INVALID_ARCHIVE_CATEGORY');
+    }
+  });
+
+  it('rejects Cross_Thematic in every category, including In-house Programs', () => {
+    for (const { id } of [{ id: 'portfolio' }, { id: 'venture' }, { id: 'in_house_program' }]) {
+      const r = planStructureFromRaw(TYPE, { archiveCategory: id, theme: 'Cross_Thematic', objectName: 'Acme' });
+      expect(r.ok).toBe(false);
+      expect(r.errors.map((e) => e.code)).toContain('INVALID_THEME');
+    }
+  });
+
+  it('reuses the folder-name rules for the object name', () => {
+    for (const [name, code] of [
+      ['', 'EMPTY'],
+      ['a/b', 'PATH_SEPARATOR'],
+      ['..', 'RELATIVE_PATH'],
+      ['x'.repeat(121), 'TOO_LONG'],
+    ]) {
+      const r = planStructureFromRaw(TYPE, { archiveCategory: 'portfolio', theme: 'Education', objectName: name });
+      expect(r.ok).toBe(false);
+      expect(r.errors.map((e) => e.code)).toContain(code);
+    }
   });
 });

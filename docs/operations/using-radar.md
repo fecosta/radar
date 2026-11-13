@@ -386,6 +386,7 @@ again. That is the design, not a bug.
 | **Venture Building initiative** | `02_INVESTMENTS_AND_PROGRAMS/03_VENTURE_BUILDING/{theme}/` | Education, Democracy |
 | **In-house program** | `02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/{theme}/` | Education, Democracy, **Cross_Thematic** |
 | **BecaTech+ partner or provider** | BecaTech+'s existing `04_Partners_and_Providers/Partners/` or `…/Providers/` | — |
+| **Historical closed project (archive)** | `99_ARCHIVE/{02_Closed_Portfolio, 03_Closed_Ventures or 04_Closed_In_House_Programs}/{theme}/` — only if the project has no folder anywhere | Education, Democracy |
 | **Policy** | `03_INSTITUTIONAL/00_POLICIES/` | — |
 | **Formal governance meeting** | `03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/{forum}/{year}/` | — |
 | **Annual OKR cycle** | `01_STRATEGY/03_OKRs/` | — |
@@ -402,6 +403,17 @@ Two things worth understanding:
 - **BecaTech+ partner or provider** is for BecaTech+ only. Choose Partner or Provider and type
   the organization name; RADAR adds `Proposal`, `Agreement` and `Reports` inside it. The
   `Partners` and `Providers` folders must already exist — RADAR never creates them.
+- **Historical closed project (archive)** is for the Drive migration: a portfolio organization,
+  venture or in-house program that closed in the past and has no folder yet. Pick the archive
+  category, the name and the theme, and RADAR builds the folder with `Investment Documents`,
+  `Execution Documents` and `MEL Evidence` inside, empty. It does not close an active project,
+  move or find documents, or update the Master Registry; you file the documents and update the
+  Registry row yourself. RADAR first searches the whole Drive. If the project already has a
+  folder anywhere, or the archive folder already holds something, it stops and shows the path;
+  that folder needs reviewing by hand. The search ignores capitalisation and spaces versus
+  underscores but **not accents**, so look for other spellings before you confirm. It is
+  approved (ADR 0007), but do not use it on the production Shared Drive until it has been
+  validated on a test Shared Drive.
 - **Emergency Response is not a type.** It is an **In-house program** with theme
   `Cross_Thematic` and the name `Emergency_Response`.
 

@@ -6,7 +6,7 @@
  * immediately before writing, because Drive may have changed in between.
  */
 
-import { LIFECYCLE_CONFLICT_SCOPES, MIME_FOLDER, joinSegments } from '../radar/canonicalTree.js';
+import { CANONICAL_ROOTS, LIFECYCLE_CONFLICT_SCOPES, MIME_FOLDER, joinSegments } from '../radar/canonicalTree.js';
 import { PLAN_WARNING } from '../radar/planStructure.js';
 import { REGISTRY_STATUS } from './registryPort.js';
 
@@ -42,6 +42,8 @@ export const CONFLICT_CODE = Object.freeze({
   OBJECT_HAS_ANOTHER_HOME: 'OBJECT_HAS_ANOTHER_HOME',
   /** Its home is already the destination — the additive structure is the right tool. */
   OBJECT_ALREADY_IN_PORTFOLIO: 'OBJECT_ALREADY_IN_PORTFOLIO',
+  /** A closed-object folder is already in the archive holding more than RADAR's own folders. */
+  OBJECT_ALREADY_IN_ARCHIVE: 'OBJECT_ALREADY_IN_ARCHIVE',
   WRONG_MIME_TYPE: 'WRONG_MIME_TYPE',
   DUPLICATE_EXACT_MATCH: 'DUPLICATE_EXACT_MATCH',
   NOT_AUTHORIZED: 'NOT_AUTHORIZED',
@@ -202,9 +204,41 @@ export async function previewStructure({ drive, registry, plan }) {
   if (plan.destination.requireNoOtherHome && plan.inputs.objectName) {
     const elsewhere = await drive.findFoldersNamedAnywhere(plan.inputs.objectName);
     const destinationPath = plan.destination.path;
+    const underArchive = destinationPath.startsWith(CANONICAL_ROOTS.ARCHIVE);
 
     for (const hit of elsewhere) {
       const path = await drive.pathOf(hit.id);
+
+      /**
+       * A closed-project folder already at the destination holding only EMPTY folders this plan
+       * creates is RADAR's own earlier, partial run (ADR 0007), so it is resumed rather than
+       * blocked — retry stays safe. Anything else in it, documents included, is historical
+       * content that needs human review, and RADAR adds nothing to it. listChildren reads every
+       * page and throws on an incomplete listing, so "empty" here means empty.
+       */
+      if (path === destinationPath && underArchive) {
+        const rootKey = plan.items.find((i) => i.isStructureRoot)?.key;
+        const own = new Set(plan.items.filter((i) => i.parentKey === rootKey).map((i) => i.name));
+        const children = await drive.listChildren(hit.id);
+        let onlyOwnEmptyFolders = children.every((c) => c.mimeType === MIME_FOLDER && own.has(c.name));
+        for (const child of onlyOwnEmptyFolders ? children : []) {
+          if ((await drive.listChildren(child.id)).length > 0) onlyOwnEmptyFolders = false;
+        }
+        if (onlyOwnEmptyFolders) continue;
+
+        return {
+          ...base,
+          blocking: [
+            blocked(
+              CONFLICT_CODE.OBJECT_ALREADY_IN_ARCHIVE,
+              `"${hit.name}" already exists at ${path} and holds content RADAR did not create. ` +
+                'RADAR will not add to, reorganize or overwrite an existing archive folder, so it ' +
+                'needs human review. Nothing was changed.',
+              { path, webViewLink: hit.webViewLink }
+            ),
+          ],
+        };
+      }
 
       /**
        * Its home is the destination itself. Not a second home — but this structure is still
@@ -235,9 +269,13 @@ export async function previewStructure({ drive, registry, plan }) {
           blocked(
             CONFLICT_CODE.OBJECT_HAS_ANOTHER_HOME,
             `"${hit.name}" already exists at ${path}. An object has exactly one official folder, ` +
-              'so RADAR will not build a second one. If this is the same organization, move that ' +
-              'folder into Portfolio and then use "Portfolio operating folders" — approval moves ' +
-              'the complete folder and keeps its history, and rebuilding it here would lose that.',
+              'so RADAR will not build a second one. ' +
+              (underArchive
+                ? 'If this is the same project, review that folder and organize it through the manual ' +
+                  'migration process. RADAR has not moved, renamed or changed it.'
+                : 'If this is the same organization, move that folder into Portfolio and then use ' +
+                  '"Portfolio operating folders" — approval moves the complete folder and keeps its ' +
+                  'history, and rebuilding it here would lose that.'),
             { path, webViewLink: hit.webViewLink }
           ),
         ],

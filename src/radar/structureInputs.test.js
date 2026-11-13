@@ -4,6 +4,8 @@ import {
   defaultInputsFor,
   MAX_NAME_LENGTH,
   SUPPORTED_YEAR_RANGE,
+  nameVariants,
+  nameMatchKey,
 } from './structureInputs.js';
 import { STRUCTURE_TYPES } from './structureTemplates.js';
 
@@ -55,6 +57,10 @@ describe('folder names — rejected', () => {
     ['zero-width space', 'a\u200Bb', 'CONTROL_CHARACTER'],
     ['right-to-left override', 'a\u202Eb', 'CONTROL_CHARACTER'],
     ['byte order mark', 'a\uFEFFb', 'CONTROL_CHARACTER'],
+    ['non-breaking space', 'Escuela\u00A0Viva', 'UNUSUAL_SPACE'],
+    ['narrow non-breaking space', 'Escuela\u202FViva', 'UNUSUAL_SPACE'],
+    ['ideographic space', 'Escuela\u3000Viva', 'UNUSUAL_SPACE'],
+    ['two spaces in a row', 'Escuela  Viva', 'REPEATED_SPACE'],
     ['over the length limit', 'x'.repeat(MAX_NAME_LENGTH + 1), 'TOO_LONG'],
   ])('rejects %s', (_label, name, code) => {
     const result = policy(name);
@@ -326,5 +332,54 @@ describe('Portfolio operating folders inputs', () => {
 
   it('offers empty defaults for both fields', () => {
     expect(defaultInputsFor(TYPE)).toEqual({ objectName: '', theme: '' });
+  });
+});
+
+describe('nameVariants', () => {
+  it('adds only the other encoding and the underscore spelling, deduplicated', () => {
+    expect(nameVariants('Aprendo+')).toEqual(['Aprendo+']);
+    expect(nameVariants('Escuela Viva')).toEqual(['Escuela Viva', 'Escuela_Viva']);
+    expect(nameVariants('Escuela_Viva')).toEqual(['Escuela_Viva', 'Escuela Viva']);
+    const accented = nameVariants('Fundación Luminar');
+    expect(accented).toHaveLength(4);
+    expect(accented).toContain('Fundación Luminar'.normalize('NFD'));
+    expect(accented).toContain('Fundación_Luminar'.normalize('NFC'));
+  });
+
+  it('never folds accents', () => {
+    expect(nameVariants('Fundación Luminar')).not.toContain('Fundacion Luminar');
+  });
+});
+
+describe('nameMatchKey', () => {
+  it('gives every spacing, underscore, case and encoding of a name the same key', () => {
+    const key = nameMatchKey('Escuela Viva');
+    for (const spelling of ['Escuela  Viva', 'Escuela_Viva', 'escuela\u00A0viva', ' ESCUELA__VIVA ']) {
+      expect(nameMatchKey(spelling)).toBe(key);
+    }
+    expect(nameMatchKey('Fundación Luminar'.normalize('NFD'))).toBe(nameMatchKey('Fundación Luminar'));
+  });
+
+  it('keeps different names and accents apart', () => {
+    expect(nameMatchKey('Escuela Nueva')).not.toBe(nameMatchKey('Escuela Viva'));
+    expect(nameMatchKey('Fundacion Luminar')).not.toBe(nameMatchKey('Fundación Luminar'));
+  });
+});
+
+describe('spacing rule', () => {
+  it('applies to a name RADAR will create', () => {
+    const r = validateStructureInput(STRUCTURE_TYPES.CLOSED_OBJECT_ARCHIVE, {
+      archiveCategory: 'portfolio', theme: 'Education', objectName: 'Escuela  Viva',
+    });
+    expect(r.ok).toBe(false);
+    expect(r.errors.map((e) => e.code)).toContain('REPEATED_SPACE');
+  });
+
+  it('does not apply to a folder that must already exist, which is matched exactly as typed', () => {
+    for (const objectName of ['Escuela  Viva', 'Escuela\u00A0Viva']) {
+      const r = validateStructureInput(STRUCTURE_TYPES.PORTFOLIO_OPERATING_FOLDERS, { objectName, theme: 'Education' });
+      expect(r.ok).toBe(true);
+      expect(r.value.objectName).toBe(objectName);
+    }
   });
 });

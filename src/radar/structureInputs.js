@@ -15,10 +15,11 @@ import {
   GOVERNANCE_FORUMS,
   BECA_TECH_ORGANIZATION_KINDS,
   becaTechOrganizationKindById,
+  CLOSED_OBJECT_CATEGORIES,
+  closedObjectCategoryById,
   forumById,
-  themesForArea,
 } from './canonicalTree.js';
-import { getTemplate, isSupportedStructureType } from './structureTemplates.js';
+import { getTemplate, isSupportedStructureType, templateThemes } from './structureTemplates.js';
 
 /* ─── Documented limits ───────────────────────────────────── */
 
@@ -89,7 +90,7 @@ function err(field, code, message) {
  * Validate a value destined to become a literal Drive folder name.
  * Returns `{ value }` or `{ error }`.
  */
-export function validateFolderName(raw, field, label) {
+export function validateFolderName(raw, field, label, { strictSpacing = true } = {}) {
   if (typeof raw !== 'string') {
     return { error: err(field, 'REQUIRED', `${label} is required.`) };
   }
@@ -107,6 +108,16 @@ export function validateFolderName(raw, field, label) {
       error: err(field, 'CONTROL_CHARACTER', `${label} contains control or invisible characters.`),
     };
   }
+  // One kind of space, one at a time: a non-breaking or doubled space gives a name that looks
+  // identical to an existing folder's but is not, which is how a second official home is born.
+  if (strictSpacing && /[^\S ]/.test(value)) {
+    return {
+      error: err(field, 'UNUSUAL_SPACE', `${label} can only contain ordinary spaces — retype any non-breaking or special spaces.`),
+    };
+  }
+  if (strictSpacing && / {2,}/.test(value)) {
+    return { error: err(field, 'REPEATED_SPACE', `${label} cannot contain two spaces in a row.`) };
+  }
   // "." and ".." are relative path references; any all-dots name is ambiguous.
   if (/^\.+$/.test(value)) {
     return { error: err(field, 'RELATIVE_PATH', `${label} cannot be "." or "..".`) };
@@ -122,6 +133,29 @@ export function validateFolderName(raw, field, label) {
   }
 
   return { value };
+}
+
+/**
+ * Spellings of one folder name that the Drive-wide existence search treats as the same folder.
+ *
+ * Deterministic, never fuzzy: the same visible name in either Unicode encoding (macOS writes
+ * NFD, Windows NFC), and whitespace swapped for the underscores Classify puts in the names it
+ * suggests. Accents are deliberately not folded — `Fundacion` and `Fundación` stay different
+ * (ADR 0007). Only for PROHIBITING a second home; reuse still matches the exact name.
+ */
+export function nameVariants(name) {
+  const spellings = [name, name.replace(/\s+/g, '_'), name.replace(/_+/g, ' ')];
+  return [...new Set(spellings.flatMap((s) => [s.normalize('NFC'), s.normalize('NFD')]))];
+}
+
+/**
+ * The key two names share when they are the same name for the existence search: one Unicode
+ * encoding, one case, and every run of whitespace or underscores (non-breaking spaces included)
+ * as a single space. Covers the variants Drive's `name =` cannot be asked for. Accents are
+ * still not folded.
+ */
+export function nameMatchKey(name) {
+  return name.normalize('NFC').toLowerCase().replace(/[\s_]+/g, ' ').trim();
 }
 
 /** Optional Registry metadata — never becomes a path segment. */
@@ -174,6 +208,16 @@ function validateOrganizationKind(raw) {
     const labels = BECA_TECH_ORGANIZATION_KINDS.map((k) => k.label).join(', ');
     return {
       error: err('organizationKind', 'INVALID_ORGANIZATION_KIND', `Organization type must be one of: ${labels}.`),
+    };
+  }
+  return { value: raw };
+}
+
+function validateArchiveCategory(raw) {
+  if (!closedObjectCategoryById(raw)) {
+    const labels = CLOSED_OBJECT_CATEGORIES.map((c) => c.label).join(', ');
+    return {
+      error: err('archiveCategory', 'INVALID_ARCHIVE_CATEGORY', `Archive category must be one of: ${labels}.`),
     };
   }
   return { value: raw };
@@ -237,7 +281,9 @@ function validateMeetingDate(raw) {
 /* ─── Field dispatch ──────────────────────────────────────── */
 
 const FIELD_VALIDATORS = {
-  objectName: (raw, ctx) => validateFolderName(raw, 'objectName', ctx.objectNameLabel),
+  // An existing folder is matched exactly as typed, so its spacing cannot be forbidden here.
+  objectName: (raw, ctx) =>
+    validateFolderName(raw, 'objectName', ctx.objectNameLabel, { strictSpacing: !ctx.requiresExistingObject }),
   theme: (raw, ctx) => validateTheme(raw, ctx.themes),
   owner: (raw) => validateMetadata(raw, 'owner', 'Owner'),
   country: (raw) => validateMetadata(raw, 'country', 'Country or geography'),
@@ -245,6 +291,7 @@ const FIELD_VALIDATORS = {
   meetingLogYear: (raw) => validateYear(raw, 'meetingLogYear', 'Meeting log year'),
   forum: (raw) => validateForum(raw),
   organizationKind: (raw) => validateOrganizationKind(raw),
+  archiveCategory: (raw) => validateArchiveCategory(raw),
   meetingDate: (raw) => validateMeetingDate(raw),
   okrYear: (raw) => validateYear(raw, 'okrYear', 'OKR year'),
 };
@@ -283,8 +330,9 @@ export function validateStructureInput(type, raw) {
   const template = getTemplate(type);
   const ctx = {
     objectNameLabel: template.objectNameLabel || 'Name',
-    // A template collecting `theme` must declare `themeArea`; themesForArea throws if not.
-    themes: template.fields.includes('theme') ? themesForArea(template.themeArea) : [],
+    requiresExistingObject: Boolean(template.requiresExistingObject),
+    // A template collecting `theme` must declare `themes` or `themeArea`; templateThemes throws if not.
+    themes: template.fields.includes('theme') ? templateThemes(template) : [],
   };
   const value = {};
 
@@ -317,6 +365,7 @@ export function defaultInputsFor(type, now = new Date()) {
     meetingLogYear: String(year),
     forum: '',
     organizationKind: '',
+    archiveCategory: '',
     meetingDate: iso,
     okrYear: String(year),
   };

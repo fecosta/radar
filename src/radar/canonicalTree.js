@@ -90,6 +90,9 @@ export const SEGMENTS = Object.freeze({
 
   // 99_ARCHIVE
   DECLINED_PIPELINE: '01_Declined_Pipeline',
+  CLOSED_PORTFOLIO: '02_Closed_Portfolio',
+  CLOSED_VENTURES: '03_Closed_Ventures',
+  CLOSED_IN_HOUSE_PROGRAMS: '04_Closed_In_House_Programs',
 });
 
 /**
@@ -203,6 +206,22 @@ export const BECA_TECH_ORGANIZATION_KINDS = Object.freeze([
 
 export function becaTechOrganizationKindById(id) {
   return BECA_TECH_ORGANIZATION_KINDS.find((k) => k.id === id) || null;
+}
+
+/**
+ * The archive categories a closed-object folder may be built in (ADR 0007). A closed
+ * allowlist, like BECA_TECH_ORGANIZATION_KINDS: `structureInputs` validates the id against it,
+ * and the destination guard accepts no other archive container. The category and its theme
+ * folder must already exist; RADAR never creates them.
+ */
+export const CLOSED_OBJECT_CATEGORIES = Object.freeze([
+  { id: 'portfolio', label: 'Closed Portfolio', folder: SEGMENTS.CLOSED_PORTFOLIO },
+  { id: 'venture', label: 'Closed Ventures', folder: SEGMENTS.CLOSED_VENTURES },
+  { id: 'in_house_program', label: 'Closed In-house Programs', folder: SEGMENTS.CLOSED_IN_HOUSE_PROGRAMS },
+]);
+
+export function closedObjectCategoryById(id) {
+  return CLOSED_OBJECT_CATEGORIES.find((c) => c.id === id) || null;
 }
 
 /** Where annual OKR cycles live. */

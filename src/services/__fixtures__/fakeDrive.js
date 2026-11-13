@@ -9,6 +9,7 @@
  */
 
 import { MIME_FOLDER, MIME_GOOGLE_DOC } from '../../radar/canonicalTree.js';
+import { nameMatchKey, nameVariants } from '../../radar/structureInputs.js';
 import { resolveCanonicalPath } from '../driveStructureApi.js';
 import { DriveError, ERROR_CODE } from '../driveErrors.js';
 
@@ -41,6 +42,14 @@ export const CANONICAL_PARENT_PATHS = [
   // setting applied by hand; no structure type creates or touches it.
   '03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/05_Weekly_Email',
   '99_ARCHIVE/01_Declined_Pipeline',
+  // ADR 0007: the closed-object containers. 04_ also has Cross_Thematic, which no structure targets.
+  '99_ARCHIVE/02_Closed_Portfolio/Education',
+  '99_ARCHIVE/02_Closed_Portfolio/Democracy',
+  '99_ARCHIVE/03_Closed_Ventures/Education',
+  '99_ARCHIVE/03_Closed_Ventures/Democracy',
+  '99_ARCHIVE/04_Closed_In_House_Programs/Education',
+  '99_ARCHIVE/04_Closed_In_House_Programs/Democracy',
+  '99_ARCHIVE/04_Closed_In_House_Programs/Cross_Thematic',
 ];
 
 /**
@@ -58,7 +67,13 @@ export function createFakeDrive({
   /** id -> { id, name, mimeType, parentId, driveId, webViewLink } */
   const items = new Map();
   let nextId = 1;
-  const calls = { findExactChildren: 0, findFoldersNamedAnywhere: 0, createFolder: 0, createGoogleDoc: 0 };
+  const calls = {
+    findExactChildren: 0,
+    findFoldersNamedAnywhere: 0,
+    listChildren: 0,
+    createFolder: 0,
+    createGoogleDoc: 0,
+  };
 
   /** Fault injection: a queue of one-shot behaviours keyed by item name. */
   const failures = new Map();
@@ -112,12 +127,19 @@ export function createFakeDrive({
       return childrenOf(parentId).filter((i) => i.name === name);
     },
 
+    async listChildren(parentId) {
+      calls.listChildren += 1;
+      return childrenOf(parentId);
+    },
+
     /** Case-insensitive, drive-wide folder search. Mirrors the real client's loose policy. */
     async findFoldersNamedAnywhere(name) {
       calls.findFoldersNamedAnywhere += 1;
-      const want = String(name).toLowerCase();
+      // Mirrors both of the real client's queries: exact spellings, then the whitespace key.
+      const want = new Set(nameVariants(String(name)).map((v) => v.toLowerCase()));
+      const key = nameMatchKey(String(name));
       return [...items.values()].filter(
-        (i) => i.mimeType === MIME_FOLDER && i.name.toLowerCase() === want
+        (i) => i.mimeType === MIME_FOLDER && (want.has(i.name.toLowerCase()) || nameMatchKey(i.name) === key)
       );
     },
 
@@ -158,6 +180,11 @@ export function createFakeDrive({
       const fault = failures.get(name);
       if (fault) {
         failures.delete(name);
+        // Drive created the item but the response was lost: the ambiguous write.
+        if (fault.createThenThrow) {
+          add(parentId, name, mimeType);
+          throw fault.createThenThrow;
+        }
         if (fault.throw) throw fault.throw;
         if (fault.driveId) {
           // Simulate Drive reporting the item outside the configured Shared Drive.
@@ -181,6 +208,10 @@ export function createFakeDrive({
     /** Make the next create of `name` fail with `error`. */
     _failOnCreate(name, error) {
       failures.set(name, { throw: error });
+    },
+    /** Make the next create of `name` succeed in Drive but report `error` to the caller. */
+    _createThenFail(name, error) {
+      failures.set(name, { createThenThrow: error });
     },
     /** Make the next create of `name` land in the wrong drive. */
     _createInWrongDrive(name, driveId = 'some-other-drive') {

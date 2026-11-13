@@ -2,6 +2,7 @@ RADAR v06 - CANONICAL FOLDER TREE / AUTOMATION SPEC
 Version: 2026-08-18
 Basis: v05 architecture + Leadership Team feedback + implemented Drive changes + structure-creation automation
 Amended: 2026-09-24 - SPECIAL TEMPLATE - BECATECH+ PARTNERS AND PROVIDERS; BecaTech+ partner or provider structure type (ADR 0006; approved by the RADAR Owner and the Education functional owner)
+Amended: 2026-11-13 - SPECIAL TEMPLATE - HISTORICAL CLOSED PROJECT ARCHIVE; Historical closed project (archive) structure type (ADR 0007; approved by the RADAR Owner, covering the Portfolio, Venture Building, In-house Programs, Education and Democracy functional areas, as confirmed by the requester)
 
 DESIGN RULES
 1. Fixed root: 01_STRATEGY, 02_INVESTMENTS_AND_PROGRAMS, 03_INSTITUTIONAL, 99_ARCHIVE.
@@ -311,6 +312,21 @@ Democracia+
 ├── 09_Photos_and_Videos
 └── 10_Spinoff_Preparation
 
+SPECIAL TEMPLATE - HISTORICAL CLOSED PROJECT ARCHIVE
+Path: 99_ARCHIVE/{02_Closed_Portfolio|03_Closed_Ventures|04_Closed_In_House_Programs}/{Education|Democracy}
+[Historical_Closed_Project]
+├── Investment Documents
+├── Execution Documents
+└── MEL Evidence
+- Historical migration exception: for a Portfolio organization, Venture or In-house Program that closed in the past and has no existing official folder. It is not a closure workflow; active objects still close by moving the complete folder (design rules 8 and 9).
+- RADAR creates the project folder only after a Shared-Drive-wide check finds no existing folder for it. A folder found anywhere else prevents creation and is reviewed and organized by hand.
+- The category and theme folders must already exist; a missing one is architecture drift and is never auto-created.
+- Subfolder names are exact, including spaces and capitalization.
+- An existing archive folder holding anything other than RADAR's own empty partial structure requires human review; RADAR adds nothing to it. A partial creation resumes only when the folder holds nothing but empty standard folders.
+- RADAR never moves, renames, deletes or reorganizes historical content and does not manage permissions for these folders.
+- Master Registry lifecycle updates remain manual; no Registry record is created or changed.
+- Cross_Thematic under 04_Closed_In_House_Programs is not part of this template.
+
 FORMAL INSTITUTIONAL GOVERNANCE TEMPLATE
 Applies only to: Board, Leadership Team, All Team, Offsites.
 Path examples:
@@ -410,6 +426,7 @@ Current structure types shown in the tool:
 - Venture Building initiative
 - In-house program
 - BecaTech+ partner or provider
+- Historical closed project (archive)
 - Policy
 - Formal governance meeting
 - Annual OKR cycle

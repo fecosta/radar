@@ -897,3 +897,140 @@ describe('BecaTech+ partner or provider', () => {
     expect(retry.created.map((c) => c.path.split('/').pop())).toEqual(['Agreement', 'Reports']);
   });
 });
+
+describe('Historical closed project (archive)', () => {
+  const INPUTS = { archiveCategory: 'in_house_program', theme: 'Education', objectName: 'Escuela Viva' };
+  const ROOT = '99_ARCHIVE/04_Closed_In_House_Programs/Education/Escuela Viva';
+  const runClosed = (drive, options = {}) =>
+    run({
+      drive,
+      type: STRUCTURE_TYPES.CLOSED_OBJECT_ARCHIVE,
+      inputs: INPUTS,
+      acknowledged: ['REGISTRY_TRANSITION_REQUIRED'],
+      ...options,
+    });
+
+  it('creates exactly the object folder and its three folders, and nothing else', async () => {
+    const drive = createFakeDrive();
+    const registry = createFakeRegistry();
+    const audit = createFakeAudit();
+    const before = drive._items.size;
+
+    const result = await runClosed(drive, { registry, audit });
+
+    expect(result.outcome).toBe(OUTCOME.SUCCESS);
+    expect(result.created.map((i) => drive._pathOf(i.id))).toEqual([
+      ROOT,
+      `${ROOT}/Investment Documents`,
+      `${ROOT}/Execution Documents`,
+      `${ROOT}/MEL Evidence`,
+    ]);
+    expect(drive._items.size).toBe(before + 4);
+    expect(drive._calls.createGoogleDoc).toBe(0);
+    // No Registry write, and the result says a human must make one.
+    expect(registry._rows).toHaveLength(0);
+    expect(result.registry.status).toBe(REGISTRY_STATUS.NOT_APPLICABLE);
+    expect(result.registry.manualTransitionRequired).toBe(true);
+    expect(audit._events).toHaveLength(1);
+    expect(audit._events[0].warnings).toContain('REGISTRY_TRANSITION_REQUIRED');
+  });
+
+  it('blocks until the Registry advisory is acknowledged', async () => {
+    const drive = createFakeDrive();
+    const result = await runClosed(drive, { acknowledged: [] });
+
+    expect(result.outcome).toBe(OUTCOME.BLOCKED);
+    expect(result.failureStage).toBe(FAILURE_STAGE.ACKNOWLEDGEMENT);
+    expect(drive._calls.createFolder).toBe(0);
+  });
+
+  it('reports a partial failure, then a retry completes it without duplicates', async () => {
+    const drive = createFakeDrive();
+    const audit = createFakeAudit();
+    drive._failOnCreate('Execution Documents', new DriveError(ERROR_CODE.RATE_LIMITED, { status: 429 }));
+
+    const partial = await runClosed(drive, { audit });
+    expect(partial.outcome).toBe(OUTCOME.PARTIAL_SUCCESS);
+    expect(partial.created.map((i) => i.name)).toEqual(['Escuela Viva', 'Investment Documents']);
+    expect(partial.errors[0].path).toContain('Execution Documents');
+
+    const retry = await runClosed(drive, { audit });
+    expect(retry.outcome).toBe(OUTCOME.SUCCESS);
+    expect(retry.existing.map((i) => i.name)).toEqual(['Escuela Viva', 'Investment Documents']);
+    expect(retry.created.map((i) => i.name)).toEqual(['Execution Documents', 'MEL Evidence']);
+
+    const again = await runClosed(drive, { audit });
+    expect(again.outcome).toBe(OUTCOME.SUCCESS);
+    expect(again.created).toHaveLength(0);
+    expect(drive._childrenOf(retry.existing[0].id)).toHaveLength(3);
+    expect(audit._events).toHaveLength(3);
+  });
+
+  it('refuses at execution time once the destination holds something RADAR did not create', async () => {
+    const drive = createFakeDrive();
+    drive._seedPath(`${ROOT}/06_MEL_Evidence`);
+
+    const result = await runClosed(drive);
+
+    expect(result.outcome).toBe(OUTCOME.BLOCKED);
+    expect(drive._calls.createFolder).toBe(0);
+  });
+});
+
+/**
+ * A create whose response is lost may still have happened in Drive. The client never resends it
+ * (driveStructureApi.test.js); these prove the next explicit attempt reconciles instead of
+ * duplicating.
+ */
+describe('a create with an unknown outcome', () => {
+  it.each([
+    ['a timeout', new DriveError(ERROR_CODE.TIMEOUT)],
+    ['a network failure', new DriveError(ERROR_CODE.NETWORK)],
+  ])('reports %s as unconfirmed, and a retry reuses what Drive made', async (_label, error) => {
+    const drive = createFakeDrive();
+    const audit = createFakeAudit();
+    const inputs = { archiveCategory: 'portfolio', theme: 'Education', objectName: 'Escuela Viva' };
+    const runIt = () =>
+      run({ drive, audit, type: STRUCTURE_TYPES.CLOSED_OBJECT_ARCHIVE, inputs, acknowledged: ['REGISTRY_TRANSITION_REQUIRED'] });
+    drive._createThenFail('Escuela Viva', error);
+
+    const first = await runIt();
+    expect(first.outcome).toBe(OUTCOME.FAILED);
+    expect(first.created).toHaveLength(0);
+    expect(first.errors[0]).toMatchObject({ details: { outcomeUnknown: true }, path: expect.stringContaining('Escuela Viva') });
+    expect(first.errors[0].message).toMatch(/did not confirm whether "Escuela Viva" was created/);
+
+    const retry = await runIt();
+    expect(retry.outcome).toBe(OUTCOME.SUCCESS);
+    expect(retry.existing.map((i) => i.name)).toEqual(['Escuela Viva']);
+    expect(retry.created.map((i) => i.name)).toEqual(['Investment Documents', 'Execution Documents', 'MEL Evidence']);
+
+    const roots = [...drive._items.values()].filter((i) => i.name === 'Escuela Viva');
+    expect(roots).toHaveLength(1);
+    expect(drive._childrenOf(roots[0].id)).toHaveLength(3);
+    expect(audit._events.map((e) => e.outcome)).toEqual([OUTCOME.FAILED, OUTCOME.SUCCESS]);
+    expect(audit._events[0].error.details.outcomeUnknown).toBe(true);
+  });
+
+  it('reconciles the same way for an existing structure type', async () => {
+    const drive = createFakeDrive();
+    drive._createThenFail('03_Screening', new DriveError(ERROR_CODE.TIMEOUT));
+
+    const first = await run({ drive });
+    expect(first.outcome).toBe(OUTCOME.PARTIAL_SUCCESS);
+    expect(first.errors[0].details.outcomeUnknown).toBe(true);
+
+    const retry = await run({ drive });
+    expect(retry.outcome).toBe(OUTCOME.SUCCESS);
+    expect(retry.existing.map((i) => i.name)).toContain('03_Screening');
+    expect([...drive._items.values()].filter((i) => i.name === '03_Screening')).toHaveLength(1);
+  });
+
+  it('keeps the plain message for a failure that certainly created nothing', async () => {
+    const drive = createFakeDrive();
+    drive._failOnCreate('03_Screening', new DriveError(ERROR_CODE.PERMISSION_DENIED));
+
+    const result = await run({ drive });
+    expect(result.errors[0].details?.outcomeUnknown).toBeUndefined();
+  });
+});
