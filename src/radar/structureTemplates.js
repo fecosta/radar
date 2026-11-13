@@ -38,8 +38,9 @@
  *     actually happens, not preemptively for a brand-new pipeline object.
  *
  *   The decline and closure MOVES into 99_ARCHIVE — same reason as the Portfolio move. A
- *     closed object that HAS a folder is moved there by a human and gets nothing from RADAR.
- *     CLOSED_OBJECT_ARCHIVE serves only a closed object with no folder anywhere (ADR 0007).
+ *     closed object that HAS a folder is organized by a human and gets nothing from RADAR.
+ *     CLOSED_OBJECT_ARCHIVE serves only a project that closed in the past and has no folder
+ *     anywhere — the historical migration case (ADR 0007).
  */
 
 import {
@@ -504,33 +505,36 @@ const TEMPLATES = {
   },
 
   /**
-   * A closed Portfolio organization, Venture or In-house Program that never had a folder, so
-   * there is nothing to move into the archive (ADR 0007, Proposed).
+   * A Portfolio organization, Venture or In-house Program that closed in the past and has no
+   * folder, organized during the Shared Drive migration (ADR 0007, Proposed). Not a closure
+   * workflow: RADAR closes nothing and moves nothing.
    *
-   * Closure MOVES the complete object folder (v06 design rules 4, 8 and 9), so this is the
+   * One object has one official folder (v06 design rule 4), so this is the
    * EXISTING_PORTFOLIO_INVESTMENT pattern applied to the archive: `requireNoOtherHome` makes the
-   * preview search the whole Shared Drive first and refuse if the object has a folder anywhere.
-   * A closed object that does have one is moved by a human and gets nothing from RADAR — which
-   * is also why these three folders never sit beside an object's own investment, execution and
-   * MEL folders.
+   * preview search the whole Shared Drive first and refuse if the project has a folder anywhere.
+   * A project that does have one is reviewed and organized by hand and gets nothing from RADAR —
+   * which is also why these three folders never sit beside an object's own investment,
+   * execution and MEL folders.
    *
    * Education and Democracy only, in all three categories. `Cross_Thematic` under
    * 04_Closed_In_House_Programs is canonical but outside what was requested and proposed.
    */
   [STRUCTURE_TYPES.CLOSED_OBJECT_ARCHIVE]: {
     id: STRUCTURE_TYPES.CLOSED_OBJECT_ARCHIVE,
-    label: 'Closed object (archive)',
+    label: 'Historical closed project (archive)',
     description:
-      'Builds Investment Documents, Execution Documents and MEL Evidence in the archive for a ' +
-      'closed object — Portfolio, Venture or In-house — that never had a folder. Refused if the ' +
-      'object has a folder anywhere; that one must be moved instead.',
-    objectNameLabel: 'Closed object name',
+      'For a Portfolio, Venture or In-house project that closed in the past and has no folder ' +
+      'yet: builds Investment Documents, Execution Documents and MEL Evidence in the archive. ' +
+      'It does not close a project, move documents or change the Master Registry. If the ' +
+      'project already has a folder, RADAR stops and shows where.',
+    objectNameLabel: 'Project name',
     fields: ['archiveCategory', 'objectName', 'theme'],
     themes: THEMES,
     themeHint: 'Education and Democracy only.',
     confirmNote:
-      'RADAR searched the whole Shared Drive and found no other folder for this object. It does ' +
-      'not record the object as closed — update its Master Registry row yourself.',
+      'RADAR searched the whole Shared Drive and found no other folder for this project. The new ' +
+      'folders start empty: RADAR moves no documents into them, and does not record the project ' +
+      'as closed — update its Master Registry row yourself.',
     /**
      * No Registry write. Building an archive folder is not evidence that the object was
      * closed, and the specification is explicit that a human determines status and type.
@@ -539,9 +543,9 @@ const TEMPLATES = {
       applicable: false,
       manualTransition: {
         message:
-          'RADAR does not add or change a Master Registry row for a closed object, and building ' +
-          'this folder does not record it as closed. Make sure the object has exactly one ' +
-          'Registry row, then set Current_Stage_or_Status, Decline_or_Closure_Reason, ' +
+          'RADAR does not add or change a Master Registry row for a historical closed project, and ' +
+          'building this folder does not record it as closed. Make sure the project has exactly ' +
+          'one Registry row, then set Current_Stage_or_Status, Decline_or_Closure_Reason, ' +
           'Decision_Link and Official_Folder_Link (this folder) by hand.',
       },
     },

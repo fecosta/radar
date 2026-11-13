@@ -210,26 +210,30 @@ export async function previewStructure({ drive, registry, plan }) {
       const path = await drive.pathOf(hit.id);
 
       /**
-       * A closed-object folder already at the destination holding only folders this plan
+       * A closed-project folder already at the destination holding only EMPTY folders this plan
        * creates is RADAR's own earlier, partial run (ADR 0007), so it is resumed rather than
-       * blocked — retry stays safe. Anything else in it means a real object, which is moved
-       * here by a human and never added to. One page is enough: more children than the plan's
-       * three folders means a stranger or a duplicate, and step 3 blocks duplicates.
+       * blocked — retry stays safe. Anything else in it, documents included, is historical
+       * content that needs human review, and RADAR adds nothing to it. One page is enough:
+       * more children than the plan's three folders means a stranger or a duplicate.
        */
       if (path === destinationPath && underArchive) {
         const rootKey = plan.items.find((i) => i.isStructureRoot)?.key;
         const own = new Set(plan.items.filter((i) => i.parentKey === rootKey).map((i) => i.name));
         const children = await drive.listChildren(hit.id);
-        if (children.every((c) => c.mimeType === MIME_FOLDER && own.has(c.name))) continue;
+        let onlyOwnEmptyFolders = children.every((c) => c.mimeType === MIME_FOLDER && own.has(c.name));
+        for (const child of onlyOwnEmptyFolders ? children : []) {
+          if ((await drive.listChildren(child.id)).length > 0) onlyOwnEmptyFolders = false;
+        }
+        if (onlyOwnEmptyFolders) continue;
 
         return {
           ...base,
           blocking: [
             blocked(
               CONFLICT_CODE.OBJECT_ALREADY_IN_ARCHIVE,
-              `"${hit.name}" already exists at ${path} and holds content RADAR did not create. This ` +
-                'structure only builds a folder for a closed object that had none. A closed object ' +
-                'that was moved here keeps its own structure, and RADAR adds nothing to it.',
+              `"${hit.name}" already exists at ${path} and holds content RADAR did not create. ` +
+                'RADAR will not add to, reorganize or overwrite an existing archive folder, so it ' +
+                'needs human review. Nothing was changed.',
               { path, webViewLink: hit.webViewLink }
             ),
           ],
@@ -267,9 +271,8 @@ export async function previewStructure({ drive, registry, plan }) {
             `"${hit.name}" already exists at ${path}. An object has exactly one official folder, ` +
               'so RADAR will not build a second one. ' +
               (underArchive
-                ? `If this is the same object, move that complete folder into ${plan.destination.parentPath} ` +
-                  'instead — closure moves the object and keeps its history, and rebuilding it here ' +
-                  'would split that history across two folders.'
+                ? 'If this is the same project, review that folder and organize it through the manual ' +
+                  'migration process. RADAR has not moved, renamed or changed it.'
                 : 'If this is the same organization, move that folder into Portfolio and then use ' +
                   '"Portfolio operating folders" — approval moves the complete folder and keeps its ' +
                   'history, and rebuilding it here would lose that.'),

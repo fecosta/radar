@@ -1,7 +1,7 @@
-# ADR 0007 — A closed object's archive folder, only on proven absence
+# ADR 0007 — A historical closed project's archive folder, only on proven absence
 
 - **Status:** Proposed
-- **Date:** 2026-11-12
+- **Date:** 2026-11-12; revised 2026-11-13 for the historical-migration clarification
 - **Supersedes, in part:** ADR 0004 guard rule A ("nothing may be created anywhere under
   `99_ARCHIVE`, no exceptions") and ADR 0005 decision 4 ("`99_ARCHIVE` keeps its absolute
   prohibition"). It adds one narrow exception and changes nothing else in either ADR.
@@ -13,11 +13,14 @@
 
 ## Context
 
-A stakeholder asked Create structure to build a standard folder for closed objects:
+The organization has projects — Portfolio organizations, Ventures and In-house Programs — that
+closed in the past, some of them months ago. Organizing their documentation is the final stage
+of the RADAR Shared Drive migration. A stakeholder asked Create structure to build a standard
+archive folder for each one:
 
 ```text
 99_ARCHIVE/{02_Closed_Portfolio|03_Closed_Ventures|04_Closed_In_House_Programs}/{Education|Democracy}/
-└── [Closed Object Name]/
+└── [Historical Closed Project Name]/
     ├── Investment Documents/
     ├── Execution Documents/
     └── MEL Evidence/
@@ -25,6 +28,11 @@ A stakeholder asked Create structure to build a standard folder for closed objec
 
 `Cross_Thematic` stays in the canonical tree under `04_Closed_In_House_Programs`. The stakeholder
 did not ask for this structure there.
+
+The stakeholder clarified (2026-11-13) that this is **not** a request to automate closing
+currently active projects. It is also not yet known where every historical project's documents
+live: some have no organized folder, others may already have one, possibly outside the archive.
+Historical closure is therefore no licence to create a second official home.
 
 What the governing sources say:
 
@@ -39,24 +47,49 @@ What the governing sources say:
 - **The guard said no, absolutely.** `forbiddenDestinationReason` rule A refused every path under
   `99_ARCHIVE`, because "an archived object by definition already had a home."
 
-That justification has the same gap ADR 0005 found in Portfolio. A closed object that never had
-a folder had no home, so there is nothing to move. Refusing to build one leaves it permanently
-in breach of rule 4. Closed grants and programs that predate RADAR are exactly this case.
+That justification has the same gap ADR 0005 found in Portfolio. A project that closed without
+ever having an organized folder had no home, so there is nothing to move. Refusing to build one
+leaves it permanently in breach of rule 4. The historical projects in the migration are exactly
+this case.
 
 ## Decision
 
 ### 1. One new structure, for proven absence only
 
-`closed_object_archive` ("Closed object (archive)") builds `{name}` with three children named
-exactly as requested, directly inside `99_ARCHIVE/{category}/{theme}`. It declares
+`closed_object_archive` ("Historical closed project (archive)") builds `{name}` with three
+children named exactly as requested, directly inside `99_ARCHIVE/{category}/{theme}`. It declares
 `requireNoOtherHome`, so before anything is written the preview runs ADR 0005's single
-Drive-wide, case-insensitive folder-name search. A hit anywhere blocks with "move that complete
-folder instead": active areas, another closed category, the other theme, or `07_Legacy_Structure`.
+Drive-wide, case-insensitive folder-name search. A hit anywhere blocks and shows its path: active
+areas, another closed category, the other theme, or `07_Legacy_Structure`. The block says the
+existing folder must be reviewed and organized through the manual migration process. RADAR
+does not move, rename, copy or delete it.
 
-A closed object that **has** a folder is moved by a human and gets nothing from RADAR. So the
-three folders never land beside an object's own `06_Investment_Docs`, `07_Execution` or
-`10_MEL_Evidence`, which would give one document type two homes inside one object. The
-stakeholder accepted that overlap if it ever arose, but with this design it cannot.
+A project that **has** a folder gets nothing from RADAR. So the three folders never land beside
+an object's own `06_Investment_Docs`, `07_Execution` or `10_MEL_Evidence`, which would give one
+document type two homes inside one object.
+
+RADAR never looks for, moves or copies the project's documents. The new folders start empty.
+
+| Scenario | Behavior |
+|---|---|
+| A. No folder anywhere | Builds the object folder and its three folders after preview and confirmation |
+| B. RADAR's own partial run at the destination | Resumes: reuses what exists, creates the rest (decision 3) |
+| C. A folder for the project elsewhere | Blocks with `OBJECT_HAS_ANOTHER_HOME` and the path; human review |
+| D. The destination already holds other content | Blocks with `OBJECT_ALREADY_IN_ARCHIVE`; nothing changed; human review |
+
+### 1a. The existence search covers the project's other spellings
+
+Historical folders were named by different people on different systems, so a name match must
+not depend on how it was typed. `nameVariants()` in `structureInputs.js` adds two kinds of
+deterministic variant to the one Drive query: the other Unicode encoding of the same visible name
+(macOS writes NFD, Windows NFC), and spaces swapped with the underscores Classify's suggested
+names use. Drive's `name =` already ignores case. It fails closed: a variant can only add a
+block. Reuse at the destination still requires the exact name.
+
+Accents are deliberately **not** folded. `Fundacion` and `Fundación` stay different, because
+folding is one-directional (a name typed without accents cannot be expanded back) and blocks
+genuinely different names. The wizard asks the administrator to check for other spellings before
+confirming. Because the search is shared, *Existing Portfolio investment* gets the same coverage.
 
 ### 2. Rule A is narrowed, not removed
 
@@ -80,10 +113,12 @@ blocks. Here that would leave a partial failure stuck until someone deleted fold
 when the search hit **is** the destination, the preview lists that folder's children (a new
 read-only `listChildren` call under the already-granted `drive` scope):
 
-- if they are only folders bearing this plan's own child names, the folder is RADAR's earlier
-  run, and the preview reuses what exists and creates the rest;
-- anything else means a real object, and the preview blocks with `OBJECT_ALREADY_IN_ARCHIVE`.
-  That covers a file, a moved object's own folder, or a planned name taken by a file.
+- if they are only **empty** folders bearing this plan's own child names, the folder is RADAR's
+  earlier run, and the preview reuses what exists and creates the rest;
+- anything else is historical content that needs human review, and the preview blocks with
+  `OBJECT_ALREADY_IN_ARCHIVE`. That covers a file, a moved object's own folder, a planned name
+  taken by a file, and a planned folder that already holds documents. Enriching an existing
+  archive folder is a separate product decision, not part of this one.
 
 This applies to archive destinations only. *Existing Portfolio investment* keeps ADR 0005's
 block-always behaviour unchanged.
@@ -107,7 +142,8 @@ form agree. `THEMES_BY_AREA` is unchanged.
 Preview, explicit confirmation, revalidation immediately before writing, exact-name reuse,
 Shared Drive containment, no delete, move, rename or permission verb, precise partial-failure
 reporting, and one audit row per attempt all apply unchanged. ADR 0001's revisit trigger
-("lifecycle transitions … decline/archive") has not fired: nothing is moved.
+("lifecycle transitions … decline/archive") has not fired: nothing is moved, and no active
+project is closed.
 
 ## Alternatives rejected
 
@@ -125,11 +161,13 @@ reporting, and one audit row per attempt all apply unchanged. ADR 0001's revisit
 
 - **The archive is no longer unreachable.** One shape-pinned, declared exception exists, and its
   safety rests on a live-Drive check rather than a structural impossibility, as in ADR 0005.
-- **Inherited residual gaps.** Drive's name search does not fold accents or Unicode
-  normalization. Two administrators racing are not serialized. The resume rule trusts any folder
-  whose only children carry the three planned names, so a human-made folder with exactly that
-  shape is treated as RADAR's own. That is harmless, because RADAR only adds missing siblings and
-  never touches their content.
+- **Residual gaps.** The search does not fold accents or punctuation, so a project filed as
+  `Fundacion Luminar` or `Fundación-Luminar` is not found when `Fundación Luminar` is typed. The
+  administrator's check before confirming is the control. Two administrators racing are not
+  serialized. An empty folder a human made with exactly the planned names is treated as RADAR's
+  own. That is harmless, because RADAR only adds empty siblings.
+- **Live behavior is unverified.** The variant query and resume rule are tested against the fake
+  Drive only. They need a test Shared Drive run before production use (AGENTS.md §5, §8).
 - **The folder names break the canonical convention.** Every other canonical folder is a
   numbered snake_case name. These follow the request verbatim (`Investment Documents`, not
   `01_Investment_Documents`). The specification states no folder-naming rule, so this is flagged
@@ -142,17 +180,26 @@ reporting, and one audit row per attempt all apply unchanged. ADR 0001's revisit
 
 Both are needed before this ADR can be Accepted.
 
-1. **Owner approval.** The RADAR Owner and the relevant functional owners must approve this
-   decision, recorded in their words as ADR 0006 does. The approval should also answer three
-   questions:
-   - Are the three names final as written, or should they follow the numbered snake_case
-     convention?
+1. **Owner approval.** The RADAR Owner and the relevant functional owners must approve these
+   four points, recorded in their words as ADR 0006 does:
+   1. the historical closed-project structure;
+   2. creating a new archive object folder only where no existing official folder is found;
+   3. the three exact subfolder names: `Investment Documents`, `Execution Documents`,
+      `MEL Evidence`;
+   4. the narrow exception to the archive creation prohibition (decision 2).
+
+   The approval should also answer:
+   - Should the names follow the numbered snake_case convention instead?
    - Should `Cross_Thematic` closed in-house programs be included?
-   - Who owns updating the Registry row for these objects?
+   - Who owns updating these projects' Registry rows?
+   - Who reviews and organizes a historical project's existing folder when RADAR finds one, and
+     through which migration process?
 2. **Specification amendment**, made at the Owner's direction:
-   - add a CLOSED OBJECT ARCHIVE TEMPLATE under the `99_ARCHIVE` section: "For a closed
-     Portfolio organization, Venture or In-house Program that never had an official folder,
-     RADAR may create `[Object]/Investment Documents`, `Execution Documents` and `MEL Evidence`
-     under `02_Closed_Portfolio`, `03_Closed_Ventures` or `04_Closed_In_House_Programs` /
-     `Education|Democracy`. A closed object with a folder is moved, never rebuilt.";
-   - add "Closed object (archive)" to *Current structure types shown in the tool*.
+   - add a HISTORICAL CLOSED PROJECT ARCHIVE TEMPLATE under the `99_ARCHIVE` section: "For a
+     Portfolio organization, Venture or In-house Program that closed in the past and has no
+     existing official folder, RADAR may create `[Project]/Investment Documents`,
+     `Execution Documents` and `MEL Evidence` under `02_Closed_Portfolio`, `03_Closed_Ventures`
+     or `04_Closed_In_House_Programs` / `Education|Democracy`. RADAR does not close projects,
+     move documents or update the Master Registry. A project that already has a folder is
+     reviewed and organized by hand, never rebuilt.";
+   - add "Historical closed project (archive)" to *Current structure types shown in the tool*.

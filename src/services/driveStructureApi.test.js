@@ -124,6 +124,21 @@ describe('exact matching', () => {
     expect(matches.map((m) => m.id)).toEqual(['b']);
   });
 
+  it('searches the Drive for every spelling variant of a name in one read-only query', async () => {
+    const { client, calls } = clientWith([{ body: { files: [] } }]);
+
+    await client.findFoldersNamedAnywhere("Fundación d'Ejemplo");
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].init?.method ?? 'GET').toBe('GET');
+    const q = calls[0].url.searchParams.get('q');
+    for (const variant of ["Fundación d\\'Ejemplo", "Fundación_d\\'Ejemplo"]) {
+      expect(q).toContain(`name = '${variant.normalize('NFC')}'`);
+      expect(q).toContain(`name = '${variant.normalize('NFD')}'`);
+    }
+    expect(q).toMatch(/^\(name = .+\) and mimeType = 'application\/vnd\.google-apps\.folder' and trashed = false$/);
+  });
+
   it('lists every child of a folder with a scoped, read-only query', async () => {
     const { client, calls } = clientWith([
       { body: { files: [folder({ id: 'a', name: 'MEL Evidence' }), folder({ id: 'b', name: 'notes.pdf' })] } },

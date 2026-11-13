@@ -386,7 +386,7 @@ again. That is the design, not a bug.
 | **Venture Building initiative** | `02_INVESTMENTS_AND_PROGRAMS/03_VENTURE_BUILDING/{theme}/` | Education, Democracy |
 | **In-house program** | `02_INVESTMENTS_AND_PROGRAMS/04_IN_HOUSE_PROGRAMS/{theme}/` | Education, Democracy, **Cross_Thematic** |
 | **BecaTech+ partner or provider** | BecaTech+'s existing `04_Partners_and_Providers/Partners/` or `…/Providers/` | — |
-| **Closed object (archive)** | `99_ARCHIVE/{02_Closed_Portfolio, 03_Closed_Ventures or 04_Closed_In_House_Programs}/{theme}/` — only if the object has no folder anywhere | Education, Democracy |
+| **Historical closed project (archive)** | `99_ARCHIVE/{02_Closed_Portfolio, 03_Closed_Ventures or 04_Closed_In_House_Programs}/{theme}/` — only if the project has no folder anywhere | Education, Democracy |
 | **Policy** | `03_INSTITUTIONAL/00_POLICIES/` | — |
 | **Formal governance meeting** | `03_INSTITUTIONAL/01_GOVERNANCE_AND_DECISIONS/{forum}/{year}/` | — |
 | **Annual OKR cycle** | `01_STRATEGY/03_OKRs/` | — |
@@ -403,13 +403,15 @@ Two things worth understanding:
 - **BecaTech+ partner or provider** is for BecaTech+ only. Choose Partner or Provider and type
   the organization name; RADAR adds `Proposal`, `Agreement` and `Reports` inside it. The
   `Partners` and `Providers` folders must already exist — RADAR never creates them.
-- **Closed object (archive)** is not how you close an object. Closing an object means *moving*
-  its existing folder into the archive yourself, and RADAR adds nothing to a folder that arrived
-  that way. This type is for a closed portfolio organization, venture or in-house program that
-  never had a folder: pick the archive category, the theme and the name, and RADAR builds the
-  folder with `Investment Documents`, `Execution Documents` and `MEL Evidence` inside. RADAR
-  searches the whole Drive first and refuses if a folder already exists anywhere. It does not
-  mark the object as closed in the Master Registry; you update that row yourself. Until it is
+- **Historical closed project (archive)** is for the Drive migration: a portfolio organization,
+  venture or in-house program that closed in the past and has no folder yet. Pick the archive
+  category, the name and the theme, and RADAR builds the folder with `Investment Documents`,
+  `Execution Documents` and `MEL Evidence` inside, empty. It does not close an active project,
+  move or find documents, or update the Master Registry; you file the documents and update the
+  Registry row yourself. RADAR first searches the whole Drive. If the project already has a
+  folder anywhere, or the archive folder already holds something, it stops and shows the path;
+  that folder needs reviewing by hand. The search ignores capitalisation and spaces versus
+  underscores but **not accents**, so look for other spellings before you confirm. Until it is
   approved (ADR 0007), do not use it on the production Shared Drive.
 - **Emergency Response is not a type.** It is an **In-house program** with theme
   `Cross_Thematic` and the name `Emergency_Response`.

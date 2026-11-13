@@ -10,6 +10,7 @@
  */
 
 import { MIME_FOLDER, MIME_GOOGLE_DOC } from '../radar/canonicalTree.js';
+import { nameVariants } from '../radar/structureInputs.js';
 import { DriveError, ERROR_CODE, mapApiError, mapTransportError } from './driveErrors.js';
 
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
@@ -229,11 +230,13 @@ export function createDriveStructureClient({
      * comparison is free, not extra work.
      *
      * One request instead of walking every lifecycle area, and it finds homes nobody thought to
-     * enumerate. It cannot fold accents, which is the residual gap recorded in ADR 0005.
+     * enumerate. It also matches the name's other encodings and underscore spelling
+     * (nameVariants), but cannot fold accents — the residual gap recorded in ADR 0005 and 0007.
      */
     async findFoldersNamedAnywhere(name) {
+      const names = nameVariants(name).map((v) => `name = '${escapeDriveQueryValue(v)}'`);
       const q = [
-        `name = '${escapeDriveQueryValue(name)}'`,
+        `(${names.join(' or ')})`,
         `mimeType = '${MIME_FOLDER}'`,
         'trashed = false',
       ].join(' and ');

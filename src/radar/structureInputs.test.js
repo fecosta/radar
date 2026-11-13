@@ -4,6 +4,7 @@ import {
   defaultInputsFor,
   MAX_NAME_LENGTH,
   SUPPORTED_YEAR_RANGE,
+  nameVariants,
 } from './structureInputs.js';
 import { STRUCTURE_TYPES } from './structureTemplates.js';
 
@@ -326,5 +327,21 @@ describe('Portfolio operating folders inputs', () => {
 
   it('offers empty defaults for both fields', () => {
     expect(defaultInputsFor(TYPE)).toEqual({ objectName: '', theme: '' });
+  });
+});
+
+describe('nameVariants', () => {
+  it('adds only the other encoding and the underscore spelling, deduplicated', () => {
+    expect(nameVariants('Aprendo+')).toEqual(['Aprendo+']);
+    expect(nameVariants('Escuela Viva')).toEqual(['Escuela Viva', 'Escuela_Viva']);
+    expect(nameVariants('Escuela_Viva')).toEqual(['Escuela_Viva', 'Escuela Viva']);
+    const accented = nameVariants('Fundación Luminar');
+    expect(accented).toHaveLength(4);
+    expect(accented).toContain('Fundación Luminar'.normalize('NFD'));
+    expect(accented).toContain('Fundación_Luminar'.normalize('NFC'));
+  });
+
+  it('never folds accents', () => {
+    expect(nameVariants('Fundación Luminar')).not.toContain('Fundacion Luminar');
   });
 });

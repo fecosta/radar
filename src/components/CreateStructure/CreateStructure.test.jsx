@@ -123,7 +123,7 @@ describe('structure type step', () => {
       'Venture Building initiative',
       'In-house program',
       'BecaTech+ partner or provider',
-      'Closed object (archive)',
+      'Historical closed project (archive)',
       'Policy',
       'Formal governance meeting',
       'Annual OKR cycle',
@@ -176,13 +176,18 @@ describe('conditional fields', () => {
     expect(screen.queryByLabelText(/Forum/i)).not.toBeInTheDocument();
   });
 
-  it('asks a closed object for category, name and an Education or Democracy theme', async () => {
+  it('asks a historical closed project for category, name and an Education or Democracy theme', async () => {
     const { user } = setup();
     await user.click(screen.getByRole('button', { name: /grant permission/i }));
-    await user.click(screen.getByRole('radio', { name: /Closed object \(archive\)/i }));
+    const card = screen.getByRole('radio', { name: /Historical closed project \(archive\)/i });
+    // Historical migration, not a closure workflow — stated before the card is picked.
+    expect(card).toHaveTextContent(/closed in the past/i);
+    expect(card).toHaveTextContent(/does not close a project, move documents or change the Master Registry/i);
+    await user.click(card);
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
-    expect(screen.getByText(/closed object with no folder yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/For projects that closed in the past/i)).toBeInTheDocument();
+    expect(screen.getByText(/does not close an active project/i)).toBeInTheDocument();
     expect(screen.queryByText(/investment with no folder yet/i)).not.toBeInTheDocument();
     const optionsOf = (label) => within(screen.getByLabelText(label)).getAllByRole('option').map((o) => o.textContent);
     expect(optionsOf(/Archive category/i)).toEqual([
@@ -192,7 +197,7 @@ describe('conditional fields', () => {
       'Closed In-house Programs',
     ]);
     expect(optionsOf(/^Theme/i)).toEqual(['Select a theme', 'Education', 'Democracy']);
-    expect(screen.getByLabelText(/Closed object name/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Project name/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Meeting log year/i)).not.toBeInTheDocument();
   });
 

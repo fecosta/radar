@@ -725,7 +725,7 @@ describe('BecaTech+ partner or provider', () => {
   });
 });
 
-describe('Closed object (archive)', () => {
+describe('Historical closed project (archive)', () => {
   const INPUTS = { archiveCategory: 'venture', theme: 'Democracy', objectName: 'Aula Abierta' };
   const PARENT = '99_ARCHIVE/03_Closed_Ventures/Democracy';
   const DESTINATION = `${PARENT}/Aula Abierta`;
@@ -783,7 +783,9 @@ describe('Closed object (archive)', () => {
     expect(result.status).toBe(PREVIEW_STATUS.BLOCKED);
     expect(result.blocking[0].code).toBe(CONFLICT_CODE.OBJECT_HAS_ANOTHER_HOME);
     expect(result.blocking[0].message).toContain(path);
-    expect(result.blocking[0].message).toMatch(/move that complete folder into 99_ARCHIVE\/03_Closed_Ventures\/Democracy/);
+    // Historical migration: the existing folder is reviewed by a human, never moved by instruction.
+    expect(result.blocking[0].message).toMatch(/manual migration process/);
+    expect(result.blocking[0].message).not.toMatch(/\bmove (that|it)\b/i);
     expect(drive._items.size).toBe(before);
   });
 
@@ -830,6 +832,46 @@ describe('Closed object (archive)', () => {
     expect(result.blocking[0].code).toBe(CONFLICT_CODE.OBJECT_ALREADY_IN_ARCHIVE);
     expect(result.blocking[0].message).toContain(DESTINATION);
     expect(drive._items.size).toBe(before);
+  });
+
+  /**
+   * Historical migration: a folder somebody already started filing documents into is scenario D
+   * (human review), not RADAR's own partial run — even when its children carry the planned names.
+   */
+  it('refuses a destination whose planned folders already hold documents', async () => {
+    const drive = createFakeDrive();
+    drive._seedPath(`${DESTINATION}/Investment Documents/2019 grant agreement`, 'application/pdf');
+    const before = drive._items.size;
+
+    const result = await closedPreview(drive);
+
+    expect(result.status).toBe(PREVIEW_STATUS.BLOCKED);
+    expect(result.blocking[0].code).toBe(CONFLICT_CODE.OBJECT_ALREADY_IN_ARCHIVE);
+    expect(result.blocking[0].message).toMatch(/needs human review/);
+    expect(drive._items.size).toBe(before);
+  });
+
+  /** The same project under another encoding or RADAR's own underscore spelling is one project. */
+  it.each([
+    ['decomposed (NFD) accents', 'Fundación Ejemplo'.normalize('NFD')],
+    ['the underscore spelling Classify suggests', 'Fundación_Ejemplo'],
+  ])('refuses a folder elsewhere spelled with %s', async (_label, spelling) => {
+    const drive = createFakeDrive();
+    drive._seedPath(`02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Democracy/${spelling}`);
+
+    const result = await closedPreview(drive, { ...INPUTS, objectName: 'Fundación Ejemplo' });
+
+    expect(result.status).toBe(PREVIEW_STATUS.BLOCKED);
+    expect(result.blocking[0].code).toBe(CONFLICT_CODE.OBJECT_HAS_ANOTHER_HOME);
+  });
+
+  it('does not fold accents — the documented limit the manual check covers', async () => {
+    const drive = createFakeDrive();
+    drive._seedPath('02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Democracy/Fundacion Ejemplo');
+
+    const result = await closedPreview(drive, { ...INPUTS, objectName: 'Fundación Ejemplo' });
+
+    expect(result.status).toBe(PREVIEW_STATUS.READY);
   });
 
   it('leaves the Existing Portfolio investment rule unchanged: its own destination still blocks', async () => {

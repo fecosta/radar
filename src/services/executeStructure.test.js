@@ -898,7 +898,7 @@ describe('BecaTech+ partner or provider', () => {
   });
 });
 
-describe('Closed object (archive)', () => {
+describe('Historical closed project (archive)', () => {
   const INPUTS = { archiveCategory: 'in_house_program', theme: 'Education', objectName: 'Escuela Viva' };
   const ROOT = '99_ARCHIVE/04_Closed_In_House_Programs/Education/Escuela Viva';
   const runClosed = (drive, options = {}) =>

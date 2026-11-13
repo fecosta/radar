@@ -87,10 +87,13 @@ export default function DetailsStep({ template, inputs, fieldErrors, onChange, p
       ) : null}
 
       {has('archiveCategory') ? (
-        <Callout tone="info" title="This is for a closed object with no folder yet">
-          Closing an object moves its complete folder into the archive, and RADAR does not move
-          folders. Use this only for a closed object that never had a folder. RADAR searches the
-          whole Shared Drive and refuses if it finds one — move that folder instead.
+        <Callout tone="info" title="For projects that closed in the past">
+          Use this while migrating a project that has already closed and has no folder yet. It
+          does not close an active project, move or copy documents, or update the Master
+          Registry. RADAR searches the whole Shared Drive first and stops if the project already
+          has a folder, which then needs reviewing by hand. The search ignores capitalisation and
+          spaces versus underscores, but not accents — check for other spellings before you
+          confirm.
         </Callout>
       ) : null}
 

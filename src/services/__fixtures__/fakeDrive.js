@@ -9,6 +9,7 @@
  */
 
 import { MIME_FOLDER, MIME_GOOGLE_DOC } from '../../radar/canonicalTree.js';
+import { nameVariants } from '../../radar/structureInputs.js';
 import { resolveCanonicalPath } from '../driveStructureApi.js';
 import { DriveError, ERROR_CODE } from '../driveErrors.js';
 
@@ -134,9 +135,9 @@ export function createFakeDrive({
     /** Case-insensitive, drive-wide folder search. Mirrors the real client's loose policy. */
     async findFoldersNamedAnywhere(name) {
       calls.findFoldersNamedAnywhere += 1;
-      const want = String(name).toLowerCase();
+      const want = new Set(nameVariants(String(name)).map((v) => v.toLowerCase()));
       return [...items.values()].filter(
-        (i) => i.mimeType === MIME_FOLDER && i.name.toLowerCase() === want
+        (i) => i.mimeType === MIME_FOLDER && want.has(i.name.toLowerCase())
       );
     },
 

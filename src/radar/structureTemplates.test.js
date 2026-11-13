@@ -721,7 +721,7 @@ describe('BecaTech+ partner or provider', () => {
   });
 });
 
-describe('Closed object (archive)', () => {
+describe('Historical closed project (archive)', () => {
   const TYPE = STRUCTURE_TYPES.CLOSED_OBJECT_ARCHIVE;
   const NAME = 'Fundación Ejemplo';
 

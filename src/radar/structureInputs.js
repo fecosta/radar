@@ -125,6 +125,19 @@ export function validateFolderName(raw, field, label) {
   return { value };
 }
 
+/**
+ * Spellings of one folder name that the Drive-wide existence search treats as the same folder.
+ *
+ * Deterministic, never fuzzy: the same visible name in either Unicode encoding (macOS writes
+ * NFD, Windows NFC), and whitespace swapped for the underscores Classify puts in the names it
+ * suggests. Accents are deliberately not folded — `Fundacion` and `Fundación` stay different
+ * (ADR 0007). Only for PROHIBITING a second home; reuse still matches the exact name.
+ */
+export function nameVariants(name) {
+  const spellings = [name, name.replace(/\s+/g, '_'), name.replace(/_+/g, ' ')];
+  return [...new Set(spellings.flatMap((s) => [s.normalize('NFC'), s.normalize('NFD')]))];
+}
+
 /** Optional Registry metadata — never becomes a path segment. */
 function validateMetadata(raw, field, label) {
   if (raw === undefined || raw === null || raw === '') return { value: '' };
