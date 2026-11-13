@@ -85,7 +85,7 @@ Each of these is enforced by a test, not just by convention.
   *Historical closed project (archive)* builds a folder only for a project that closed in the
   past and has no folder anywhere — the migration case. Every other archive destination is
   refused by the destination guard. See
-  [ADR 0007](../decisions/0007-closed-object-archive-structure.md) (Proposed).
+  [ADR 0007](../decisions/0007-closed-object-archive-structure.md).
 
 - **No root-tree bootstrap and no launch seeds.** A missing canonical root is architecture
   drift: it is reported to the administrator and never repaired automatically. No sample
@@ -463,11 +463,10 @@ Provider) → Organization name → Preview → Confirm → Result.
 
 ## Historical closed project (archive)
 
-**Approved by the RADAR Owner; not yet Accepted.** The canonical rules are in the v06
-specification's SPECIAL TEMPLATE - HISTORICAL CLOSED PROJECT ARCHIVE, and the decision record is
-[ADR 0007](../decisions/0007-closed-object-archive-structure.md). That ADR stays Proposed until
-the functional owners' approval is recorded. Do not use it on the production Shared Drive before
-then.
+**Accepted.** The canonical rules are in the v06 specification's SPECIAL TEMPLATE - HISTORICAL
+CLOSED PROJECT ARCHIVE, and the decision record is
+[ADR 0007](../decisions/0007-closed-object-archive-structure.md). Do not use it on the production
+Shared Drive until it has been validated on a test Shared Drive and that evidence is recorded.
 
 **What it is for.** The last stage of the Shared Drive migration: giving Portfolio
 organizations, Ventures and In-house Programs that **closed before they were managed in RADAR**
@@ -513,6 +512,8 @@ Project name → Theme → Preview → Confirm → Result.
   single Master Registry row, and update it by hand (`Current_Stage_or_Status`,
   `Decline_or_Closure_Reason`, `Decision_Link`, `Official_Folder_Link`).
 - **No permissions.** The new folders inherit the archive's existing access unchanged.
+- **Manual responsibilities.** Two jobs stay with people: updating Master Registry rows, and
+  reviewing existing-folder conflicts. No individual or team is assigned to either yet.
 - **Recovery.** A partial failure leaves the object folder with some of its three folders; retry
   completes it. A folder built under the wrong name, category or theme has to be removed by hand
   — RADAR has no delete, move or rename.

@@ -411,8 +411,9 @@ Two things worth understanding:
   Registry row yourself. RADAR first searches the whole Drive. If the project already has a
   folder anywhere, or the archive folder already holds something, it stops and shows the path;
   that folder needs reviewing by hand. The search ignores capitalisation and spaces versus
-  underscores but **not accents**, so look for other spellings before you confirm. The RADAR Owner
-  has approved it, but do not use it on the production Shared Drive until ADR 0007 is Accepted.
+  underscores but **not accents**, so look for other spellings before you confirm. It is
+  approved (ADR 0007), but do not use it on the production Shared Drive until it has been
+  validated on a test Shared Drive.
 - **Emergency Response is not a type.** It is an **In-house program** with theme
   `Cross_Thematic` and the name `Emergency_Response`.
 

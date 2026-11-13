@@ -3,7 +3,7 @@
 - **Status:** Proposed. Decisions 2, 3 and 4 are partly superseded by
   [ADR 0005](0005-legacy-portfolio-objects-only-on-proven-absence.md) for the from-scratch case;
   the additive structure described here is unchanged. Guard rule A gains one narrow exception
-  in [ADR 0007](0007-closed-object-archive-structure.md) (Proposed).
+  in [ADR 0007](0007-closed-object-archive-structure.md) (Accepted).
 - **Date:** 2026-08-27
 - **Deciders:** RADAR owner. **Approval is not yet recorded.** This ADR must not be marked
   Accepted, and the feature must not be deployed to the production Shared Drive, until the

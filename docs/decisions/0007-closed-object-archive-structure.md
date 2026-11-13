@@ -1,19 +1,22 @@
 # ADR 0007 — A historical closed project's archive folder, only on proven absence
 
-- **Status:** Proposed. The RADAR Owner's approval is recorded below and the specification has
-  been amended. The functional owners' approval is not yet recorded, and it is the remaining
-  condition for Accepted.
+- **Status:** Accepted (2026-11-13). Both acceptance conditions are met: the approvals below are
+  recorded, and the specification has been amended. Until then this ADR was Proposed.
 - **Date:** 2026-11-12; revised 2026-11-13 for the historical-migration clarification
 - **Supersedes, in part:** ADR 0004 guard rule A ("nothing may be created anywhere under
   `99_ARCHIVE`, no exceptions") and ADR 0005 decision 4 ("`99_ARCHIVE` keeps its absolute
   prohibition"). It adds one narrow exception and changes nothing else in either ADR.
 - **Deciders:** the RADAR Owner, and the functional owners of Portfolio, Venture Building and
   In-house Programs for Education and Democracy (AGENTS.md §3).
-  - **RADAR Owner:** approved. The approval was confirmed by the requester in the request that
-    produced this change, on 2026-11-13; see *Approval record*. The Owner's own decision date and
-    verbatim wording are not recorded in this repository.
-  - **Functional owners:** approval **not recorded**. Until it is, this ADR must not be marked
-    Accepted, and the structure must not be used on or deployed to the production Shared Drive.
+  - **RADAR Owner and functional areas:** approved on 2026-11-13. The requester (the repository
+    maintainer, who requested this change) stated the approval in their own words. When asked
+    whether it covered the functional areas as well as RADAR ownership, the requester said it
+    does: Portfolio, Venture Building, In-house Programs, Education and Democracy. See
+    *Approval record*. No separate approval from individually named functional owners is
+    recorded. The repository's rule (AGENTS.md §3) is satisfied by the stated coverage.
+  - Acceptance approves the canonical rule, not a production release. The structure still has to
+    pass test-Shared-Drive validation (AGENTS.md §5, §8) before it is used on production; see
+    *Production readiness*.
   - The implementation was built on a feature branch ahead of approval, at the repository
     maintainer's request.
 
@@ -221,6 +224,17 @@ the following. These are the requester's words, not the Owner's verbatim text:
 during the historical migration. It does not authorize automatically closing or moving active
 projects.
 
+**Coverage and operational responsibilities, confirmed 2026-11-13.** The requester's own words,
+in the request that produced this change:
+
+- on the historical archive structure: "Approved by me";
+- on manual Master Registry maintenance: "OK";
+- on manual review of existing-folder conflicts: "OK";
+- asked whether the approval covered all functional areas rather than RADAR ownership alone:
+  "It's cover all".
+
+The approved scope is historical archive onboarding only (see *Scope*).
+
 ## Resolved 2026-11-13
 
 - **The four points proposed for approval**: the structure, creation only where no existing
@@ -232,15 +246,17 @@ projects.
 - **Specification amendment.** Made at the RADAR Owner's direction in
   `docs/specs/2026-08-18_RADAR_Folder_Tree_v06.txt`: a new SPECIAL TEMPLATE - HISTORICAL CLOSED
   PROJECT ARCHIVE section, the structure-type list entry, and an `Amended:` header line that
-  records the pending functional-owner approval.
+  records the approval.
+- **Functional-area approval.** Covered by the requester's statement above.
+- **Manual operational responsibilities.** Two jobs stay manual, both accepted by the requester:
+  - updating each project's Master Registry row;
+  - reviewing an existing folder when RADAR finds one, and organizing it through the manual
+    migration process.
 
-## Outstanding, and deliberately not done here
+  No individual or team is assigned to either in this repository.
 
-1. **Functional-owner approval**, recorded in their words as ADR 0006 does. This is the
-   condition for Accepted.
-2. **Who owns** updating these projects' Master Registry rows. The approval keeps those updates
-   manual but names no owner.
-3. **Who reviews** a historical project's existing folder when RADAR finds one, and through
-   which migration process.
-4. **Test Shared Drive dry-run evidence** before production use (AGENTS.md §5, §8). Integration
-   validation was reported as completed, but no environment, date or results are recorded.
+## Production readiness, and deliberately not done here
+
+- **Test Shared Drive dry-run evidence** before production use (AGENTS.md §5, §8). Integration
+  validation was reported as completed, but no environment, date or results are recorded. A
+  Vercel preview deployment is not a Drive dry run.

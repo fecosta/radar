@@ -2,7 +2,7 @@ RADAR v06 - CANONICAL FOLDER TREE / AUTOMATION SPEC
 Version: 2026-08-18
 Basis: v05 architecture + Leadership Team feedback + implemented Drive changes + structure-creation automation
 Amended: 2026-09-24 - SPECIAL TEMPLATE - BECATECH+ PARTNERS AND PROVIDERS; BecaTech+ partner or provider structure type (ADR 0006; approved by the RADAR Owner and the Education functional owner)
-Amended: 2026-11-13 - SPECIAL TEMPLATE - HISTORICAL CLOSED PROJECT ARCHIVE; Historical closed project (archive) structure type (ADR 0007, Proposed; RADAR Owner approval confirmed by the requester; functional-owner approval not yet recorded)
+Amended: 2026-11-13 - SPECIAL TEMPLATE - HISTORICAL CLOSED PROJECT ARCHIVE; Historical closed project (archive) structure type (ADR 0007; approved by the RADAR Owner, covering the Portfolio, Venture Building, In-house Programs, Education and Democracy functional areas, as confirmed by the requester)
 
 DESIGN RULES
 1. Fixed root: 01_STRATEGY, 02_INVESTMENTS_AND_PROGRAMS, 03_INSTITUTIONAL, 99_ARCHIVE.
