@@ -463,9 +463,11 @@ Provider) → Organization name → Preview → Confirm → Result.
 
 ## Historical closed project (archive)
 
-**Proposed, not approved.** Implemented ahead of approval; governed by
-[ADR 0007](../decisions/0007-closed-object-archive-structure.md). Do not use it on the production
-Shared Drive until the ADR is Accepted and the v06 specification is amended.
+**Approved by the RADAR Owner; not yet Accepted.** The canonical rules are in the v06
+specification's SPECIAL TEMPLATE - HISTORICAL CLOSED PROJECT ARCHIVE, and the decision record is
+[ADR 0007](../decisions/0007-closed-object-archive-structure.md). That ADR stays Proposed until
+the functional owners' approval is recorded. Do not use it on the production Shared Drive before
+then.
 
 **What it is for.** The last stage of the Shared Drive migration: giving Portfolio
 organizations, Ventures and In-house Programs that **closed in the past** an archive folder.

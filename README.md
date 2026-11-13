@@ -68,8 +68,9 @@ missing folders.
 - **Historical closed project (archive)** builds `Investment Documents`, `Execution Documents`
   and `MEL Evidence` for a project that closed in the past and has no folder yet — the last
   stage of the Drive migration, not a way to close an active project. Same Drive-wide absence
-  check; no document moves and no Registry write. **Proposed, not yet approved**: see
-  [ADR 0007](docs/decisions/0007-closed-object-archive-structure.md).
+  check; no document moves and no Registry write. Approved by the RADAR Owner and in the v06
+  spec; [ADR 0007](docs/decisions/0007-closed-object-archive-structure.md) awaits functional-owner
+  approval before production use.
 
 Full details, configuration and known limitations: **[docs/operations/create-structure.md](docs/operations/create-structure.md)**.
 Why writes are client-side: **[docs/decisions/0001-client-side-controlled-drive-writes.md](docs/decisions/0001-client-side-controlled-drive-writes.md)**.

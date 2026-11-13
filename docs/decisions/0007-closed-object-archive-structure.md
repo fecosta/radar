@@ -1,15 +1,21 @@
 # ADR 0007 — A historical closed project's archive folder, only on proven absence
 
-- **Status:** Proposed
+- **Status:** Proposed. The RADAR Owner's approval is recorded below and the specification has
+  been amended. The functional owners' approval is not yet recorded, and it is the remaining
+  condition for Accepted.
 - **Date:** 2026-11-12; revised 2026-11-13 for the historical-migration clarification
 - **Supersedes, in part:** ADR 0004 guard rule A ("nothing may be created anywhere under
   `99_ARCHIVE`, no exceptions") and ADR 0005 decision 4 ("`99_ARCHIVE` keeps its absolute
   prohibition"). It adds one narrow exception and changes nothing else in either ADR.
 - **Deciders:** the RADAR Owner, and the functional owners of Portfolio, Venture Building and
-  In-house Programs for Education and Democracy. **Approval is not yet recorded.** The repository
-  maintainer asked for the implementation to be built ahead of approval, on a feature branch.
-  This ADR must not be marked Accepted, and the structure must not be used on or deployed to the
-  production Shared Drive, until both conditions in *Outstanding* are met.
+  In-house Programs for Education and Democracy (AGENTS.md §3).
+  - **RADAR Owner:** approved. The approval was confirmed by the requester in the request that
+    produced this change, on 2026-11-13; see *Approval record*. The Owner's own decision date and
+    verbatim wording are not recorded in this repository.
+  - **Functional owners:** approval **not recorded**. Until it is, this ADR must not be marked
+    Accepted, and the structure must not be used on or deployed to the production Shared Drive.
+  - The implementation was built on a feature branch ahead of approval, at the repository
+    maintainer's request.
 
 ## Context
 
@@ -141,7 +147,7 @@ form agree. `THEMES_BY_AREA` is unchanged.
 
 Preview, explicit confirmation, revalidation immediately before writing, exact-name reuse,
 Shared Drive containment, no delete, move, rename or permission verb, precise partial-failure
-reporting, and one audit row per attempt all apply unchanged. ADR 0001's revisit trigger
+reporting, and one audit row per attempt — blocked and failed runs included — all apply unchanged. ADR 0001's revisit trigger
 ("lifecycle transitions … decline/archive") has not fired: nothing is moved, and no active
 project is closed.
 
@@ -166,8 +172,9 @@ project is closed.
   administrator's check before confirming is the control. Two administrators racing are not
   serialized. An empty folder a human made with exactly the planned names is treated as RADAR's
   own. That is harmless, because RADAR only adds empty siblings.
-- **Live behavior is unverified.** The variant query and resume rule are tested against the fake
-  Drive only. They need a test Shared Drive run before production use (AGENTS.md §5, §8).
+- **Live behavior is not evidenced here.** The variant query and resume rule are tested against
+  the fake Drive. The requester reports integration validation as completed, but no record of it
+  exists in this repository (see *Outstanding*).
 - **The folder names break the canonical convention.** Every other canonical folder is a
   numbered snake_case name. These follow the request verbatim (`Investment Documents`, not
   `01_Investment_Documents`). The specification states no folder-naming rule, so this is flagged
@@ -176,30 +183,47 @@ project is closed.
   `99_ARCHIVE/{category}/{theme}/{object}`. `classifierEquivalence.test.js` now proves the
   container agrees with this structure. It does not route documents into the three new folders.
 
+## Approval record (2026-11-13)
+
+The requester confirmed on 2026-11-13 that the RADAR Owner approved this feature and authorized
+the following. These are the requester's words, not the Owner's verbatim text:
+
+1. a historical closed-project structure under `02_Closed_Portfolio`, `03_Closed_Ventures` and
+   `04_Closed_In_House_Programs` (decision 1);
+2. Education and Democracy (decision 5);
+3. creating a new archive project folder only when no existing official project folder is found
+   in the configured Shared Drive (decisions 1, 1a and 3);
+4. exactly three subfolders: `Investment Documents`, `Execution Documents`, `MEL Evidence`
+   (decision 1);
+5. the narrowly scoped exception to the prohibition on creating folders within `99_ARCHIVE`
+   (decision 2);
+6. all existing restrictions on duplicate official folders, permissions, lifecycle transitions
+   and document movements preserved (decisions 4 and 6).
+
+`Cross_Thematic` is not included. The approval covers organizing previously closed projects
+during the historical migration. It does not authorize automatically closing or moving active
+projects.
+
+## Resolved 2026-11-13
+
+- **The four points proposed for approval**: the structure, creation only where no existing
+  folder is found, the three names and the archive exception. All four are approved by the
+  RADAR Owner (items 1–5 above).
+- **Naming.** The three names are final as written, with spaces and capitalisation, not the
+  numbered snake_case convention.
+- **`Cross_Thematic`** is excluded.
+- **Specification amendment.** Made at the RADAR Owner's direction in
+  `docs/specs/2026-08-18_RADAR_Folder_Tree_v06.txt`: a new SPECIAL TEMPLATE - HISTORICAL CLOSED
+  PROJECT ARCHIVE section, the structure-type list entry, and an `Amended:` header line that
+  records the pending functional-owner approval.
+
 ## Outstanding, and deliberately not done here
 
-Both are needed before this ADR can be Accepted.
-
-1. **Owner approval.** The RADAR Owner and the relevant functional owners must approve these
-   four points, recorded in their words as ADR 0006 does:
-   1. the historical closed-project structure;
-   2. creating a new archive object folder only where no existing official folder is found;
-   3. the three exact subfolder names: `Investment Documents`, `Execution Documents`,
-      `MEL Evidence`;
-   4. the narrow exception to the archive creation prohibition (decision 2).
-
-   The approval should also answer:
-   - Should the names follow the numbered snake_case convention instead?
-   - Should `Cross_Thematic` closed in-house programs be included?
-   - Who owns updating these projects' Registry rows?
-   - Who reviews and organizes a historical project's existing folder when RADAR finds one, and
-     through which migration process?
-2. **Specification amendment**, made at the Owner's direction:
-   - add a HISTORICAL CLOSED PROJECT ARCHIVE TEMPLATE under the `99_ARCHIVE` section: "For a
-     Portfolio organization, Venture or In-house Program that closed in the past and has no
-     existing official folder, RADAR may create `[Project]/Investment Documents`,
-     `Execution Documents` and `MEL Evidence` under `02_Closed_Portfolio`, `03_Closed_Ventures`
-     or `04_Closed_In_House_Programs` / `Education|Democracy`. RADAR does not close projects,
-     move documents or update the Master Registry. A project that already has a folder is
-     reviewed and organized by hand, never rebuilt.";
-   - add "Historical closed project (archive)" to *Current structure types shown in the tool*.
+1. **Functional-owner approval**, recorded in their words as ADR 0006 does. This is the
+   condition for Accepted.
+2. **Who owns** updating these projects' Master Registry rows. The approval keeps those updates
+   manual but names no owner.
+3. **Who reviews** a historical project's existing folder when RADAR finds one, and through
+   which migration process.
+4. **Test Shared Drive dry-run evidence** before production use (AGENTS.md §5, §8). Integration
+   validation was reported as completed, but no environment, date or results are recorded.
