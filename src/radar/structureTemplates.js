@@ -506,7 +506,7 @@ const TEMPLATES = {
 
   /**
    * A Portfolio organization, Venture or In-house Program that closed in the past and has no
-   * folder, organized during the Shared Drive migration (ADR 0007, Proposed). Not a closure
+   * folder, organized during the Shared Drive migration (ADR 0007). Not a closure
    * workflow: RADAR closes nothing and moves nothing.
    *
    * One object has one official folder (v06 design rule 4), so this is the
@@ -735,7 +735,7 @@ export function forbiddenDestinationReason(destination, items = []) {
   const parent = destination.parentSegments || [];
 
   /**
-   * Whether this plan has earned the one archive exception (ADR 0007, Proposed): a closed
+   * Whether this plan has earned the one archive exception (ADR 0007): a closed
    * object with no folder anywhere. Pinned like the Portfolio permission below — the
    * declaration, exactly one created folder directly inside an allowlisted, Education or
    * Democracy closed-object container, and nothing deeper than that folder's own children.

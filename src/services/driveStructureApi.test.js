@@ -124,19 +124,46 @@ describe('exact matching', () => {
     expect(matches.map((m) => m.id)).toEqual(['b']);
   });
 
-  it('searches the Drive for every spelling variant of a name in one read-only query', async () => {
-    const { client, calls } = clientWith([{ body: { files: [] } }]);
+  it('searches the Drive for every exact spelling, then every first-word candidate, read-only', async () => {
+    const { client, calls } = clientWith([{ body: { files: [] } }, { body: { files: [] } }]);
 
     await client.findFoldersNamedAnywhere("Fundación d'Ejemplo");
 
-    expect(calls).toHaveLength(1);
-    expect(calls[0].init?.method ?? 'GET').toBe('GET');
-    const q = calls[0].url.searchParams.get('q');
+    expect(calls).toHaveLength(2);
+    expect(calls.every((c) => (c.init?.method ?? 'GET') === 'GET')).toBe(true);
+    const exact = calls[0].url.searchParams.get('q');
     for (const variant of ["Fundación d\\'Ejemplo", "Fundación_d\\'Ejemplo"]) {
-      expect(q).toContain(`name = '${variant.normalize('NFC')}'`);
-      expect(q).toContain(`name = '${variant.normalize('NFD')}'`);
+      expect(exact).toContain(`name = '${variant.normalize('NFC')}'`);
+      expect(exact).toContain(`name = '${variant.normalize('NFD')}'`);
     }
-    expect(q).toMatch(/^\(name = .+\) and mimeType = 'application\/vnd\.google-apps\.folder' and trashed = false$/);
+    expect(exact).toMatch(/^\(name = .+\) and mimeType = 'application\/vnd\.google-apps\.folder' and trashed = false$/);
+    const candidates = calls[1].url.searchParams.get('q');
+    expect(candidates).toContain(`name contains '${'Fundación'.normalize('NFC')}'`);
+    expect(candidates).toContain(`name contains '${'Fundación'.normalize('NFD')}'`);
+  });
+
+  it('keeps a first-word candidate only when it is the same name apart from spacing', async () => {
+    const { client } = clientWith([
+      { body: { files: [] } },
+      {
+        body: {
+          files: [
+            folder({ id: 'double', name: 'Escuela  Viva' }),
+            folder({ id: 'nbsp', name: 'Escuela\u00A0Viva' }),
+            folder({ id: 'other', name: 'Escuela Nueva' }),
+            folder({ id: 'longer', name: 'Escuela Viva 2' }),
+          ],
+        },
+      },
+    ]);
+    const hits = await client.findFoldersNamedAnywhere('Escuela Viva');
+    expect(hits.map((f) => f.id)).toEqual(['double', 'nbsp']);
+  });
+
+  it('never drops an exact-spelling hit the candidate filter would not keep', async () => {
+    // Drive's own case folding decides query 1; the JS key must not overrule it.
+    const { client } = clientWith([{ body: { files: [folder({ id: 'drive-says', name: 'ESCUELA VİVA' })] } }]);
+    expect((await client.findFoldersNamedAnywhere('Escuela Viva')).map((f) => f.id)).toEqual(['drive-says']);
   });
 
   it('lists every child of a folder with a scoped, read-only query', async () => {
@@ -351,6 +378,126 @@ describe('retry behaviour', () => {
       code: ERROR_CODE.PERMISSION_DENIED,
     });
     expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('pagination', () => {
+  /** Drive may return a partial or even empty page that still carries a nextPageToken. */
+  it.each([
+    ['listChildren', (c) => c.listChildren('p')],
+    ['findExactChildren', (c) => c.findExactChildren('p', 'Escuela Viva')],
+  ])('%s reads past an empty first page', async (_label, call) => {
+    const { client, calls } = clientWith([
+      { body: { files: [], nextPageToken: 't1' } },
+      { body: { files: [folder({ id: 'late', name: 'Escuela Viva' })] } },
+    ]);
+    const result = await call(client);
+    expect(result.map((f) => f.id)).toEqual(['late']);
+    expect(calls).toHaveLength(2);
+    expect(calls[1].url.searchParams.get('pageToken')).toBe('t1');
+    expect(calls[0].url.searchParams.get('fields')).toMatch(/nextPageToken/);
+    expect(calls[0].url.searchParams.get('pageSize')).toBe('1000');
+  });
+
+  it('finds an existing historical document on a later page of a listing', async () => {
+    const { client } = clientWith([
+      { body: { files: [folder({ id: 'a', name: 'MEL Evidence' })], nextPageToken: 't1' } },
+      { body: { files: [folder({ id: 'doc', name: '2019 closure memo', mimeType: 'application/pdf' })] } },
+    ]);
+    expect((await client.listChildren('p')).map((f) => f.id)).toEqual(['a', 'doc']);
+  });
+
+  it('returns duplicate exact matches split across pages', async () => {
+    const { client } = clientWith([
+      { body: { files: [folder({ id: 'one', name: 'Aprendo+' })], nextPageToken: 't1' } },
+      { body: { files: [folder({ id: 'two', name: 'Aprendo+' })] } },
+    ]);
+    expect((await client.findExactChildren('p', 'Aprendo+')).map((f) => f.id)).toEqual(['one', 'two']);
+  });
+
+  it('finds another home that only appears on a later page of the Drive-wide search', async () => {
+    const { client } = clientWith([
+      { body: { files: [], nextPageToken: 't1' } },
+      { body: { files: [folder({ id: 'home', name: 'Escuela Viva' })] } },
+    ]);
+    expect((await client.findFoldersNamedAnywhere('Escuela Viva')).map((f) => f.id)).toContain('home');
+  });
+
+  it('fails closed when a later page fails', async () => {
+    const { client } = clientWith([
+      { body: { files: [], nextPageToken: 't1' } },
+      { ok: false, status: 403, body: { error: { errors: [{ reason: 'forbidden' }] } } },
+    ]);
+    await expect(client.listChildren('p')).rejects.toMatchObject({ code: ERROR_CODE.PERMISSION_DENIED });
+  });
+
+  it('fails closed when Drive repeats a page token instead of progressing', async () => {
+    const { client, calls } = clientWith([
+      { body: { files: [], nextPageToken: 'same' } },
+      { body: { files: [], nextPageToken: 'same' } },
+    ]);
+    await expect(client.listChildren('p')).rejects.toMatchObject({ code: ERROR_CODE.API_ERROR });
+    expect(calls).toHaveLength(2);
+  });
+
+  it('fails closed when Drive reports an incomplete search', async () => {
+    const { client } = clientWith([{ body: { files: [], incompleteSearch: true } }]);
+    await expect(client.findExactChildren('p', 'X')).rejects.toMatchObject({ code: ERROR_CODE.API_ERROR });
+  });
+
+  it('stops at a page limit rather than looping forever', async () => {
+    let n = 0;
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ files: [], nextPageToken: `t${(n += 1)}` }),
+    }));
+    const client = createDriveStructureClient({ token: 't', sharedDriveId: DRIVE_ID, fetchImpl, sleepImpl: async () => {} });
+    await expect(client.listChildren('p')).rejects.toMatchObject({ code: ERROR_CODE.API_ERROR });
+    expect(fetchImpl).toHaveBeenCalledTimes(50);
+  });
+});
+
+describe('folder creation is never retried automatically', () => {
+  const abort = Object.assign(new Error('aborted'), { name: 'AbortError' });
+
+  /**
+   * Drive may have created the folder before the response was lost. Sending the same POST again
+   * could create a second one, so an ambiguous write is reported, not repeated.
+   */
+  it.each([
+    ['a timeout', { throws: abort }, ERROR_CODE.TIMEOUT],
+    ['a network failure', { throws: new TypeError('Failed to fetch') }, ERROR_CODE.NETWORK],
+    ['a 503', { ok: false, status: 503, body: {} }, ERROR_CODE.TIMEOUT],
+  ])('sends one POST after %s', async (_label, response, code) => {
+    const { client, fetchImpl } = clientWith([response, { body: folder({ id: 'dup' }) }]);
+    await expect(client.createFolder('parent-1', 'Escuela Viva')).rejects.toMatchObject({ code });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends one POST when a 200 arrives but its body cannot be read', async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new TypeError('body stream interrupted');
+      },
+    }));
+    const client = createDriveStructureClient({ token: 't', sharedDriveId: DRIVE_ID, fetchImpl, sleepImpl: async () => {} });
+    await expect(client.createFolder('parent-1', 'Escuela Viva')).rejects.toMatchObject({ code: ERROR_CODE.NETWORK });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries a create that Google rejected with a rate limit, which applies nothing', async () => {
+    const { client, fetchImpl } = clientWith([{ ok: false, status: 429, body: {} }, { body: folder({ id: 'made' }) }]);
+    expect((await client.createFolder('parent-1', 'Escuela Viva')).id).toBe('made');
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it('still retries a read', async () => {
+    const { client, fetchImpl } = clientWith([{ throws: abort }, { body: { files: [] } }]);
+    await client.findExactChildren('p', 'X');
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 });
 

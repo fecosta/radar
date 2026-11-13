@@ -291,6 +291,11 @@ Drive** first and run the manual verification below before pointing at productio
   is the Shared Drive ACL, enforced by Google.
 - **Everything is re-checked immediately before writing**, because Drive can change between
   preview and confirmation.
+- **Every listing is read to the last page.** A failed page, a repeated page token or an
+  incomplete search stops the preview with an error; it is never read as "not found".
+- **A create is never sent twice.** Reads are retried on transient errors. A create is retried
+  only after a rate limit, which Google rejects without applying; one that times out or loses its
+  connection is not, because Drive may have made the folder anyway.
 - **Every created item is verified to be in the configured Shared Drive.** A mismatch stops
   the operation.
 
@@ -416,6 +421,12 @@ that no rollback occurred.
 expected MIME type and expected parent, and creates only what is missing. The "Retry safely"
 button re-previews against live Drive first.
 
+If a create timed out or lost its connection, the result says Google did not confirm whether
+that item was created, and the audit row's `Error` carries `outcomeUnknown`. RADAR does not
+resend it. Wait a minute — an abandoned request can still complete at Google — then retry. The
+retry re-checks Drive first and never creates a second copy: most structures reuse the item,
+while *Existing Portfolio investment* blocks on its own folder, as ADR 0005 describes.
+
 If Drive creation succeeded but the Registry write failed, the outcome is partial success and
 retrying completes the Registry record without touching the folders.
 
@@ -496,8 +507,11 @@ Project name → Theme → Preview → Confirm → Result.
 - **Only on proven absence.** Like *Existing Portfolio investment*, the preview searches the whole
   Shared Drive for a folder of that name and blocks if it finds one anywhere — active areas,
   another closed category, the other theme, `07_Legacy_Structure`. The search ignores
-  capitalisation, Unicode encoding (macOS vs Windows) and spaces versus underscores
-  (`Escuela Viva` = `Escuela_Viva`).
+  capitalisation, Unicode encoding (macOS vs Windows), and spacing: underscores, doubled spaces
+  and non-breaking spaces (`Escuela Viva` = `Escuela_Viva` = `Escuela  Viva`). The spacing match
+  relies on Drive's `name contains` and is not yet verified live. Names RADAR creates must use
+  ordinary single spaces; anything else is rejected. A name that must match an existing folder
+  (*Portfolio operating folders*) is still accepted exactly as typed.
 - **Manual check before confirming.** The search does **not** fold accents or punctuation:
   `Fundacion Luminar` or `Fundación-Luminar` is not found when `Fundación Luminar` is typed.
   Historical folders were named by many people, so search the Drive for the project's key word,

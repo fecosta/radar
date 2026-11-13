@@ -90,7 +90,7 @@ function err(field, code, message) {
  * Validate a value destined to become a literal Drive folder name.
  * Returns `{ value }` or `{ error }`.
  */
-export function validateFolderName(raw, field, label) {
+export function validateFolderName(raw, field, label, { strictSpacing = true } = {}) {
   if (typeof raw !== 'string') {
     return { error: err(field, 'REQUIRED', `${label} is required.`) };
   }
@@ -107,6 +107,16 @@ export function validateFolderName(raw, field, label) {
     return {
       error: err(field, 'CONTROL_CHARACTER', `${label} contains control or invisible characters.`),
     };
+  }
+  // One kind of space, one at a time: a non-breaking or doubled space gives a name that looks
+  // identical to an existing folder's but is not, which is how a second official home is born.
+  if (strictSpacing && /[^\S ]/.test(value)) {
+    return {
+      error: err(field, 'UNUSUAL_SPACE', `${label} can only contain ordinary spaces — retype any non-breaking or special spaces.`),
+    };
+  }
+  if (strictSpacing && / {2,}/.test(value)) {
+    return { error: err(field, 'REPEATED_SPACE', `${label} cannot contain two spaces in a row.`) };
   }
   // "." and ".." are relative path references; any all-dots name is ambiguous.
   if (/^\.+$/.test(value)) {
@@ -136,6 +146,16 @@ export function validateFolderName(raw, field, label) {
 export function nameVariants(name) {
   const spellings = [name, name.replace(/\s+/g, '_'), name.replace(/_+/g, ' ')];
   return [...new Set(spellings.flatMap((s) => [s.normalize('NFC'), s.normalize('NFD')]))];
+}
+
+/**
+ * The key two names share when they are the same name for the existence search: one Unicode
+ * encoding, one case, and every run of whitespace or underscores (non-breaking spaces included)
+ * as a single space. Covers the variants Drive's `name =` cannot be asked for. Accents are
+ * still not folded.
+ */
+export function nameMatchKey(name) {
+  return name.normalize('NFC').toLowerCase().replace(/[\s_]+/g, ' ').trim();
 }
 
 /** Optional Registry metadata — never becomes a path segment. */
@@ -261,7 +281,9 @@ function validateMeetingDate(raw) {
 /* ─── Field dispatch ──────────────────────────────────────── */
 
 const FIELD_VALIDATORS = {
-  objectName: (raw, ctx) => validateFolderName(raw, 'objectName', ctx.objectNameLabel),
+  // An existing folder is matched exactly as typed, so its spacing cannot be forbidden here.
+  objectName: (raw, ctx) =>
+    validateFolderName(raw, 'objectName', ctx.objectNameLabel, { strictSpacing: !ctx.requiresExistingObject }),
   theme: (raw, ctx) => validateTheme(raw, ctx.themes),
   owner: (raw) => validateMetadata(raw, 'owner', 'Owner'),
   country: (raw) => validateMetadata(raw, 'country', 'Country or geography'),
@@ -308,6 +330,7 @@ export function validateStructureInput(type, raw) {
   const template = getTemplate(type);
   const ctx = {
     objectNameLabel: template.objectNameLabel || 'Name',
+    requiresExistingObject: Boolean(template.requiresExistingObject),
     // A template collecting `theme` must declare `themes` or `themeArea`; templateThemes throws if not.
     themes: template.fields.includes('theme') ? templateThemes(template) : [],
   };

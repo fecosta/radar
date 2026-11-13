@@ -63,7 +63,8 @@ export default function ResultStep({ result, onRetry, onStartOver }) {
 
   const meta = OUTCOME_META[result.outcome] || OUTCOME_META[OUTCOME.FAILED];
   const isPartial = result.outcome === OUTCOME.PARTIAL_SUCCESS;
-  const nothingCreated = result.created.length === 0;
+  // A create Google did not confirm may still exist in Drive, so "nothing written" would be untrue.
+  const nothingCreated = result.created.length === 0 && !result.errors.some((e) => e.details?.outcomeUnknown);
   const generalWarnings = result.warnings.filter(
     (w) => !w.code.startsWith('AUDIT_') && !ADVISORY_CODES.has(w.code)
   );

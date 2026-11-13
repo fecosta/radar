@@ -10,7 +10,7 @@
  */
 
 import { MIME_FOLDER, MIME_GOOGLE_DOC } from '../radar/canonicalTree.js';
-import { nameVariants } from '../radar/structureInputs.js';
+import { nameMatchKey, nameVariants } from '../radar/structureInputs.js';
 import { DriveError, ERROR_CODE, mapApiError, mapTransportError } from './driveErrors.js';
 
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
@@ -20,6 +20,9 @@ const ITEM_FIELDS = 'id, name, mimeType, webViewLink, driveId, parents, trashed'
 
 const DEFAULT_TIMEOUT_MS = 20000;
 const MAX_ATTEMPTS = 3;
+
+/** Upper bound on pages for one listing; 50 × 1000 items. Exceeding it fails closed. */
+const MAX_PAGES = 50;
 
 /**
  * Escape a value for interpolation into a Drive `q` expression.
@@ -126,7 +129,8 @@ export function createDriveStructureClient({
           ...(body ? { body: JSON.stringify(body) } : {}),
         });
 
-        if (res.ok) return res.status === 204 ? null : res.json();
+        // Awaited so a body that fails to arrive after a 200 is caught as a transport error.
+        if (res.ok) return res.status === 204 ? null : await res.json();
 
         const payload = await res.json().catch(() => null);
         // `url` is omitted from details: it embeds the drive id and the query.
@@ -137,10 +141,46 @@ export function createDriveStructureClient({
         clearTimeout(timer);
       }
 
-      if (!lastError.retryable || attempt === MAX_ATTEMPTS) throw lastError;
+      // A write is retried only after a rate limit, which Google rejects without applying. Any
+      // other failure may hide a create that happened, so resending could make a duplicate; the
+      // caller reports it and the explicit retry's re-preview reconciles.
+      const safeToRepeat = method === 'GET' || lastError.code === ERROR_CODE.RATE_LIMITED;
+      if (!lastError.retryable || !safeToRepeat || attempt === MAX_ATTEMPTS) throw lastError;
       await sleepImpl(2 ** (attempt - 1) * 250);
     }
     throw lastError;
+  }
+
+  /**
+   * Every page of a `files.list` query. Drive may return a partial or empty page that still
+   * carries a nextPageToken, so the first page alone is never proof that something is absent.
+   * A failed page, a repeated token, too many pages or an incomplete search all throw: an
+   * incomplete answer must not be mistaken for "not there" (fail closed).
+   */
+  async function listAll(params, stage) {
+    const files = [];
+    const seenTokens = new Set();
+    let pageToken;
+    for (let page = 0; page < MAX_PAGES; page += 1) {
+      const result = await request('/files', {
+        params: { ...params, ...driveScope, pageSize: 1000, pageToken, fields: `nextPageToken, incompleteSearch, files(${ITEM_FIELDS})` },
+        stage,
+      });
+      if (result?.incompleteSearch) throw incompleteListing(stage, 'incomplete_search');
+      files.push(...(result?.files || []));
+      pageToken = result?.nextPageToken;
+      if (!pageToken) return files;
+      if (seenTokens.has(pageToken)) throw incompleteListing(stage, 'repeated_page_token');
+      seenTokens.add(pageToken);
+    }
+    throw incompleteListing(stage, 'page_limit');
+  }
+
+  function incompleteListing(stage, reason) {
+    return new DriveError(ERROR_CODE.API_ERROR, {
+      message: 'Google Drive returned an incomplete listing, so RADAR stopped rather than guess what exists.',
+      details: { stage, reason },
+    });
   }
 
   /** Assert an item Google returned actually lives in the configured Shared Drive. */
@@ -187,36 +227,16 @@ export function createDriveStructureClient({
         'trashed = false',
       ].join(' and ');
 
-      const result = await request('/files', {
-        params: {
-          q,
-          ...driveScope,
-          fields: `files(${ITEM_FIELDS})`,
-          pageSize: 100,
-          orderBy: 'createdTime',
-        },
-        stage: 'find_exact_children',
-      });
-
-      return (result?.files || []).filter((f) => f.name === name);
+      const files = await listAll({ q, orderBy: 'createdTime' }, 'find_exact_children');
+      return files.filter((f) => f.name === name);
     },
 
     /**
-     * Non-trashed children of `parentId`, first page only. Read-only; used to tell RADAR's own
-     * partial closed-object folder from one holding anything else (see previewStructure).
+     * Every non-trashed child of `parentId`. Read-only; used to tell RADAR's own partial
+     * closed-object folder from one holding anything else (see previewStructure).
      */
     async listChildren(parentId) {
-      const result = await request('/files', {
-        params: {
-          q: `'${escapeDriveQueryValue(parentId)}' in parents and trashed = false`,
-          ...driveScope,
-          fields: `files(${ITEM_FIELDS})`,
-          pageSize: 100,
-        },
-        stage: 'list_children',
-      });
-
-      return result?.files || [];
+      return listAll({ q: `'${escapeDriveQueryValue(parentId)}' in parents and trashed = false` }, 'list_children');
     },
 
     /**
@@ -229,30 +249,40 @@ export function createDriveStructureClient({
      * case-insensitive (see findExactChildren), so this is the unfiltered result — the loose
      * comparison is free, not extra work.
      *
-     * One request instead of walking every lifecycle area, and it finds homes nobody thought to
-     * enumerate. It also matches the name's other encodings and underscore spelling
-     * (nameVariants), but cannot fold accents — the residual gap recorded in ADR 0005 and 0007.
+     * A Drive-wide search instead of walking every lifecycle area, so it finds homes nobody
+     * thought to enumerate. Two queries:
+     *   1. the name's exact spellings (nameVariants): other encoding, underscores. Every result
+     *      is a hit, exactly as before.
+     *   2. every folder with a name term starting with the first word, kept only when its
+     *      nameMatchKey equals the name's. This catches doubled and non-breaking spaces, which
+     *      `name =` cannot be asked for. It relies on Drive's documented prefix matching for
+     *      `contains`, and can only add hits.
+     * It cannot fold accents — the residual gap recorded in ADR 0005 and 0007.
      */
     async findFoldersNamedAnywhere(name) {
-      const names = nameVariants(name).map((v) => `name = '${escapeDriveQueryValue(v)}'`);
-      const q = [
-        `(${names.join(' or ')})`,
-        `mimeType = '${MIME_FOLDER}'`,
-        'trashed = false',
-      ].join(' and ');
+      const stage = 'find_folders_named_anywhere';
+      const folders = `mimeType = '${MIME_FOLDER}' and trashed = false`;
+      const anyOf = (clauses) => `(${clauses.join(' or ')}) and ${folders}`;
 
-      const result = await request('/files', {
-        params: {
-          q,
-          ...driveScope,
-          fields: `files(${ITEM_FIELDS})`,
-          pageSize: 100,
-          orderBy: 'createdTime',
-        },
-        stage: 'find_folders_named_anywhere',
-      });
+      const exact = nameVariants(name).map((v) => `name = '${escapeDriveQueryValue(v)}'`);
+      const hits = await listAll({ q: anyOf(exact), orderBy: 'createdTime' }, stage);
 
-      return (result?.files || []).map((item) => assertInSharedDrive(item, 'find_folders_named_anywhere'));
+      const first = name.split(/[\s_]+/).find(Boolean);
+      if (first) {
+        const terms = [...new Set([first.normalize('NFC'), first.normalize('NFD')])].map(
+          (t) => `name contains '${escapeDriveQueryValue(t)}'`
+        );
+        const key = nameMatchKey(name);
+        const seen = new Set(hits.map((f) => f.id));
+        for (const f of await listAll({ q: anyOf(terms), orderBy: 'createdTime' }, stage)) {
+          if (!seen.has(f.id) && nameMatchKey(f.name) === key) {
+            hits.push(f);
+            seen.add(f.id);
+          }
+        }
+      }
+
+      return hits.map((item) => assertInSharedDrive(item, stage));
     },
 
     /**

@@ -9,7 +9,7 @@
  */
 
 import { MIME_FOLDER, MIME_GOOGLE_DOC } from '../../radar/canonicalTree.js';
-import { nameVariants } from '../../radar/structureInputs.js';
+import { nameMatchKey, nameVariants } from '../../radar/structureInputs.js';
 import { resolveCanonicalPath } from '../driveStructureApi.js';
 import { DriveError, ERROR_CODE } from '../driveErrors.js';
 
@@ -135,9 +135,11 @@ export function createFakeDrive({
     /** Case-insensitive, drive-wide folder search. Mirrors the real client's loose policy. */
     async findFoldersNamedAnywhere(name) {
       calls.findFoldersNamedAnywhere += 1;
+      // Mirrors both of the real client's queries: exact spellings, then the whitespace key.
       const want = new Set(nameVariants(String(name)).map((v) => v.toLowerCase()));
+      const key = nameMatchKey(String(name));
       return [...items.values()].filter(
-        (i) => i.mimeType === MIME_FOLDER && want.has(i.name.toLowerCase())
+        (i) => i.mimeType === MIME_FOLDER && (want.has(i.name.toLowerCase()) || nameMatchKey(i.name) === key)
       );
     },
 
@@ -178,6 +180,11 @@ export function createFakeDrive({
       const fault = failures.get(name);
       if (fault) {
         failures.delete(name);
+        // Drive created the item but the response was lost: the ambiguous write.
+        if (fault.createThenThrow) {
+          add(parentId, name, mimeType);
+          throw fault.createThenThrow;
+        }
         if (fault.throw) throw fault.throw;
         if (fault.driveId) {
           // Simulate Drive reporting the item outside the configured Shared Drive.
@@ -201,6 +208,10 @@ export function createFakeDrive({
     /** Make the next create of `name` fail with `error`. */
     _failOnCreate(name, error) {
       failures.set(name, { throw: error });
+    },
+    /** Make the next create of `name` succeed in Drive but report `error` to the caller. */
+    _createThenFail(name, error) {
+      failures.set(name, { createThenThrow: error });
     },
     /** Make the next create of `name` land in the wrong drive. */
     _createInWrongDrive(name, driveId = 'some-other-drive') {

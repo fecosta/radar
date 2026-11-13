@@ -976,3 +976,61 @@ describe('Historical closed project (archive)', () => {
     expect(drive._calls.createFolder).toBe(0);
   });
 });
+
+/**
+ * A create whose response is lost may still have happened in Drive. The client never resends it
+ * (driveStructureApi.test.js); these prove the next explicit attempt reconciles instead of
+ * duplicating.
+ */
+describe('a create with an unknown outcome', () => {
+  it.each([
+    ['a timeout', new DriveError(ERROR_CODE.TIMEOUT)],
+    ['a network failure', new DriveError(ERROR_CODE.NETWORK)],
+  ])('reports %s as unconfirmed, and a retry reuses what Drive made', async (_label, error) => {
+    const drive = createFakeDrive();
+    const audit = createFakeAudit();
+    const inputs = { archiveCategory: 'portfolio', theme: 'Education', objectName: 'Escuela Viva' };
+    const runIt = () =>
+      run({ drive, audit, type: STRUCTURE_TYPES.CLOSED_OBJECT_ARCHIVE, inputs, acknowledged: ['REGISTRY_TRANSITION_REQUIRED'] });
+    drive._createThenFail('Escuela Viva', error);
+
+    const first = await runIt();
+    expect(first.outcome).toBe(OUTCOME.FAILED);
+    expect(first.created).toHaveLength(0);
+    expect(first.errors[0]).toMatchObject({ details: { outcomeUnknown: true }, path: expect.stringContaining('Escuela Viva') });
+    expect(first.errors[0].message).toMatch(/did not confirm whether "Escuela Viva" was created/);
+
+    const retry = await runIt();
+    expect(retry.outcome).toBe(OUTCOME.SUCCESS);
+    expect(retry.existing.map((i) => i.name)).toEqual(['Escuela Viva']);
+    expect(retry.created.map((i) => i.name)).toEqual(['Investment Documents', 'Execution Documents', 'MEL Evidence']);
+
+    const roots = [...drive._items.values()].filter((i) => i.name === 'Escuela Viva');
+    expect(roots).toHaveLength(1);
+    expect(drive._childrenOf(roots[0].id)).toHaveLength(3);
+    expect(audit._events.map((e) => e.outcome)).toEqual([OUTCOME.FAILED, OUTCOME.SUCCESS]);
+    expect(audit._events[0].error.details.outcomeUnknown).toBe(true);
+  });
+
+  it('reconciles the same way for an existing structure type', async () => {
+    const drive = createFakeDrive();
+    drive._createThenFail('03_Screening', new DriveError(ERROR_CODE.TIMEOUT));
+
+    const first = await run({ drive });
+    expect(first.outcome).toBe(OUTCOME.PARTIAL_SUCCESS);
+    expect(first.errors[0].details.outcomeUnknown).toBe(true);
+
+    const retry = await run({ drive });
+    expect(retry.outcome).toBe(OUTCOME.SUCCESS);
+    expect(retry.existing.map((i) => i.name)).toContain('03_Screening');
+    expect([...drive._items.values()].filter((i) => i.name === '03_Screening')).toHaveLength(1);
+  });
+
+  it('keeps the plain message for a failure that certainly created nothing', async () => {
+    const drive = createFakeDrive();
+    drive._failOnCreate('03_Screening', new DriveError(ERROR_CODE.PERMISSION_DENIED));
+
+    const result = await run({ drive });
+    expect(result.errors[0].details?.outcomeUnknown).toBeUndefined();
+  });
+});

@@ -213,8 +213,8 @@ export async function previewStructure({ drive, registry, plan }) {
        * A closed-project folder already at the destination holding only EMPTY folders this plan
        * creates is RADAR's own earlier, partial run (ADR 0007), so it is resumed rather than
        * blocked — retry stays safe. Anything else in it, documents included, is historical
-       * content that needs human review, and RADAR adds nothing to it. One page is enough:
-       * more children than the plan's three folders means a stranger or a duplicate.
+       * content that needs human review, and RADAR adds nothing to it. listChildren reads every
+       * page and throws on an incomplete listing, so "empty" here means empty.
        */
       if (path === destinationPath && underArchive) {
         const rootKey = plan.items.find((i) => i.isStructureRoot)?.key;

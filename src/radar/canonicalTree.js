@@ -209,7 +209,7 @@ export function becaTechOrganizationKindById(id) {
 }
 
 /**
- * The archive categories a closed-object folder may be built in (ADR 0007, Proposed). A closed
+ * The archive categories a closed-object folder may be built in (ADR 0007). A closed
  * allowlist, like BECA_TECH_ORGANIZATION_KINDS: `structureInputs` validates the id against it,
  * and the destination guard accepts no other archive container. The category and its theme
  * folder must already exist; RADAR never creates them.

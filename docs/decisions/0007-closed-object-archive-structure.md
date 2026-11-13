@@ -112,6 +112,19 @@ deterministic variant to the one Drive query: the other Unicode encoding of the 
 names use. Drive's `name =` already ignores case. It fails closed: a variant can only add a
 block. Reuse at the destination still requires the exact name.
 
+Whitespace (revised after review, 2026-11-13). A name RADAR creates may contain only ordinary
+single spaces: non-breaking or other special spaces, and two spaces in a row, are rejected at
+validation. Names that must match an existing folder exactly are exempt. Existing folders cannot be held to that rule, so a second query fetches
+every folder with a name term that starts with the name's first word. It keeps those whose
+`nameMatchKey()` matches — the same name once encoding, case, and runs of spaces, non-breaking
+spaces and underscores are set aside. That relies on Drive's documented prefix matching for
+`name contains` and has not been verified live. It can only add blocks; the exact-spelling query
+is unchanged.
+
+Every Drive listing used for these decisions reads all pages and stops with an error on a
+repeated page token, too many pages or an incomplete search. An incomplete answer is never
+taken to mean "absent" or "empty".
+
 Accents are deliberately **not** folded. `Fundacion` and `Fundación` stay different, because
 folding is one-directional (a name typed without accents cannot be expanded back) and blocks
 genuinely different names. The wizard asks the administrator to check for other spellings before
@@ -189,9 +202,15 @@ project is closed.
   safety rests on a live-Drive check rather than a structural impossibility, as in ADR 0005.
 - **Residual gaps.** The search does not fold accents or punctuation, so a project filed as
   `Fundacion Luminar` or `Fundación-Luminar` is not found when `Fundación Luminar` is typed. The
-  administrator's check before confirming is the control. Two administrators racing are not
+  administrator's check before confirming is the control. Whitespace variants are caught only if
+  Drive's `name contains` matches the first word as documented. Two administrators racing are not
   serialized. An empty folder a human made with exactly the planned names is treated as RADAR's
   own. That is harmless, because RADAR only adds empty siblings.
+- **A create is never sent twice.** Reads are retried on timeouts, rate limits and network errors.
+  Writes are retried only after a rate limit, which Google rejects without applying, because a
+  lost response may hide a folder Drive did create. The result and the
+  audit row mark that item's outcome as unconfirmed. The administrator's explicit retry
+  re-previews, finds the folder if Drive made it, and reuses it.
 - **Live behavior is not evidenced here.** The variant query and resume rule are tested against
   the fake Drive. The requester reports integration validation as completed, but no record of it
   exists in this repository (see *Outstanding*).
@@ -259,4 +278,8 @@ The approved scope is historical archive onboarding only (see *Scope*).
 
 - **Test Shared Drive dry-run evidence** before production use (AGENTS.md §5, §8). Integration
   validation was reported as completed, but no environment, date or results are recorded. A
-  Vercel preview deployment is not a Drive dry run.
+  Vercel preview deployment is not a Drive dry run. Preview and Production also share one
+  Shared Drive configuration in Vercel, so the preview is not an isolated test environment.
+- **Live checks the fake Drive cannot make:** how `name =` folds case and Unicode encoding; that
+  `name contains` matches a first word followed by a non-breaking space or underscore; and that
+  a just-created folder is visible to the next listing (the retry reconciliation depends on it).

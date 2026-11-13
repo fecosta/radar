@@ -865,6 +865,32 @@ describe('Historical closed project (archive)', () => {
     expect(result.blocking[0].code).toBe(CONFLICT_CODE.OBJECT_HAS_ANOTHER_HOME);
   });
 
+  /** Existing historical folders keep whatever spacing they were given; typed names cannot. */
+  it.each([
+    ['two spaces', 'Fundación  Ejemplo'],
+    ['a non-breaking space', 'Fundación\u00A0Ejemplo'],
+  ])('refuses a folder elsewhere spelled with %s', async (_label, spelling) => {
+    const drive = createFakeDrive();
+    drive._seedPath(`02_INVESTMENTS_AND_PROGRAMS/03_VENTURE_BUILDING/Democracy/${spelling}`);
+
+    const result = await closedPreview(drive, { ...INPUTS, objectName: 'Fundación Ejemplo' });
+
+    expect(result.blocking[0].code).toBe(CONFLICT_CODE.OBJECT_HAS_ANOTHER_HOME);
+  });
+
+  it('blocks rather than reuses a differently spaced folder at the destination itself', async () => {
+    // Reuse is strict (exact name); the broader match only ever prohibits.
+    const drive = createFakeDrive();
+    drive._seedPath(`${PARENT}/Aula\u00A0Abierta`);
+    const before = drive._items.size;
+
+    const result = await closedPreview(drive);
+
+    expect(result.status).toBe(PREVIEW_STATUS.BLOCKED);
+    expect(result.blocking[0].code).toBe(CONFLICT_CODE.OBJECT_HAS_ANOTHER_HOME);
+    expect(drive._items.size).toBe(before);
+  });
+
   it('does not fold accents — the documented limit the manual check covers', async () => {
     const drive = createFakeDrive();
     drive._seedPath('02_INVESTMENTS_AND_PROGRAMS/02_PORTFOLIO/Democracy/Fundacion Ejemplo');

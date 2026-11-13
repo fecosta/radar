@@ -258,7 +258,16 @@ async function runExecution({
       // Stop immediately. Nothing already created is deleted: there is no proven
       // transactional cleanup here, and a retry will reuse what exists.
       failureStage = FAILURE_STAGE.CREATION;
-      errors.push({ ...toErrorRecord(error), path: item.fullPath });
+      const record = { ...toErrorRecord(error), path: item.fullPath };
+      // A timeout or lost connection does not say whether Google created the item. The client
+      // does not resend it; say so, because the retry's re-preview is what finds out.
+      if (error instanceof DriveError && (error.code === ERROR_CODE.TIMEOUT || error.code === ERROR_CODE.NETWORK)) {
+        record.details = { ...record.details, outcomeUnknown: true };
+        record.message =
+          `Google did not confirm whether "${item.name}" was created, and RADAR did not send it ` +
+          'again. Wait a minute, then retry: RADAR checks Drive first and never creates a second copy.';
+      }
+      errors.push(record);
       outcome = created.length > 0 ? OUTCOME.PARTIAL_SUCCESS : OUTCOME.FAILED;
       return finish();
     }
