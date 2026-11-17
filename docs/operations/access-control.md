@@ -69,6 +69,9 @@ VITE_RADAR_ALLOWED_DOMAINS= Your-Org.com , PARTNER-ORG.org ,
 Matching is **exact**. Approving `your-org.com` does not approve `mail.your-org.com`,
 `fake-your-org.com`, or `your-org.com.example.net`.
 
+The domain RADAR is *served from* (`radar.velezreyesmas.org`) has nothing to do with this list.
+It lists the email domains of the people allowed in; never add the hosting domain to it.
+
 Both variables are build-time. Changing either requires a **rebuild and redeploy**, or a dev
 server restart locally.
 
@@ -201,11 +204,12 @@ who has nothing to fix.
 
 ## Troubleshooting
 
-The first two rows are Google's own screens, shown on `accounts.google.com` **before RADAR
-loads**. If you see either one, nothing in RADAR is involved and no RADAR setting will change it.
+The first three rows are Google's own screens, shown on `accounts.google.com` **before RADAR
+loads**. If you see one, nothing in RADAR is involved and no RADAR setting will change it.
 
 | Message | Cause | Fix |
 |---|---|---|
+| `Error 400: redirect_uri_mismatch` (or `origin_mismatch`) for **everyone** | RADAR was opened on an address that is not an Authorized JavaScript origin of the OAuth client — `http://` instead of `https://`, a Vercel preview URL, or a new domain not yet added | open `https://radar.velezreyesmas.org`; for a new address, add its exact origin under the OAuth client in **APIs & Services → Credentials** (no trailing slash, no path) |
 | `Error 403: org_internal` — "can only be used within its organization" | the OAuth audience is **Internal**, which admits only your own Workspace | set **Google Auth Platform → Audience → User type: External**; see [Who can authenticate](../../README.md#who-can-authenticate) for what that costs |
 | `Error 403: access_denied`, or a screen saying the app "has not completed the Google verification process" | the app is in **Testing** status and this account is not on the test-user list — this now includes your own staff | add the account under **Google Auth Platform → Audience → Test users**; if the list is full, see [Google-side capacity](#google-side-capacity) |
 | "Google hasn't verified this app" | expected while the app is in **Testing** status | choose **Advanced → Continue**; removing this screen requires verification |

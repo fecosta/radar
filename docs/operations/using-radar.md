@@ -55,7 +55,8 @@ you off to Drive itself.
 ### The route
 
 1. Go to the **Employee Hub** and open the **RADAR microsite**.
-2. Open the **Drive Finder** from the link at the top of the page.
+2. Open the **Drive Finder** from the link at the top of the page — or go straight to
+   **https://radar.velezreyesmas.org**.
 3. **Sign in with your VélezReyes+ Google account.**
 
 ### One confusing thing, before you start

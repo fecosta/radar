@@ -269,10 +269,11 @@ so the suite never touches a real drive. CI runs `npm run test` and `npm run bui
 
 ## Deployment
 
-The app is static (`npm run build` → `dist/`). Add the production origin to the OAuth
-consent screen's authorized JavaScript origins and set the environment variables in the
-hosting platform. Because the variables are build-time, changing a Shared Drive or
-spreadsheet id requires a rebuild.
+The app is static (`npm run build` → `dist/`), served at `https://radar.velezreyesmas.org`.
+The production origin belongs under the OAuth **client's** Authorized JavaScript origins, not
+the consent screen, and the environment variables are set in Vercel; see
+[Deploying to production](../../README.md#deploying-to-production). Because the variables are
+build-time, changing a Shared Drive or spreadsheet id requires a rebuild.
 
 Roll out progressively, per `AGENTS.md` §11: point `VITE_SHARED_DRIVE_ID` at a **test Shared
 Drive** first and run the manual verification below before pointing at production.
