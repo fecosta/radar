@@ -111,8 +111,11 @@ disabled"*.
      users who only search never consent to them.
 
 4. Back in Credentials, select **Web application**
-5. Add **Authorized JavaScript origins**: `http://localhost:5173`
-6. Add **Authorized redirect URIs**: `http://localhost:5173`
+5. Add **Authorized JavaScript origins**: `http://localhost:5173` for development and
+   `https://radar.velezreyesmas.org` for production. Exact origins only: scheme and host, no
+   trailing slash, no path.
+6. Leave **Authorized redirect URIs** empty. RADAR uses the Google Identity Services popup token
+   flow, which returns the token to a JavaScript callback and never redirects.
 7. Copy the **Client ID** — you'll need it below
 
 #### Who can authenticate
@@ -217,20 +220,67 @@ faked in memory for every test, so the suite never touches a real Drive.
 
 ## Deploying to production
 
-For production (e.g., Vercel, Netlify):
+Production is **https://radar.velezreyesmas.org**, deployed by Vercel from `main`. Vercel's Vite
+preset runs `npm run build` and publishes `dist/`; there is no `vercel.json`. The app is static
+and has no client-side routes, so nothing else needs configuring.
 
-1. Add your production domain to the OAuth consent screen's authorized origins
-2. Ensure the Drive API is enabled, and the consent screen admits the organizations you intend
-   to authorize (see [Who can authenticate](#who-can-authenticate))
-3. Set the environment variables in your hosting platform — including
-   `VITE_RADAR_ALLOWED_DOMAINS`, without which **nobody can sign in**
-4. Grant the intended users or groups access to the RADAR Shared Drive in Google Workspace.
-   RADAR cannot do this and will refuse anyone who lacks it
-5. `npm run build` → deploy the `dist/` folder
+### Google Cloud
 
-Environment values are compiled into the bundle at build time, so changing the approved
-organizations always requires a rebuild and redeploy. Removing an *individual* does not: that is
-a Shared Drive permission change and takes effect on their next request.
+1. **OAuth client** (APIs & Services → Credentials → the Web application client whose ID is
+   `VITE_GOOGLE_CLIENT_ID`): `https://radar.velezreyesmas.org` under **Authorized JavaScript
+   origins**, beside `http://localhost:5173`. No redirect URI. The client ID stays the same.
+2. **APIs**: Google Drive API and Google Sheets API both enabled.
+3. **Branding** (Google Auth Platform → Branding): if an application home page is set, point it
+   at `https://radar.velezreyesmas.org` and list `velezreyesmas.org` under **Authorized
+   domains**. Optional while the app is in Testing. Keep the app name: users are told to expect
+   it ([using-radar.md](docs/operations/using-radar.md#one-confusing-thing-before-you-start)).
+4. **Audience**: not affected by where RADAR is served. The user type, publishing status and
+   test-user list decide who may sign in; see [Who can authenticate](#who-can-authenticate).
+
+An unregistered origin fails on Google's page with `Error 400: redirect_uri_mismatch` (or
+`origin_mismatch`) before RADAR loads. Only the exact origin works: `http://`, a trailing slash
+or a Vercel preview URL is refused, so preview deployments cannot sign in.
+
+### Vercel
+
+1. **Domain**: `radar.velezreyesmas.org` on the `radar` project, verified, with no redirect.
+2. **Environment variables**, Production environment: `VITE_GOOGLE_CLIENT_ID`,
+   `VITE_SHARED_DRIVE_ID` and `VITE_RADAR_ALLOWED_DOMAINS` are required (RADAR refuses everyone
+   without them); `VITE_RADAR_REGISTRY_SHEET_ID` and `VITE_RADAR_AUDIT_SHEET_ID` are optional and
+   used only by Create structure. Check them by name under **Settings → Environment Variables**
+   or with `vercel env ls production`; there is no need to reveal a value.
+3. **Redeploy** after changing any variable: values are compiled into the bundle at build time.
+   Adding or changing the domain needs no redeploy, because no variable holds RADAR's own address.
+
+**The hosting domain is not an approved organization.** `velezreyesmas.org` is where RADAR is
+served; `VITE_RADAR_ALLOWED_DOMAINS` lists the email domains of the people allowed in. Do not add
+the hosting domain to it.
+
+Changing the approved organizations always requires a rebuild and redeploy. Removing an
+*individual* does not: that is a Shared Drive permission change and takes effect on their next
+request. Granting Shared Drive access is a Google Workspace action; RADAR cannot do it and will
+refuse anyone who lacks it.
+
+### Smoke test after a deploy or domain change
+
+Read-only. Never create a structure just to check a deployment.
+
+1. `https://radar.velezreyesmas.org` loads over HTTPS, the sign-in card renders, and a reload
+   still works.
+2. A test user on an approved domain with Shared Drive access signs in; the popup closes and the
+   address stays on `radar.velezreyesmas.org`.
+3. Search returns results and a result opens in Drive; Classify returns a path.
+4. Create structure asks for the extra permission and shows a preview. Stop there.
+5. Sign out, then sign back in.
+6. An unapproved-domain account sees "Access not authorized"; an approved-domain account without
+   Shared Drive access sees "RADAR Shared Drive access required".
+
+### Rollback
+
+The repository holds no domain-specific value, so rolling back is a hosting action: promote an
+earlier deployment in Vercel, or point users back at `https://velezreyes-drive-search.vercel.app`.
+That fallback works only while it stays registered as an origin on the OAuth client, so keep it
+there until nobody uses the old address. Neither action touches Drive data.
 
 ---
 
